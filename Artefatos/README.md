@@ -1,12 +1,15 @@
 # Artefatos do projeto
 
-Este diretório mantém os artefatos do projeto. 
+Este diretório mantém os artefatos produzidos pela equipe.
 
+## Sprint 0
 
-Liste os artefatos produzidos, com suas localizações e descrição do conteúdo.
+Os documentos da entrega inicial estão em `/Sprint-0`:
 
-Por exemplo, pode-se criar um diretório "atas", que seria descrito da seguinte forma:
-* `/atas`
-	* **Ata_xx_ago_20xx.docx**: Ata de reunião do dia xx de agosto de 20xx.
+- **Documento-de-Visao-DaFabi-Frangos.pdf**: visão, escopo e requisitos do projeto.
+- **Ata-de-Reuniao-com-Cliente-2026-08-29.pdf**: registro da reunião de levantamento com a cliente.
+- **Termo-de-Ciencia-Anuencia-e-Compromisso.pdf**: acordo assinado entre a equipe, docentes e cliente.
+- **Termo-de-Sigilo-e-Confidencialidade.pdf**: compromisso de confidencialidade assinado.
+- **Procuracao-ao-NIT-PUC-Minas.pdf**: procuração assinada para representação perante o INPI.
 
-Assim, sucessivamente para outros artefatos como `interfaces de usuário` e `modelos`, etc.
+O planejamento da Sprint 1, com a divisão de tarefas e responsabilidades, está registrado no board do projeto.
