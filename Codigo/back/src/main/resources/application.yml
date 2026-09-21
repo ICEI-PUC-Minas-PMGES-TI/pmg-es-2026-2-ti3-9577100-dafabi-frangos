@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: dafabi-backend
+  profiles:
+    default: dev
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+  jpa:
+    open-in-view: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+logging:
+  level:
+    root: INFO
+    com.dafabi: DEBUG
