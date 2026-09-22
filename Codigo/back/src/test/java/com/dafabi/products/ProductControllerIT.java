@@ -3,6 +3,8 @@ package com.dafabi.products;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.ProductStatus;
 import com.dafabi.products.dto.CreateProductRequest;
+import com.dafabi.inventory.repository.InventoryLotRepository;
+import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.repository.CategoryRepository;
 import com.dafabi.products.repository.ProductRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,10 +43,18 @@ class ProductControllerIT {
     @Autowired
     private CategoryRepository categoryRepository;
 
+    @Autowired
+    private StockMovementRepository stockMovementRepository;
+
+    @Autowired
+    private InventoryLotRepository inventoryLotRepository;
+
     private Category savedCategory;
 
     @BeforeEach
     void setUp() {
+        stockMovementRepository.deleteAll();
+        inventoryLotRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
 
