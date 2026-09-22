@@ -18,6 +18,9 @@ WORKDIR /app
 
 COPY --from=build /app/target/dafabi-backend-*.jar /app/app.jar
 
+# Configurações otimizadas para ambientes de baixa memória (Homelab / ARM64)
+ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m"
+
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

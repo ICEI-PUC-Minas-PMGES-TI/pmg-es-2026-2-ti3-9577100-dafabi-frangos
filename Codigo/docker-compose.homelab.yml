@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dafabi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dafabidb}
+      POSTGRES_USER: ${DB_USER:-dafabi_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dafabipassword123}
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=16MB
+      -c max_connections=30
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 160M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dafabi_user} -d ${DB_NAME:-dafabidb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ${BACKEND_IMAGE:-dafabi-backend:homelab}
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: dafabi-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dafabidb}
+      DB_USER: ${DB_USER:-dafabi_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dafabipassword123}
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-dafabi-frontend:homelab}
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: dafabi-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONT_PORT:-3000}:80"
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+
+volumes:
+  postgres_data:
