@@ -1,0 +1,1 @@
+import{ChangeDetectionStrategy,Component,input}from'@angular/core';@Component({selector:'app-data-table',standalone:true,template:`<div class="table-wrap" role="region" [attr.aria-label]="label()" tabindex="0"><ng-content/></div>`,changeDetection:ChangeDetectionStrategy.OnPush})export class DataTableComponent{readonly label=input('Tabela de dados')}

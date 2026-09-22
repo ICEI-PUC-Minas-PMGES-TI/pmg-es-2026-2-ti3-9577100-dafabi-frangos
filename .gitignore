@@ -1,1 +1,12 @@
-Codigo/.vscode/settings.json
+Codigo/front/.angular/
+Codigo/front/dist/
+Codigo/front/node_modules/
+Codigo/front/.vscode/settings.json
+Codigo/back/target/
+/node_modules/
+/dist/
+/output/
+~$*.docx
+tmp
+.openai
+v11

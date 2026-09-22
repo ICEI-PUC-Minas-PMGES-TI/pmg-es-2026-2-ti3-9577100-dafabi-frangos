@@ -1,6 +1,7 @@
 package com.dafabi.products;
 
 import com.dafabi.products.domain.Category;
+import com.dafabi.products.domain.ProductStatus;
 import com.dafabi.products.dto.CreateProductRequest;
 import com.dafabi.products.repository.CategoryRepository;
 import com.dafabi.products.repository.ProductRepository;
@@ -63,6 +64,7 @@ class ProductControllerIT {
                 "7891234560001",
                 true,
                 true,
+                ProductStatus.ACTIVE,
                 100
         );
 
@@ -97,6 +99,7 @@ class ProductControllerIT {
                 null,
                 false,
                 false,
+                ProductStatus.ACTIVE,
                 -1 // Estoque negativo
         );
 
@@ -122,6 +125,7 @@ class ProductControllerIT {
                 "7899999999999",
                 true,
                 false,
+                ProductStatus.ACTIVE,
                 20
         );
 
@@ -139,6 +143,7 @@ class ProductControllerIT {
                 "7899999999999",
                 true,
                 false,
+                ProductStatus.ACTIVE,
                 10
         );
 
@@ -162,6 +167,7 @@ class ProductControllerIT {
                 null,
                 true,
                 false,
+                ProductStatus.ACTIVE,
                 15
         );
 

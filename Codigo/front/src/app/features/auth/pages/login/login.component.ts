@@ -1,0 +1,45 @@
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { LoginService } from '../../services/login.service';
+
+@Component({
+  selector: 'app-login', standalone: true, imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
+  template: `
+    <main class="login-page">
+      <section class="login-brand" aria-label="Sobre o sistema">
+        <div class="login-logo"><span>DF</span><div><strong>DaFabi</strong><small>Frangos</small></div></div>
+        <div class="brand-copy"><p class="brand-kicker">Gestão simples para o dia a dia</p><h1>Atendimento ágil.<br><em>Controle de verdade.</em></h1><p>Vendas, caixa e estoque reunidos em um só lugar para sua operação fluir sem complicação.</p></div>
+        <div class="brand-features"><span><mat-icon>point_of_sale</mat-icon>PDV rápido</span><span><mat-icon>inventory_2</mat-icon>Estoque integrado</span><span><mat-icon>query_stats</mat-icon>Resultado claro</span></div>
+        <div class="brand-pattern" aria-hidden="true"></div>
+      </section>
+      <section class="login-form-wrap">
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="mobile-logo"><span>DF</span><strong>DaFabi Frangos</strong></div>
+          <p class="eyebrow">Acesso ao sistema</p><h2>Bem-vindo de volta</h2><p class="intro">Entre com seu usuário para iniciar o atendimento.</p>
+          @if (expired()) { <div class="notice warning" role="status"><mat-icon>schedule</mat-icon>Sua sessão expirou. Entre novamente para continuar.</div> }
+          @if (error()) { <div class="notice error" role="alert"><mat-icon>error</mat-icon>Usuário ou senha inválidos. Confira os dados e tente novamente.</div> }
+          <mat-form-field appearance="outline"><mat-label>Usuário ou e-mail</mat-label><mat-icon matPrefix>person</mat-icon><input matInput formControlName="identifier" autocomplete="username">@if (form.controls.identifier.touched && form.controls.identifier.invalid) { <mat-error>Informe seu usuário ou e-mail.</mat-error> }</mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Senha</mat-label><mat-icon matPrefix>lock</mat-icon><input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password"><button mat-icon-button matSuffix type="button" (click)="showPassword.set(!showPassword())" [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Exibir senha'"><mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon></button>@if (form.controls.password.touched && form.controls.password.invalid) { <mat-error>A senha deve ter pelo menos 6 caracteres.</mat-error> }</mat-form-field>
+          <button type="button" class="forgot">Esqueci minha senha</button>
+          <button mat-flat-button class="primary-button login-button" type="submit" [disabled]="loading()">@if (loading()) { <span class="button-spinner"></span><span>Entrando…</span> } @else { <span>Entrar</span> } @if (!loading()) { <mat-icon>arrow_forward</mat-icon> }</button>
+          <div class="demo-access"><strong>Acessos para demonstração</strong><div><button type="button" (click)="fill('admin','admin123')"><span class="demo-icon admin"><mat-icon>shield_person</mat-icon></span><span><b>Administradora</b><small>admin / admin123</small></span></button><button type="button" (click)="fill('caixa','caixa123')"><span class="demo-icon"><mat-icon>badge</mat-icon></span><span><b>Operador de caixa</b><small>caixa / caixa123</small></span></button></div></div>
+        </form>
+        <p class="login-footer">© 2026 DaFabi Frangos · Ambiente de demonstração</p>
+      </section>
+    </main>`,
+  styles: [`
+    :host{display:block;min-height:100vh}.login-page{min-height:100vh;padding:0;display:grid;grid-template-columns:minmax(390px,.95fr) minmax(460px,1.05fr);background:white}.login-brand{position:relative;overflow:hidden;background:#9f2118;color:white;padding:clamp(36px,5vw,72px);display:flex;flex-direction:column;justify-content:space-between}.login-logo{display:flex;align-items:center;gap:13px;position:relative;z-index:1}.login-logo>span,.mobile-logo>span{width:45px;height:45px;border-radius:12px;background:#fff;color:#9f2118;display:grid;place-items:center;font-weight:800;box-shadow:5px 5px 0 #f4c542}.login-logo strong,.login-logo small{display:block}.login-logo strong{font-size:1.35rem}.login-logo small{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;color:#ffe9a0}.brand-copy{position:relative;z-index:1;max-width:560px}.brand-kicker{text-transform:uppercase;letter-spacing:.12em;font-size:.74rem;font-weight:800;color:#ffe28a}.brand-copy h1{font-size:clamp(2.5rem,5vw,4.8rem);line-height:1.02;letter-spacing:-.055em;margin:16px 0 22px}.brand-copy h1 em{color:#f4c542;font-style:normal}.brand-copy>p:last-child{font-size:1.05rem;line-height:1.7;color:#ffeceb;max-width:480px}.brand-features{display:flex;flex-wrap:wrap;gap:20px;position:relative;z-index:1}.brand-features span{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600}.brand-features mat-icon{color:#f4c542}.brand-pattern{position:absolute;width:420px;height:420px;border:80px solid rgba(244,197,66,.09);border-radius:50%;right:-180px;bottom:-170px;box-shadow:0 0 0 70px rgba(255,255,255,.025)}.login-form-wrap{display:grid;place-items:center;padding:42px;position:relative}.login-form-wrap form{width:min(100%,460px)}.mobile-logo{display:none}.login-form-wrap h2{font-size:2rem;letter-spacing:-.04em;margin:5px 0 8px}.intro{color:var(--muted);margin:0 0 28px}.login-form-wrap mat-form-field{width:100%;margin-bottom:5px}.forgot{border:0;background:none;color:var(--red);font-weight:700;padding:0;margin:-2px 0 20px;cursor:pointer}.login-button{width:100%;height:50px!important;font-weight:700;display:flex;gap:8px}.button-spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.demo-access{margin-top:30px;padding-top:24px;border-top:1px solid var(--border)}.demo-access>strong{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.demo-access>div{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.demo-access button{display:flex;gap:10px;text-align:left;align-items:center;background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:11px;cursor:pointer}.demo-access button:hover{border-color:#c5c0bc;background:#fff}.demo-access b,.demo-access small{display:block}.demo-access b{font-size:.76rem}.demo-access small{font-size:.68rem;color:var(--muted);margin-top:2px}.demo-icon{width:32px;height:32px;border-radius:8px;background:var(--yellow-light);display:grid;place-items:center;color:#76520e}.demo-icon.admin{background:#fff0ee;color:var(--red)}.demo-icon mat-icon{font-size:19px;width:19px;height:19px}.login-footer{position:absolute;bottom:18px;color:#a8a29e;font-size:.7rem}.notice{font-size:.84rem}.notice mat-icon{flex:0 0 auto}@media(max-width:880px){.login-page{grid-template-columns:1fr}.login-brand{display:none}.login-form-wrap{min-height:100vh;padding:32px 24px 68px}.mobile-logo{display:flex;align-items:center;gap:16px;margin-bottom:50px}.mobile-logo>span{background:var(--red);color:white;box-shadow:4px 4px 0 var(--yellow)}.mobile-logo strong{color:var(--red-dark)}}@media(max-width:520px){.demo-access>div{grid-template-columns:1fr}}
+  `], changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class LoginComponent {
+  private readonly service = inject(LoginService); private readonly router = inject(Router); private readonly route = inject(ActivatedRoute);
+  readonly loading = signal(false); readonly error = signal(false); readonly showPassword = signal(false); readonly expired = signal(this.route.snapshot.queryParamMap.get('motivo') === 'sessao-expirada');
+  readonly form = new FormGroup({ identifier: new FormControl('', { nonNullable: true, validators: [Validators.required] }), password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6)] }) });
+  fill(identifier: string, password: string): void { this.form.setValue({ identifier, password }); this.error.set(false); }
+  async submit(): Promise<void> { if (this.form.invalid) { this.form.markAllAsTouched(); return; } this.loading.set(true); this.error.set(false); try { const user = await this.service.login(this.form.getRawValue()); await this.router.navigate([user.role === 'ADMIN' ? '/app/dashboard' : '/app/vendas/nova']); } catch { this.error.set(true); } finally { this.loading.set(false); } }
+}

@@ -1,0 +1,24 @@
+# Artefatos de build e dependências locais
+target/
+
+# Controle de versão e configurações de IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+
+# Configurações e segredos locais
+.env
+.env.*
+
+# Arquivos temporários e de log
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Documentação e artefatos não utilizados na criação da imagem
+README.md
+docs/

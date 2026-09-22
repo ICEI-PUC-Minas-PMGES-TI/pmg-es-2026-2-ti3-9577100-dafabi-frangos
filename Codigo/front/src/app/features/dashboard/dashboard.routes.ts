@@ -1,0 +1,1 @@
+import{Routes}from'@angular/router';import{roleGuard}from'../../core/auth/role.guard';export const DASHBOARD_ROUTES:Routes=[{path:'',canActivate:[roleGuard],data:{roles:['ADMIN']},loadComponent:()=>import('./pages/dashboard/dashboard.component').then(m=>m.DashboardComponent)}];

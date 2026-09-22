@@ -65,6 +65,7 @@ class ProductServiceTest {
                 "7891234567890",
                 true,
                 true,
+                ProductStatus.ACTIVE,
                 50
         );
 
@@ -104,6 +105,7 @@ class ProductServiceTest {
                 "7890000000000",
                 false,
                 false,
+                ProductStatus.ACTIVE,
                 10
         );
 
@@ -129,6 +131,7 @@ class ProductServiceTest {
                 null,
                 false,
                 false,
+                ProductStatus.ACTIVE,
                 0
         );
 
@@ -160,7 +163,7 @@ class ProductServiceTest {
                 null
         );
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findWithCategoryAndStockById(productId)).thenReturn(Optional.of(product));
 
         ProductResponse response = productService.findById(productId);
 
@@ -173,7 +176,7 @@ class ProductServiceTest {
     @DisplayName("Deve lançar exceção ao buscar produto inexistente")
     void shouldThrowExceptionWhenProductNotFound() {
         UUID productId = UUID.randomUUID();
-        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        when(productRepository.findWithCategoryAndStockById(productId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.findById(productId))
                 .isInstanceOf(ResourceNotFoundException.class)

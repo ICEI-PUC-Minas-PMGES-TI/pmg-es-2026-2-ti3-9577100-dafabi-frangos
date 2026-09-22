@@ -45,6 +45,7 @@ public class ProductController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) ProductStatus status,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(
@@ -52,8 +53,14 @@ public class ProductController {
                         query,
                         categoryId,
                         status,
+                        includeInactive,
                         page,
                         size));
+    }
+
+    @GetMapping("/by-barcode/{barcode}")
+    public ResponseEntity<ProductResponse> findByBarcode(@PathVariable String barcode) {
+        return ResponseEntity.ok(productService.findByBarcode(barcode));
     }
 
     @GetMapping("/{id}")

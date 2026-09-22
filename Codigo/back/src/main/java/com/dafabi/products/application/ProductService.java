@@ -85,6 +85,7 @@ public class ProductService {
             String query,
             UUID categoryId,
             ProductStatus status,
+            boolean includeInactive,
             int page,
             int size) {
         if (page < 0) {
@@ -108,12 +109,13 @@ public class ProductService {
 
         Specification<Product> specification = Specification.where(null);
 
-        ProductStatus requestedStatus = status != null
-                ? status
-                : ProductStatus.ACTIVE;
-
-        specification = specification.and(
-                (root, criteriaQuery, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), requestedStatus));
+        if (status != null) {
+            specification = specification.and(
+                    (root, criteriaQuery, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status));
+        } else if (!includeInactive) {
+            specification = specification.and(
+                    (root, criteriaQuery, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), ProductStatus.ACTIVE));
+        }
 
         if (categoryId != null) {
             specification = specification.and(
@@ -137,6 +139,19 @@ public class ProductService {
 
         return productRepository.findAll(specification, pageable)
                 .map(productMapper::toListResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse findByBarcode(String barcode) {
+        String normalizedBarcode = normalizeBarcode(barcode);
+        if (normalizedBarcode == null) {
+            throw new BusinessException("INVALID_BARCODE", "Informe um código de barras válido.");
+        }
+
+        Product product = productRepository.findByBarcode(normalizedBarcode)
+                .orElseThrow(() -> new ResourceNotFoundException("Produto", normalizedBarcode));
+
+        return productMapper.toResponse(product);
     }
 
     @Transactional

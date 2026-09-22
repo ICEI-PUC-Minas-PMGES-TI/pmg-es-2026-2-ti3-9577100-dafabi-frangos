@@ -35,7 +35,7 @@ public class ProductMapper {
                 : null);
         product.setPerishable(Boolean.TRUE.equals(request.perishable()));
         product.setFrequent(Boolean.TRUE.equals(request.frequent()));
-        product.setStatus(ProductStatus.ACTIVE);
+        product.setStatus(request.status() != null ? request.status() : ProductStatus.ACTIVE);
         product.setCreatedAt(OffsetDateTime.now());
         product.setUpdatedAt(product.getCreatedAt());
         product.setVersion(0L);

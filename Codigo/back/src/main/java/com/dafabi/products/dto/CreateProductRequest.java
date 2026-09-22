@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import com.dafabi.products.domain.ProductStatus;
 
 public record CreateProductRequest(
         @NotBlank(message = "O nome do produto é obrigatório")
@@ -23,13 +24,17 @@ public record CreateProductRequest(
         @PositiveOrZero(message = "O custo atual não pode ser negativo")
         BigDecimal currentCost,
 
+        @Size(max = 10, message = "A unidade deve ter no máximo 10 caracteres")
         String unit,
 
+        @Size(max = 64, message = "O código de barras deve ter no máximo 64 caracteres")
         String barcode,
 
         Boolean perishable,
 
         Boolean frequent,
+
+        ProductStatus status,
 
         @PositiveOrZero(message = "O estoque inicial não pode ser negativo")
         Integer initialStock
