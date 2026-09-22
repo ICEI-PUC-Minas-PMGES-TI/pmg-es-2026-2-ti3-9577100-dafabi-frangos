@@ -8,11 +8,13 @@ RUN npm ci --include=dev
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM node:22-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /dist/front /usr/share/nginx/html
+WORKDIR /app
+
+COPY server.mjs ./server.mjs
+COPY --from=build /dist/front ./dist
 
 EXPOSE 8080
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.mjs"]
