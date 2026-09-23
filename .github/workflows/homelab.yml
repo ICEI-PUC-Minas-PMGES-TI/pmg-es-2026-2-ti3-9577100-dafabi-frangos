@@ -1,0 +1,137 @@
+﻿name: CI/CD - Homelab
+
+on:
+  push:
+    branches:
+      - homelab
+    paths:
+      - 'Codigo/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # 1. Identifica se houve alterações em backend, frontend ou ambos
+  changes:
+    name: Detectar alterações em Codigo
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+
+      - name: Filtrar caminhos modificados
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'Codigo/back/**'
+            frontend:
+              - 'Codigo/front/**'
+
+  # 2. Compila e publica a imagem Docker do Backend para o GHCR
+  build-backend:
+    name: Build & Push Backend (ARM64 / AMD64)
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+
+      - name: Configurar QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Definir nome da imagem
+        id: image
+        shell: bash
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dafabi-backend" >> "$GITHUB_OUTPUT"
+
+      - name: Autenticar no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Gerar tags da imagem
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=homelab
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build e Push da Imagem do Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: Codigo/back
+          file: Codigo/back/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 3. Compila e publica a imagem Docker do Frontend para o GHCR
+  build-frontend:
+    name: Build & Push Frontend (ARM64 / AMD64)
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+
+      - name: Configurar QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Definir nome da imagem
+        id: image
+        shell: bash
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dafabi-frontend" >> "$GITHUB_OUTPUT"
+
+      - name: Autenticar no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Gerar tags da imagem
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=homelab
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build e Push da Imagem do Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: Codigo/front
+          file: Codigo/front/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
