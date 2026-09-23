@@ -17,7 +17,6 @@ interface NavItem { label: string; icon: string; route: string; roles: Role[]; e
           </a>
         }
       </nav>
-      @if (!collapsed()) { <div class="sidebar-foot"><span class="online-dot"></span><div><strong>Sistema disponível</strong><small>{{ auth.isAdmin() ? 'Acesso administrativo' : 'Acesso de operador' }}</small></div></div> }
     </aside>`,
   styles: [`:host{display:block;width:100%;height:100%;min-width:0}.sidebar nav{min-height:1px}`],
   changeDetection: ChangeDetectionStrategy.OnPush

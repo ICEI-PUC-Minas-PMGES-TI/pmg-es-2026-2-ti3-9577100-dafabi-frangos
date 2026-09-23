@@ -7,7 +7,7 @@ import { TopbarComponent } from '../topbar/topbar.component';
 import { BreadcrumbsComponent } from '../../../shared/components/breadcrumbs/breadcrumbs.component';
 
 @Component({ selector: 'app-shell', standalone: true, imports: [RouterOutlet, MatSidenavModule, SidebarComponent, TopbarComponent, BreadcrumbsComponent], template: `
-  <mat-sidenav-container class="app-shell">
+  <mat-sidenav-container class="app-shell" autosize>
     <mat-sidenav #drawer [mode]="isTablet() ? 'over' : 'side'" [opened]="!isTablet()" [disableClose]="!isTablet()" [style.width.px]="collapsed() ? 88 : 264"><app-sidebar [collapsed]="collapsed() && !isTablet()" (navigate)="isTablet() && drawer.close()" /></mat-sidenav>
     <mat-sidenav-content>
       <app-topbar (menuClick)="isTablet() ? drawer.toggle() : collapsed.set(!collapsed())" />
