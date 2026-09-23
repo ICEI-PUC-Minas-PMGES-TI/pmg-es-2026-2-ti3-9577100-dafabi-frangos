@@ -45,21 +45,29 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ---
 
-## 🛠️ 2. Como Compilar as Imagens (no seu PC Windows)
+## 🛠️ 2. CI/CD e Compilação das Imagens
 
-> ⚠️ **Atenção:** Nunca tente rodar `docker build` ou `mvn package` direto na TV Box. O processador fraco e a pouca memória vão travar o sistema. Compile as imagens no seu computador onde há mais CPU e memória.
+> ⚠️ **Atenção:** Nunca tente rodar `docker build` ou `mvn package` direto na TV Box. O processador fraco e a pouca memória vão travar o sistema.
 
-Você pode escolher entre duas formas de levar as imagens até a TV Box:
+### Opção A: GitHub Actions (Totalmente Automatizado - Recomendado)
+Toda vez que você atualizar a branch `homelab` (por exemplo, sincronizando com a `main`) e der `push`, o GitHub Actions:
+1. Detecta as alterações na pasta `Codigo/`.
+2. Compila as imagens Docker multi-arquitetura (`linux/arm64` e `linux/amd64`).
+3. Publica no **GitHub Container Registry (GHCR)**:
+   - `ghcr.io/icei-puc-minas-pmges-ti/dafabi-backend:homelab`
+   - `ghcr.io/icei-puc-minas-pmges-ti/dafabi-frontend:homelab`
+4. O **Watchtower** na TV Box detecta a nova imagem automaticamente a cada 2 minutos e reinicia os containers sem você precisar rodar nenhum comando manual!
 
-### Opção A: Usando Docker Hub (Recomendado)
-No seu computador Windows, abra o PowerShell na pasta `Codigo`:
-
+### Opção B: Build Local via Script PowerShell (Fallback)
+Se preferir compilar na sua máquina Windows local:
+No PowerShell dentro de `Codigo`:
 ```powershell
-# Faz o build para ARM64 e envia direto para o seu Docker Hub:
-.\build-homelab.ps1 -Registry "seu_usuario_dockerhub"
-```
+# Envia para Docker Hub/Registry próprio:
+.\build-homelab.ps1 -Registry "seu_usuario"
 
-### Opção B: Sem Docker Hub (Gerando arquivos `.tar`)
+# Ou gera arquivos .tar locais na pasta dist-homelab:
+.\build-homelab.ps1
+```
 Se você não quiser criar conta ou subir imagens para a nuvem:
 
 ```powershell

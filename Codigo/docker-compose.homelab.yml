@@ -26,7 +26,7 @@ services:
       retries: 5
 
   backend:
-    image: ${BACKEND_IMAGE:-dafabi-backend:homelab}
+    image: ${BACKEND_IMAGE:-ghcr.io/icei-puc-minas-pmges-ti/dafabi-backend:homelab}
     build:
       context: ./back
       dockerfile: Dockerfile
@@ -49,7 +49,7 @@ services:
           memory: 384M
 
   frontend:
-    image: ${FRONTEND_IMAGE:-dafabi-frontend:homelab}
+    image: ${FRONTEND_IMAGE:-ghcr.io/icei-puc-minas-pmges-ti/dafabi-frontend:homelab}
     build:
       context: ./front
       dockerfile: Dockerfile
@@ -63,6 +63,20 @@ services:
       resources:
         limits:
           memory: 32M
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: dafabi-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_CONFIG_PATH:-/root/.docker/config.json}:/config.json:ro
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_INTERVAL:-120}
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_REVIVE_STOPPED=false
+    command: dafabi-backend dafabi-frontend
 
 volumes:
   postgres_data:
