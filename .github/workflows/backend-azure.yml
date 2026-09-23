@@ -1,12 +1,11 @@
-name: Publicar imagem do backend
+name: Validar e publicar imagem do backend
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'Codigo/back/**'
-      - '.github/workflows/backend-container.yml'
+      - '.github/workflows/backend-azure.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,8 +14,8 @@ permissions:
 
 jobs:
   build-and-publish:
+    name: Build e publicação da imagem
     runs-on: ubuntu-latest
-
     steps:
       - name: Obter código
         uses: actions/checkout@v4
@@ -29,7 +28,7 @@ jobs:
         shell: bash
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dafabi-api" >> "$GITHUB_OUTPUT"
 
-      - name: Autenticar no GitHub Container Registry
+      - name: Autenticar no GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
