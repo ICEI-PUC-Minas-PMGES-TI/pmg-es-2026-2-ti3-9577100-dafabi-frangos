@@ -20,7 +20,7 @@ services:
         limits:
           memory: 160M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dafabi_user} -d ${DB_NAME:-dafabidb}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
