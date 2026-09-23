@@ -42,6 +42,7 @@ services:
       DB_NAME: ${DB_NAME:-dafabidb}
       DB_USER: ${DB_USER:-dafabi_user}
       DB_PASSWORD: ${DB_PASSWORD:-dafabipassword123}
+      APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN:-https://dafabi.flxcloud.dev}
       JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m"
     deploy:
       resources:

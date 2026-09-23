@@ -19,7 +19,8 @@ public class WebConfig implements WebMvcConfigurer {
             "http://127.0.0.1:4300",
             "http://127.0.0.1:5173",
             "https://dafabi.gustavoarc.com.br",
-            "https://dafabi-front.vercel.app"
+            "https://dafabi-front.vercel.app",
+            "https://dafabi.flxcloud.dev"
     };
 
     @Value("${app.cors.allowed-origin:}")
