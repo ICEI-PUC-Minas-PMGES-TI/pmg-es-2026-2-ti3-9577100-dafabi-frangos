@@ -1,4 +1,4 @@
-﻿name: CI/CD - Homelab
+name: CI/CD - Homelab
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - homelab
     paths:
       - 'Codigo/**'
+      - '.github/workflows/homelab.yml'
   workflow_dispatch:
 
 permissions:
@@ -31,8 +32,10 @@ jobs:
           filters: |
             backend:
               - 'Codigo/back/**'
+              - '.github/workflows/homelab.yml'
             frontend:
               - 'Codigo/front/**'
+              - '.github/workflows/homelab.yml'
 
   # 2. Compila e publica a imagem Docker do Backend para o GHCR
   build-backend:
