@@ -48,6 +48,14 @@ A API fica em `http://localhost:8080/api/v1`.
 - `POST /api/v1/inventory/adjustments`
 - `GET /api/v1/inventory/lots`
 - `POST /api/v1/inventory/lots`
+- `GET /api/v1/cash-registers/current`
+- `POST /api/v1/cash-registers`
+- `POST /api/v1/cash-registers/{id}/close`
+- `POST /api/v1/cash-registers/close`
+- `GET /api/v1/cash-registers/{id}`
+- `GET /api/v1/cash-registers/{id}/summary`
+- `GET /api/v1/cash-registers/{id}/movements`
+- `POST /api/v1/cash-registers/{id}/movements`
 
 ## Estoque
 
@@ -56,6 +64,14 @@ O saldo atual fica em `product_stock`; toda alteração manual gera um registro 
 entrada e soma a quantidade ao saldo do produto. As operações são transacionais e
 usam bloqueio pessimista do saldo durante a atualização, evitando perda de atualização
 em acessos concorrentes.
+
+## Caixa
+
+O Caixa (`cash_register`) gerencia abertura, fechamento e controle de saldos por loja,
+garantindo que haja apenas um caixa aberto por estabelecimento (reforçado por índice
+único parcial no PostgreSQL e validação na aplicação). No fechamento, o saldo esperado é
+recalculado a partir do saldo inicial e das movimentações registradas (`cash_movement`);
+caso haja divergência entre o saldo contado e o esperado, a justificativa é obrigatória.
 
 ## Testes
 
