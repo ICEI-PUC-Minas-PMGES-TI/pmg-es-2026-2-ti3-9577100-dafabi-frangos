@@ -7,6 +7,13 @@ spring:
     username: ${DB_USER:${SPRING_DATASOURCE_USERNAME:postgres}}
     password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 5000
+      max-lifetime: 600000
+      idle-timeout: 300000
+      leak-detection-threshold: 5000
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -16,3 +23,10 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+
+server:
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 4
+
