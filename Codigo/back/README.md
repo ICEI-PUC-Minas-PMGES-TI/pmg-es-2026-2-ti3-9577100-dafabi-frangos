@@ -56,6 +56,8 @@ A API fica em `http://localhost:8080/api/v1`.
 - `GET /api/v1/cash-registers/{id}/summary`
 - `GET /api/v1/cash-registers/{id}/movements`
 - `POST /api/v1/cash-registers/{id}/movements`
+- `POST /api/v1/sales`
+- `GET /api/v1/sales/{id}`
 
 ## Estoque
 
@@ -72,6 +74,16 @@ garantindo que haja apenas um caixa aberto por estabelecimento (reforçado por �
 único parcial no PostgreSQL e validação na aplicação). No fechamento, o saldo esperado é
 recalculado a partir do saldo inicial e das movimentações registradas (`cash_movement`);
 caso haja divergência entre o saldo contado e o esperado, a justificativa é obrigatória.
+
+## Vendas
+
+A venda de balcão (`sale` e `sale_item`) recebe os itens do carrinho e a forma de
+pagamento; o valor total é calculado no backend a partir do preço de venda cadastrado.
+A venda só é concluída com um caixa aberto e quando todos os itens têm estoque
+suficiente. Ao concluir, o estoque de cada produto é baixado com uma movimentação
+`COUNTER_SALE` e, se o pagamento for em dinheiro, uma entrada é registrada no caixa.
+Todo o processo é transacional e usa bloqueio pessimista do caixa aberto e dos saldos
+de estoque, evitando venda acima do disponível em acessos concorrentes.
 
 ## Testes
 
