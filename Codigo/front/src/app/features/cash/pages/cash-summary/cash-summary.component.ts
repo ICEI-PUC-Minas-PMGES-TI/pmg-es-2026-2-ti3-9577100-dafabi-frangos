@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
+import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
 import { CashBalanceCardComponent } from '../../components/cash-balance-card/cash-balance-card.component';
@@ -11,9 +13,11 @@ import { CashService } from '../../services/cash.service';
 
 @Component({
   selector: 'app-cash-summary', standalone: true,
-  imports: [CurrencyPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, EmptyStateComponent, PageHeaderComponent, StatusChipComponent, CashBalanceCardComponent],
+  imports: [CurrencyPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent, StatusChipComponent, CashBalanceCardComponent],
   template: `<app-page-header eyebrow="Caixa" title="Resumo do caixa" subtitle="Valores e movimentações do atendimento atual."/>
-    @if(cash.register();as register){
+    @if(cash.loading()){<section class="surface"><app-loading-state label="Carregando resumo do caixa…"/></section>}
+    @else if(cash.error()){<app-error-state title="Caixa indisponível" [message]="cash.error()!"/><div class="retry"><button mat-stroked-button (click)="cash.refresh()">Tentar novamente</button></div>}
+    @else if(cash.register();as register){
       <div class="cash-status surface"><div><app-status-chip [status]="register.status"/><strong>{{register.operator}}</strong><span>{{register.status==='OPEN'?'Aberto':'Fechado'}} em {{(register.closedAt||register.openedAt)|date:'dd/MM/yyyy, HH:mm'}}</span></div>@if(register.status==='OPEN'){<a mat-flat-button class="primary-button" routerLink="/app/caixa/fechar"><mat-icon>lock</mat-icon>Fechar caixa</a>}@else{<a mat-flat-button class="primary-button" routerLink="/app/caixa/abrir"><mat-icon>lock_open</mat-icon>Abrir novo caixa</a>}</div>
       <section class="balance-grid"><app-cash-balance-card label="Saldo inicial" [value]="register.initialBalance" icon="account_balance_wallet"/><app-cash-balance-card label="Vendas em dinheiro" [value]="cash.cashSales()" icon="payments"/><app-cash-balance-card label="Despesas em dinheiro" [value]="cash.cashExpenses()" icon="receipt_long"/><app-cash-balance-card label="Estornos em dinheiro" [value]="cash.cashRefunds()" icon="undo"/><app-cash-balance-card label="Saldo esperado" [value]="cash.expected()" icon="calculate" [highlight]="true"/></section>
       <section class="surface movements"><div class="surface-header"><div><h2>Movimentações recentes</h2><span class="cell-meta">Entradas e saídas em dinheiro registradas neste caixa</span></div></div>@if(!cash.movements().length){<app-empty-state icon="swap_vert" title="Nenhuma movimentação" message="As movimentações em dinheiro aparecerão aqui."/>}@else{<div class="table-wrap"><table class="data-table"><thead><tr><th>Horário</th><th>Descrição</th><th>Origem</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>@for(m of cash.movements();track m.id){<tr><td>{{m.date|date:'HH:mm'}}</td><td class="cell-title">{{m.description}}</td><td>{{m.origin}}</td><td><span class="move-type" [class.out]="m.type==='OUT'"><mat-icon>{{m.type==='IN'?'south_west':'north_east'}}</mat-icon>{{m.type==='IN'?'Entrada':'Saída'}}</span></td><td class="money">{{m.amount|currency:'BRL':'symbol':'1.2-2':'pt-BR'}}</td></tr>}</tbody></table></div>}</section>

@@ -38,11 +38,10 @@ export class ExpenseListComponent {
   cancelExpense(id: string, name: string) {
     this.dialog.open(ConfirmationDialogComponent, { data: {
       title: 'Cancelar despesa?', message: `A despesa “${name}” deixará de impactar o resultado e o caixa.`,
-      confirmLabel: 'Cancelar despesa', destructive: true
+      confirmLabel: 'Cancelar despesa', destructive: true, confirmAction: () => this.service.cancel(id)
     }}).afterClosed().subscribe(async ok => {
       if (!ok) return;
       try {
-        await this.service.cancel(id);
         this.snack.open('Despesa cancelada.', 'Fechar', { duration: 3000 });
       } catch { this.snack.open('Despesas consolidadas não podem ser canceladas.', 'Fechar', { duration: 3500 }); }
     });

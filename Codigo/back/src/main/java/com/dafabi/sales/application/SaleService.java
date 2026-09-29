@@ -25,6 +25,8 @@ import com.dafabi.sales.repository.SaleRepository;
 import com.dafabi.shared.exception.BusinessException;
 import com.dafabi.shared.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -131,6 +133,14 @@ public class SaleService {
 
         sale.setSubtotal(subtotal);
         sale.setTotal(subtotal);
+        if (request.paymentMethod() == PaymentMethod.CASH
+                && request.amountReceived() != null
+                && request.amountReceived().compareTo(subtotal) < 0) {
+            throw new BusinessException(
+                    "INSUFFICIENT_AMOUNT",
+                    "O valor recebido é insuficiente para concluir a venda.",
+                    HttpStatus.BAD_REQUEST);
+        }
         Sale saved = saleRepository.save(sale);
 
         if (saved.getPaymentMethod() == PaymentMethod.CASH) {
@@ -153,6 +163,35 @@ public class SaleService {
         return saleRepository.findWithItemsById(id)
                 .map(saleMapper::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Venda", id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SaleResponse> findAll(String query,
+                                      OffsetDateTime startDate,
+                                      OffsetDateTime endDate,
+                                      SaleOrigin origin,
+                                      SaleStatus status,
+                                      PaymentMethod paymentMethod,
+                                      UUID operatorId,
+                                      Pageable pageable) {
+        String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
+        return saleRepository.findAllWithFilters(
+                        normalizedQuery,
+                        normalizedQuery != null,
+                        startDate,
+                        startDate != null,
+                        endDate,
+                        endDate != null,
+                        origin,
+                        origin != null,
+                        status,
+                        status != null,
+                        paymentMethod,
+                        paymentMethod != null,
+                        operatorId,
+                        operatorId != null,
+                        pageable)
+                .map(saleMapper::toResponse);
     }
 
     private UUID resolveOperator(CashRegister register, UUID requestedOperatorId) {
