@@ -172,6 +172,31 @@ class SaleControllerIT {
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItems("items", "paymentMethod")));
     }
 
+    @Test
+    @DisplayName("GET /sales deve listar vendas com paginação e filtros")
+    void shouldListSalesWithPaginationAndFilters() throws Exception {
+        openCashRegister();
+        CreateSaleRequest request = new CreateSaleRequest(List.of(
+                new SaleItemRequest(chicken.getId(), 1)
+        ), PaymentMethod.PIX);
+
+        mockMvc.perform(post("/sales")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/sales")
+                        .param("paymentMethod", "PIX")
+                        .param("origin", "COUNTER")
+                        .param("status", "COMPLETED")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.content[0].paymentMethod", is("PIX")));
+    }
+
     private CashRegister openCashRegister() {
         return cashRegisterRepository.save(new CashRegister(
                 null, null, operatorId, "Fabiana", new BigDecimal("100.00"), OffsetDateTime.now()));
