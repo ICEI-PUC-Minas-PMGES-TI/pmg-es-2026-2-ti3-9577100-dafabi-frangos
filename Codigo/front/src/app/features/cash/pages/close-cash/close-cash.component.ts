@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { CashService } from '../../services/cash.service';
+import { ApiError } from '../../../../core/http/api-error';
 
 @Component({ selector:'app-close-cash', standalone:true,
   imports:[CurrencyPipe,ReactiveFormsModule,MatButtonModule,MatFormFieldModule,MatIconModule,MatInputModule,PageHeaderComponent],
@@ -21,5 +22,5 @@ export class CloseCashComponent {
   constructor(){this.form.controls.countedBalance.valueChanges.subscribe(value=>{this.counted.set(value);this.updateValidator();});}
   difference(){return Math.round((this.counted()-this.cash.expected())*100)/100;}
   updateValidator(){this.form.controls.justification.setValidators(this.difference()!==0?[Validators.required,Validators.minLength(4)]:[]);this.form.controls.justification.updateValueAndValidity({emitEvent:false});}
-  async close(){this.updateValidator();if(this.form.invalid){this.form.markAllAsTouched();return;}this.saving.set(true);try{await this.cash.close(this.form.getRawValue());this.snack.open('Caixa fechado com sucesso.','Fechar',{duration:3500});await this.router.navigate(['/app/caixa/resumo']);}finally{this.saving.set(false);}}
+  async close(){this.updateValidator();if(this.form.invalid){this.form.markAllAsTouched();return;}this.saving.set(true);try{await this.cash.close(this.form.getRawValue());this.snack.open('Caixa fechado com sucesso.','Fechar',{duration:3500});await this.router.navigate(['/app/caixa/resumo']);}catch(error){this.snack.open(error instanceof ApiError?error.message:'Não foi possível fechar o caixa.','Fechar',{duration:4500});}finally{this.saving.set(false);}}
 }
