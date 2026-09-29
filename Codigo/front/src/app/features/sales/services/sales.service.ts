@@ -1,33 +1,67 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { Product, Sale, SaleItem, StockMovement } from '../../../core/models/domain.models';
-import { MockDatabaseService } from '../../../core/services/mock-database.service';
+import { ApiError } from '../../../core/http/api-error';
+import { Product, Sale, SaleItem } from '../../../core/models/domain.models';
+import { ProductsApiService } from '../../products/services/products-api.service';
+import { toProduct } from '../../products/services/products.mapper';
 import { PaymentRequest } from '../models/sales.models';
+import { SaleQuery } from '../models/sales-api.models';
+import { SalesApiService } from './sales-api.service';
+import { toSale } from './sales.mapper';
+import { CashService } from '../../cash/services/cash.service';
 
 export type CartError = 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_QUANTITY' | 'EMPTY_CART' | 'INSUFFICIENT_AMOUNT' | 'CASH_CLOSED';
 
+const STORE_ID = '00000000-0000-0000-0000-000000000001';
+
 @Injectable({ providedIn: 'root' })
 export class SalesService {
+  private readonly api = inject(SalesApiService);
+  private readonly productsApi = inject(ProductsApiService);
+  private readonly auth = inject(AuthService);
+  private readonly cash = inject(CashService);
   private readonly cartState = signal<SaleItem[]>([]);
   readonly cart = this.cartState.asReadonly();
+  readonly products = signal<Product[]>([]);
+  readonly sales = signal<Sale[]>([]);
   readonly total = computed(() => this.cartState().reduce((sum, item) => sum + item.subtotal, 0));
   readonly itemCount = computed(() => this.cartState().reduce((sum, item) => sum + item.quantity, 0));
-  readonly products = this.db.products.asReadonly();
-  readonly sales = this.db.sales.asReadonly();
-  readonly cashOpen = computed(() => this.db.cashRegister()?.status === 'OPEN');
+  readonly cashOpen = computed(() => this.cash.cashOpen());
+  readonly loadingProducts = signal(false);
+  readonly productsError = signal<string | null>(null);
+  readonly loadingSales = signal(false);
+  readonly salesError = signal<string | null>(null);
+  readonly pageState = signal({ page: 0, size: 20, totalElements: 0, totalPages: 0 });
 
-  constructor(private readonly db: MockDatabaseService, private readonly auth: AuthService) {}
+  async loadProducts(query = ''): Promise<void> {
+    this.loadingProducts.set(true);
+    this.productsError.set(null);
+    try {
+      const response = await firstValueFrom(this.productsApi.list({ query, status: 'ACTIVE', page: 0, size: 100 }));
+      this.products.set(response.content.map(toProduct));
+    } catch (error) {
+      this.productsError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar os produtos.');
+    } finally {
+      this.loadingProducts.set(false);
+    }
+  }
 
   findProducts(query: string): Product[] {
     const normalized = query.trim().toLowerCase();
-    return this.db.products().filter(product => product.status === 'ACTIVE' &&
+    return this.products().filter(product => product.status === 'ACTIVE' &&
       (!normalized || `${product.name} ${product.category} ${product.barcode ?? ''}`.toLowerCase().includes(normalized)));
   }
 
-  addByBarcode(barcode: string): void {
-    const product = this.db.products().find(item => item.barcode === barcode && item.status === 'ACTIVE');
-    if (!product) throw new Error('PRODUCT_NOT_FOUND');
-    this.addProduct(product);
+  async addByBarcode(barcode: string): Promise<void> {
+    try {
+      const product = toProduct(await firstValueFrom(this.productsApi.getByBarcode(barcode)));
+      this.upsertProduct(product);
+      this.addProduct(product);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) throw new Error('PRODUCT_NOT_FOUND');
+      throw error;
+    }
   }
 
   addProduct(product: Product): void {
@@ -45,7 +79,7 @@ export class SalesService {
   }
 
   changeQuantity(productId: string, delta: number): void {
-    const product = this.db.products().find(item => item.id === productId);
+    const product = this.products().find(item => item.id === productId);
     const cartItem = this.cartState().find(item => item.productId === productId);
     if (!product || !cartItem) return;
     const quantity = cartItem.quantity + delta;
@@ -62,38 +96,44 @@ export class SalesService {
     if (!this.cashOpen()) throw new Error('CASH_CLOSED');
     if (!this.cartState().length) throw new Error('EMPTY_CART');
     if (payment.method === 'CASH' && (payment.received ?? 0) < this.total()) throw new Error('INSUFFICIENT_AMOUNT');
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    const total = this.total();
-    const now = new Date().toISOString();
-    const sale: Sale = {
-      id: `v${Date.now()}`, number: `#${1045 + this.db.sales().length}`, createdAt: now,
-      operator: this.auth.currentUser()?.name ?? 'Operador', origin: 'COUNTER',
-      payment: { method: payment.method, amount: total, received: payment.received,
-        change: payment.method === 'CASH' ? (payment.received ?? 0) - total : undefined },
-      items: [...this.cartState()], gross: total, discount: 0, fees: 0, net: total,
-      status: 'COMPLETED', history: ['Venda criada no PDV', 'Pagamento confirmado', 'Estoque atualizado']
-    };
-
-    const movements: StockMovement[] = [];
-    this.db.products.update(products => products.map(product => {
-      const sold = sale.items.find(item => item.productId === product.id);
-      if (!sold) return product;
-      movements.push({
-        id: `mov-${sale.id}-${product.id}`, productId: product.id, productName: product.name,
-        date: now, previousQuantity: product.stock, newQuantity: product.stock - sold.quantity,
-        difference: -sold.quantity, origin: 'Venda balcão', user: sale.operator,
-        reason: `Venda ${sale.number} concluída`
-      });
-      return { ...product, stock: product.stock - sold.quantity };
+    const user = this.auth.currentUser();
+    if (!user) throw new Error('CASH_CLOSED');
+    const response = await firstValueFrom(this.api.create({
+      items: this.cartState().map(item => ({ productId: item.productId, quantity: item.quantity })),
+      paymentMethod: payment.method,
+      amountReceived: payment.received,
+      storeId: STORE_ID,
+      operatorId: user.id
     }));
-    this.db.movements.update(items => [...movements, ...items]);
-    this.db.sales.update(sales => [sale, ...sales]);
-    if (payment.method === 'CASH') this.db.cashMovements.update(items => [{
-      id: `m${Date.now()}`, referenceId: sale.id, date: sale.createdAt,
-      description: `Venda ${sale.number}`, type: 'IN', amount: total, origin: 'Dinheiro'
-    }, ...items]);
+    const sale = toSale(response);
+    this.sales.update(items => [sale, ...items.filter(item => item.id !== sale.id)]);
     this.cartState.set([]);
+    await this.loadProducts();
+    await this.cash.refresh();
     return sale;
+  }
+
+  async loadHistory(query: SaleQuery = {}): Promise<void> {
+    this.loadingSales.set(true);
+    this.salesError.set(null);
+    try {
+      const response = await firstValueFrom(this.api.list(query));
+      this.sales.set(response.content.map(toSale));
+      this.pageState.set({ page: response.number, size: response.size, totalElements: response.totalElements, totalPages: response.totalPages });
+    } catch (error) {
+      this.salesError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar o histórico de vendas.');
+    } finally {
+      this.loadingSales.set(false);
+    }
+  }
+
+  async findById(id: string): Promise<Sale> {
+    const sale = toSale(await firstValueFrom(this.api.getById(id)));
+    this.sales.update(items => [sale, ...items.filter(item => item.id !== sale.id)]);
+    return sale;
+  }
+
+  private upsertProduct(product: Product): void {
+    this.products.update(items => [product, ...items.filter(item => item.id !== product.id)]);
   }
 }
