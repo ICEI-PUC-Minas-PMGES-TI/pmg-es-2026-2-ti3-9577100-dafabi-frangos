@@ -3,6 +3,10 @@ import { Router } from '@angular/router';
 import { User } from '../models/domain.models';
 
 const SESSION_KEY = 'dafabi.session';
+const DEMO_USER_IDS = {
+  ADMIN: '00000000-0000-0000-0000-000000000101',
+  CASHIER: '00000000-0000-0000-0000-000000000102'
+} as const;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -21,10 +25,10 @@ export class AuthService {
     let user: User | undefined;
 
     if (['admin', 'admin@dafabi.com.br'].includes(identifier.trim().toLowerCase()) && digest === adminHash) {
-      user = { id: 'u1', name: 'Fabiana Nogueira', email: 'admin@dafabi.com.br', role: 'ADMIN', active: true };
+      user = { id: DEMO_USER_IDS.ADMIN, name: 'Fabiana Nogueira', email: 'admin@dafabi.com.br', role: 'ADMIN', active: true };
     }
     if (['caixa', 'caixa@dafabi.com.br'].includes(identifier.trim().toLowerCase()) && digest === cashierHash) {
-      user = { id: 'u2', name: 'Carlos Oliveira', email: 'caixa@dafabi.com.br', role: 'CASHIER', active: true };
+      user = { id: DEMO_USER_IDS.CASHIER, name: 'Carlos Oliveira', email: 'caixa@dafabi.com.br', role: 'CASHIER', active: true };
     }
     if (!user) throw new Error('INVALID_CREDENTIALS');
 
@@ -50,7 +54,10 @@ export class AuthService {
         sessionStorage.removeItem(SESSION_KEY);
         return null;
       }
-      return { id: stored.id, name: stored.name, email: stored.email, role, active: stored.active !== false };
+      const id = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(stored.id)
+        ? stored.id
+        : role === 'ADMIN' ? DEMO_USER_IDS.ADMIN : DEMO_USER_IDS.CASHIER;
+      return { id, name: stored.name, email: stored.email, role, active: stored.active !== false };
     } catch {
       sessionStorage.removeItem(SESSION_KEY);
       return null;
