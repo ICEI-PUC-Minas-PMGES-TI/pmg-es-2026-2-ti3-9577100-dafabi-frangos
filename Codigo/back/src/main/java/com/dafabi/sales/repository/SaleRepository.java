@@ -27,22 +27,30 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     @Query("""
         select s from Sale s
-        where (:query is null or str(s.saleNumber) like concat('%', :query, '%'))
-          and (:startDate is null or s.dateTime >= :startDate)
-          and (:endDate is null or s.dateTime <= :endDate)
-          and (:origin is null or s.origin = :origin)
-          and (:status is null or s.status = :status)
-          and (:paymentMethod is null or s.paymentMethod = :paymentMethod)
-          and (:operatorId is null or s.operatorId = :operatorId)
+        where (:hasQuery = false
+               or cast(s.saleNumber as string) like concat('%', cast(:query as string), '%'))
+          and (:hasStartDate = false or s.dateTime >= :startDate)
+          and (:hasEndDate = false or s.dateTime <= :endDate)
+          and (:hasOrigin = false or s.origin = :origin)
+          and (:hasStatus = false or s.status = :status)
+          and (:hasPaymentMethod = false or s.paymentMethod = :paymentMethod)
+          and (:hasOperatorId = false or s.operatorId = :operatorId)
         order by s.dateTime desc
         """)
     Page<Sale> findAllWithFilters(
             @Param("query") String query,
+            @Param("hasQuery") boolean hasQuery,
             @Param("startDate") OffsetDateTime startDate,
+            @Param("hasStartDate") boolean hasStartDate,
             @Param("endDate") OffsetDateTime endDate,
+            @Param("hasEndDate") boolean hasEndDate,
             @Param("origin") SaleOrigin origin,
+            @Param("hasOrigin") boolean hasOrigin,
             @Param("status") SaleStatus status,
+            @Param("hasStatus") boolean hasStatus,
             @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("hasPaymentMethod") boolean hasPaymentMethod,
             @Param("operatorId") UUID operatorId,
+            @Param("hasOperatorId") boolean hasOperatorId,
             Pageable pageable);
 }

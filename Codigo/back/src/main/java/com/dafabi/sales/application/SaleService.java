@@ -176,7 +176,21 @@ public class SaleService {
                                       Pageable pageable) {
         String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
         return saleRepository.findAllWithFilters(
-                        normalizedQuery, startDate, endDate, origin, status, paymentMethod, operatorId, pageable)
+                        normalizedQuery,
+                        normalizedQuery != null,
+                        startDate,
+                        startDate != null,
+                        endDate,
+                        endDate != null,
+                        origin,
+                        origin != null,
+                        status,
+                        status != null,
+                        paymentMethod,
+                        paymentMethod != null,
+                        operatorId,
+                        operatorId != null,
+                        pageable)
                 .map(saleMapper::toResponse);
     }
 
