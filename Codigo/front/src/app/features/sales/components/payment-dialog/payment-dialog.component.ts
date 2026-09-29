@@ -6,21 +6,24 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ApiError } from '../../../../core/http/api-error';
 import { PaymentMethod, SaleItem } from '../../../../core/models/domain.models';
 import { PaymentRequest } from '../../models/sales.models';
 
-export interface PaymentDialogData { total: number; items: SaleItem[]; }
+export interface PaymentDialogData { total: number; items: SaleItem[]; onConfirm?: (request: PaymentRequest) => Promise<unknown>; }
+export interface PaymentDialogResult { request: PaymentRequest; result?: unknown; }
 
 @Component({
   selector: 'app-payment-dialog', standalone: true,
-  imports: [CurrencyPipe, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [CurrencyPipe, ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
   template: `
     <div class="payment-dialog">
-      <header><div><p class="eyebrow">Finalizar venda</p><h2>Pagamento</h2></div><button mat-icon-button (click)="ref.close()" aria-label="Fechar"><mat-icon>close</mat-icon></button></header>
+      <header><div><p class="eyebrow">Finalizar venda</p><h2>Pagamento</h2></div><button mat-icon-button [disabled]="processing()" (click)="ref.close()" aria-label="Fechar"><mat-icon>close</mat-icon></button></header>
       <div class="payment-total"><span>Total a receber</span><strong>{{ data.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>{{ data.items.length }} produto(s) no carrinho</small></div>
       <section>
         <h3>Forma de pagamento</h3>
-        <div class="payment-methods">@for (method of methods; track method.value) { <button type="button" [class.active]="selected() === method.value" (click)="selected.set(method.value)"><mat-icon>{{ method.icon }}</mat-icon><span>{{ method.label }}</span></button> }</div>
+        <div class="payment-methods">@for (method of methods; track method.value) { <button type="button" [disabled]="processing()" [class.active]="selected() === method.value" (click)="selected.set(method.value)"><mat-icon>{{ method.icon }}</mat-icon><span>{{ method.label }}</span></button> }</div>
         @if (selected() === 'CASH') {
           <div class="cash-fields">
             <mat-form-field appearance="outline"><mat-label>Valor recebido</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0" step="0.01" [formControl]="received"></mat-form-field>
@@ -29,21 +32,34 @@ export interface PaymentDialogData { total: number; items: SaleItem[]; }
           </div>
         }
         <div class="summary-line"><span>Resumo</span><strong>{{ data.items.length }} produto(s) · {{ itemUnits }} unidade(s)</strong></div>
+        @if (error()) { <div class="dialog-error" role="alert"><mat-icon>error</mat-icon><span>{{ error() }}</span></div> }
       </section>
-      <footer><button mat-button (click)="ref.close()">Voltar</button><button mat-flat-button class="primary-button" [disabled]="processing()" (click)="confirm()">@if (processing()) { <span>Processando…</span> } @else { <span>Confirmar pagamento</span><mat-icon>check_circle</mat-icon> }</button></footer>
+      <footer><button mat-button [disabled]="processing()" (click)="ref.close()">Voltar</button><button mat-flat-button class="primary-button" [disabled]="processing()" (click)="confirm()">@if (processing()) { <mat-progress-spinner diameter="18" mode="indeterminate"/><span>Processando…</span> } @else { <span>Confirmar pagamento</span><mat-icon>check_circle</mat-icon> }</button></footer>
     </div>`,
   styles: [`
-    .payment-dialog{width:min(560px,90vw)}header{display:flex;justify-content:space-between;align-items:center;padding:22px 24px 12px}header h2{margin:3px 0 0;font-size:1.6rem}.payment-total{margin:0 24px;padding:17px 20px;border-radius:12px;background:var(--yellow-light);display:grid;grid-template-columns:1fr auto;align-items:center}.payment-total span{font-size:.78rem;font-weight:700}.payment-total strong{font-size:1.65rem;color:var(--red-dark);grid-row:span 2}.payment-total small{color:#76520e;margin-top:3px}section{padding:20px 24px}section h3{font-size:.8rem;margin:0 0 10px}.payment-methods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.payment-methods button{height:80px;border:1px solid var(--border);background:white;border-radius:10px;display:grid;place-items:center;align-content:center;gap:6px;cursor:pointer}.payment-methods button.active{border:2px solid var(--red);background:#fff7f5;color:var(--red-dark)}.payment-methods span{font-size:.72rem;font-weight:700}.cash-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.change{height:56px;border:1px solid var(--border);border-radius:8px;padding:8px 14px}.change span,.change strong{display:block}.change span{color:var(--muted);font-size:.7rem}.change strong{margin-top:3px}.change.invalid strong{color:var(--red)}.field-error{grid-column:1/-1;color:var(--red-dark);font-size:.75rem;display:flex;align-items:center;margin:0}.field-error mat-icon{font-size:17px;width:17px;height:17px}.summary-line{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.76rem}.summary-line span{color:var(--muted)}footer{padding:14px 24px 22px;display:flex;justify-content:flex-end;gap:8px}@media(max-width:520px){.payment-methods{grid-template-columns:repeat(2,1fr)}.cash-fields{grid-template-columns:1fr}}
+    .payment-dialog{width:min(560px,90vw)}header{display:flex;justify-content:space-between;align-items:center;padding:22px 24px 12px}header h2{margin:3px 0 0;font-size:1.6rem}.payment-total{margin:0 24px;padding:17px 20px;border-radius:12px;background:var(--yellow-light);display:grid;grid-template-columns:1fr auto;align-items:center}.payment-total span{font-size:.78rem;font-weight:700}.payment-total strong{font-size:1.65rem;color:var(--red-dark);grid-row:span 2}.payment-total small{color:#76520e;margin-top:3px}section{padding:20px 24px}section h3{font-size:.8rem;margin:0 0 10px}.payment-methods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.payment-methods button{height:80px;border:1px solid var(--border);background:white;border-radius:10px;display:grid;place-items:center;align-content:center;gap:6px;cursor:pointer}.payment-methods button.active{border:2px solid var(--red);background:#fff7f5;color:var(--red-dark)}.payment-methods span{font-size:.72rem;font-weight:700}.cash-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.change{height:56px;border:1px solid var(--border);border-radius:8px;padding:8px 14px}.change span,.change strong{display:block}.change span{color:var(--muted);font-size:.7rem}.change strong{margin-top:3px}.change.invalid strong{color:var(--red)}.field-error{grid-column:1/-1;color:var(--red-dark);font-size:.75rem;display:flex;align-items:center;margin:0}.field-error mat-icon{font-size:17px;width:17px;height:17px}.summary-line{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.76rem}.summary-line span{color:var(--muted)}.dialog-error{display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:10px 12px;border-radius:8px;background:#fff0ee;color:var(--red-dark);font-size:.78rem}.dialog-error mat-icon{font-size:18px;width:18px;height:18px}footer{padding:14px 24px 22px;display:flex;justify-content:flex-end;gap:8px}.primary-button{display:inline-flex;align-items:center;gap:8px}.primary-button mat-progress-spinner{--mdc-circular-progress-active-indicator-color:white}@media(max-width:520px){.payment-methods{grid-template-columns:repeat(2,1fr)}.cash-fields{grid-template-columns:1fr}}
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaymentDialogComponent {
   readonly data = inject<PaymentDialogData>(MAT_DIALOG_DATA);
   readonly ref = inject(MatDialogRef<PaymentDialogComponent>);
-  readonly selected = signal<PaymentMethod>('PIX'); readonly processing = signal(false);
+  readonly selected = signal<PaymentMethod>('PIX'); readonly processing = signal(false); readonly error = signal<string | null>(null);
   readonly received = new FormControl<number | null>(null, [Validators.min(0)]);
   readonly methods = [{ value: 'CASH' as const, label: 'Dinheiro', icon: 'payments' }, { value: 'PIX' as const, label: 'Pix', icon: 'qr_code_2' }, { value: 'DEBIT' as const, label: 'Débito', icon: 'credit_card' }, { value: 'CREDIT' as const, label: 'Crédito', icon: 'credit_score' }];
   change(): number { return (this.received.value ?? 0) - this.data.total; }
   get itemUnits(): number { return this.data.items.reduce((sum, item) => sum + item.quantity, 0); }
-  confirm(): void { if (this.selected() === 'CASH' && (this.received.value ?? 0) < this.data.total) { this.received.markAsTouched(); return; } this.processing.set(true); setTimeout(() => this.ref.close({ method: this.selected(), received: this.received.value ?? undefined } satisfies PaymentRequest), 300); }
+  async confirm(): Promise<void> {
+    if (this.selected() === 'CASH' && (this.received.value ?? 0) < this.data.total) { this.received.markAsTouched(); return; }
+    this.processing.set(true);
+    this.error.set(null);
+    const request = { method: this.selected(), received: this.received.value ?? undefined } satisfies PaymentRequest;
+    try {
+      const result = this.data.onConfirm ? await this.data.onConfirm(request) : undefined;
+      this.ref.close({ request, result } satisfies PaymentDialogResult);
+    } catch (error) {
+      this.error.set(error instanceof ApiError ? error.message : 'Não foi possível concluir o pagamento.');
+      this.processing.set(false);
+    }
+  }
 }

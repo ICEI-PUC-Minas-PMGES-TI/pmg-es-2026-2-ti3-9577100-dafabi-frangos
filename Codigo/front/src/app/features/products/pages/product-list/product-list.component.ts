@@ -63,10 +63,9 @@ export class ProductListComponent {
   }
 
   inactivate(id: string, name: string): void {
-    this.dialog.open(ConfirmationDialogComponent, { data: { title: 'Inativar produto?', message: `${name} deixará de aparecer para novas vendas. O histórico será mantido.`, confirmLabel: 'Inativar', destructive: true }, width: '420px' }).afterClosed().subscribe(async ok => {
+    this.dialog.open(ConfirmationDialogComponent, { data: { title: 'Inativar produto?', message: `${name} deixará de aparecer para novas vendas. O histórico será mantido.`, confirmLabel: 'Inativar', destructive: true, confirmAction: () => this.service.inactivate(id) }, width: '420px' }).afterClosed().subscribe(async ok => {
       if (!ok) return;
       try {
-        await this.service.inactivate(id);
         this.snack.open('Produto inativado com sucesso.', 'Fechar', { duration: 3500 });
         await this.load();
       } catch (error) {

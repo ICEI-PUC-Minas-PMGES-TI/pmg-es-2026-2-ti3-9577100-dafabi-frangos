@@ -12,7 +12,6 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { ConfirmationDialogComponent } from '../../../../shared/components/confirmation-dialog/confirmation-dialog.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { CashService } from '../../services/cash.service';
-import { ApiError } from '../../../../core/http/api-error';
 
 @Component({ selector:'app-open-cash',standalone:true,
   imports:[DatePipe,ReactiveFormsModule,MatButtonModule,MatFormFieldModule,MatIconModule,MatInputModule,PageHeaderComponent],
@@ -27,8 +26,17 @@ export class OpenCashComponent {
   open(){
     if(this.form.invalid){this.form.markAllAsTouched();return;}
     const balance=this.form.controls.initialBalance.value;
-    this.dialog.open(ConfirmationDialogComponent,{data:{title:'Confirmar abertura do caixa?',message:`O caixa será aberto com saldo inicial de R$ ${balance.toFixed(2).replace('.',',')}.`,confirmLabel:'Abrir caixa'}}).afterClosed().subscribe(async ok=>{
-      if(!ok)return;this.saving.set(true);try{await this.cash.open(this.form.getRawValue());this.snack.open('Caixa aberto com sucesso.','Fechar',{duration:3500});await this.router.navigate(['/app/caixa/resumo']);}catch(error){this.snack.open(error instanceof ApiError?error.message:'Não foi possível abrir o caixa.','Fechar',{duration:4500});}finally{this.saving.set(false);}
+    this.dialog.open(ConfirmationDialogComponent, { data: {
+      title: 'Confirmar abertura do caixa?',
+      message: `O caixa será aberto com saldo inicial de R$ ${balance.toFixed(2).replace('.', ',')}.`,
+      confirmLabel: 'Abrir caixa',
+      confirmAction: async () => {
+        this.saving.set(true);
+        try { await this.cash.open(this.form.getRawValue()); }
+        finally { this.saving.set(false); }
+      }
+    }}).afterClosed().subscribe(async ok=>{
+      if(!ok)return;this.snack.open('Caixa aberto com sucesso.','Fechar',{duration:3500});await this.router.navigate(['/app/caixa/resumo']);
     });
   }
 }
