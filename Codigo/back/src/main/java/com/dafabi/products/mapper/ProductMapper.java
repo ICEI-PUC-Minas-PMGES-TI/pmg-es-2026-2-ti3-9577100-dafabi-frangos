@@ -103,6 +103,7 @@ public class ProductMapper {
                 stockQuantity,
                 product.getUnit(),
                 product.getBarcode(),
+                product.isFrequent(),
                 product.getStatus());
     }
 

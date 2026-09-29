@@ -14,7 +14,9 @@ export function toProduct(api: ApiProduct | ApiProductListItem): Product {
     unit: api.unit,
     barcode: api.barcode ?? undefined,
     perishable: 'perishable' in api ? api.perishable : false,
-    frequent: 'frequent' in api ? api.frequent : false,
+    // A lista de produtos de versões anteriores da API não trazia este campo.
+    // Nesse caso, mantemos o produto disponível no PDV até a API ser atualizada.
+    frequent: 'frequent' in api ? api.frequent !== false : true,
     status: api.status,
     version: 'version' in api ? api.version : undefined
   };

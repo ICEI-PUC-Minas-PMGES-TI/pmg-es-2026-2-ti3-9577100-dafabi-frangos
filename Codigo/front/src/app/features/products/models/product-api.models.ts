@@ -30,6 +30,7 @@ export interface ApiProductListItem {
   stockQuantity: number;
   unit: string;
   barcode: string | null;
+  frequent?: boolean;
   status: ProductStatus;
 }
 

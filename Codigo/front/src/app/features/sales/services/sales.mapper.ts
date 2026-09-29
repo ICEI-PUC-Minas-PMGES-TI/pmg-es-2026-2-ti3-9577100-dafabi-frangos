@@ -1,6 +1,17 @@
 import { Sale, SaleItem } from '../../../core/models/domain.models';
 import { ApiSale, ApiSaleItem } from '../models/sales-api.models';
 
+const DEMO_OPERATOR_NAMES: Record<string, string> = {
+  '00000000-0000-0000-0000-000000000101': 'Fabiana Nogueira',
+  '00000000-0000-0000-0000-000000000102': 'Carlos Oliveira'
+};
+
+function operatorLabel(operatorId: string, origin: ApiSale['origin']): string {
+  if (origin === 'IFOOD') return 'Integração iFood';
+  if (origin === 'FOOD_99') return 'Integração 99Food';
+  return DEMO_OPERATOR_NAMES[operatorId] ?? 'Operador de caixa';
+}
+
 function toItem(api: ApiSaleItem): SaleItem {
   return {
     productId: api.productId,
@@ -18,7 +29,7 @@ export function toSale(api: ApiSale): Sale {
     id: api.id,
     number: `#${api.saleNumber}`,
     createdAt: api.dateTime,
-    operator: api.operatorId,
+    operator: operatorLabel(api.operatorId, api.origin),
     origin: api.origin === 'FOOD_99' ? '99FOOD' : api.origin,
     payment: {
       method: api.paymentMethod,
