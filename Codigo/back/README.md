@@ -1,6 +1,6 @@
 # DaFabi Frangos — Backend
 
-API Spring Boot da primeira versão do sistema. Nesta etapa, disponibiliza os domínios de **Produtos** e **Estoque**, persistidos em PostgreSQL e versionados com Flyway.
+API Spring Boot da primeira versão do sistema. Nesta etapa, disponibiliza os domínios de **Produtos**, **Estoque**, **Caixa**, **Vendas** e **Fornecedores**, persistidos em PostgreSQL e versionados com Flyway.
 
 ## Pré-requisitos
 
@@ -58,6 +58,11 @@ A API fica em `http://localhost:8080/api/v1`.
 - `POST /api/v1/cash-registers/{id}/movements`
 - `POST /api/v1/sales`
 - `GET /api/v1/sales/{id}`
+- `GET /api/v1/suppliers?query=&active=`
+- `GET /api/v1/suppliers/{id}`
+- `POST /api/v1/suppliers`
+- `PUT /api/v1/suppliers/{id}`
+- `PATCH /api/v1/suppliers/{id}/status`
 
 ## Estoque
 
@@ -84,6 +89,12 @@ suficiente. Ao concluir, o estoque de cada produto é baixado com uma movimenta�
 `COUNTER_SALE` e, se o pagamento for em dinheiro, uma entrada é registrada no caixa.
 Todo o processo é transacional e usa bloqueio pessimista do caixa aberto e dos saldos
 de estoque, evitando venda acima do disponível em acessos concorrentes.
+
+## Fornecedores
+
+O domínio de Fornecedores (`supplier`) gerencia o cadastro, consulta, busca e atualização
+dos parceiros que abastecem a loja, garantindo unicidade de e-mail (`lower(email)`) por
+estabelecimento e inativação lógica (`active`) sem exclusão física.
 
 ## Testes
 
