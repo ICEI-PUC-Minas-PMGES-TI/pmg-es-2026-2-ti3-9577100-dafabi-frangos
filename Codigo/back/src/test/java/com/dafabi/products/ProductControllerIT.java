@@ -194,4 +194,35 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.id", is(id)))
                 .andExpect(jsonPath("$.name", is("Moela de Frango")));
     }
+
+    @Test
+    @DisplayName("GET /products - Deve retornar a configuração de produto frequente na listagem")
+    void shouldReturnFrequentFlagInProductList() throws Exception {
+        CreateProductRequest request = new CreateProductRequest(
+                "Frango para o PDV",
+                savedCategory.getId(),
+                new BigDecimal("42.90"),
+                new BigDecimal("24.50"),
+                "UN",
+                null,
+                true,
+                true,
+                ProductStatus.ACTIVE,
+                18
+        );
+
+        mockMvc.perform(post("/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/products")
+                        .param("status", "ACTIVE")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].frequent", is(true)))
+                .andExpect(jsonPath("$.content[0].stockQuantity", is(18)));
+    }
 }
