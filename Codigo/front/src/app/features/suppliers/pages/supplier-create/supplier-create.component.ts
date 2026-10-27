@@ -1,1 +1,19 @@
-import{ChangeDetectionStrategy,Component,inject,signal}from'@angular/core';import{Router}from'@angular/router';import{MatSnackBar}from'@angular/material/snack-bar';import{PageHeaderComponent}from'../../../../shared/components/page-header/page-header.component';import{SupplierFormComponent}from'../../components/supplier-form/supplier-form.component';import{SupplierFormValue}from'../../models/supplier.models';import{SuppliersService}from'../../services/suppliers.service';@Component({selector:'app-supplier-create',standalone:true,imports:[PageHeaderComponent,SupplierFormComponent],template:`<app-page-header eyebrow="Fornecedores" title="Novo fornecedor" subtitle="Cadastre os dados de contato do parceiro."/><app-supplier-form [saving]="saving()" (saved)="save($event)" (cancel)="router.navigate(['/app/fornecedores'])"/>`,changeDetection:ChangeDetectionStrategy.OnPush})export class SupplierCreateComponent{readonly router=inject(Router);private readonly service=inject(SuppliersService);private readonly snack=inject(MatSnackBar);readonly saving=signal(false);async save(v:SupplierFormValue){this.saving.set(true);await this.service.save(v);this.snack.open('Fornecedor cadastrado com sucesso.','Fechar',{duration:3500});await this.router.navigate(['/app/fornecedores'])}}
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ApiError } from '../../../../core/http/api-error';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SupplierFormComponent } from '../../components/supplier-form/supplier-form.component';
+import { SupplierFormValue } from '../../models/supplier.models';
+import { SuppliersService } from '../../services/suppliers.service';
+
+@Component({ selector: 'app-supplier-create', standalone: true, imports: [PageHeaderComponent, SupplierFormComponent], template: `<app-page-header eyebrow="Fornecedores" title="Novo fornecedor" subtitle="Cadastre os dados de contato do parceiro."/><app-supplier-form [saving]="saving()" (saved)="save($event)" (cancel)="router.navigate(['/app/fornecedores'])"/>`, changeDetection: ChangeDetectionStrategy.OnPush })
+export class SupplierCreateComponent {
+  readonly router = inject(Router); private readonly service = inject(SuppliersService); private readonly snack = inject(MatSnackBar); readonly saving = signal(false);
+  async save(value: SupplierFormValue): Promise<void> {
+    this.saving.set(true);
+    try { await this.service.save(value); this.snack.open('Fornecedor cadastrado com sucesso.', 'Fechar', { duration: 3500 }); await this.router.navigate(['/app/fornecedores']); }
+    catch (error) { this.snack.open(error instanceof ApiError ? error.message : 'Não foi possível salvar o fornecedor.', 'Fechar', { duration: 4500 }); }
+    finally { this.saving.set(false); }
+  }
+}
