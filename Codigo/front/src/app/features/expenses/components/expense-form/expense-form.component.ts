@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Expense, PaymentMethod } from '../../../../core/models/domain.models';
+import { toDateInputValue } from '../../../../shared/utils/date.utils';
 import { ExpenseFormValue } from '../../models/expense.models';
 
 @Component({
@@ -33,7 +34,7 @@ export class ExpenseFormComponent {
     description: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(3)] }),
     category: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     amount: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(.01)] }),
-    date: new FormControl('2026-09-15', { nonNullable: true, validators: [Validators.required] }),
+    date: new FormControl(toDateInputValue(), { nonNullable: true, validators: [Validators.required] }),
     paymentMethod: new FormControl<PaymentMethod>('PIX', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
     status: new FormControl<'PENDING' | 'CONSOLIDATED' | 'CANCELED'>('PENDING', { nonNullable: true })
