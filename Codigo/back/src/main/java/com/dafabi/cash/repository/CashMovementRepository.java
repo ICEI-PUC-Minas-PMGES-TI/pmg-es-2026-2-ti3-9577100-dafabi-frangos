@@ -13,4 +13,6 @@ public interface CashMovementRepository extends JpaRepository<CashMovement, UUID
     List<CashMovement> findByCashRegister_IdOrderByOccurredAtDesc(UUID cashRegisterId);
 
     List<CashMovement> findByCashRegister_IdOrderByOccurredAtAsc(UUID cashRegisterId);
+
+    List<CashMovement> findByReferenceTypeAndReferenceId(String referenceType, UUID referenceId);
 }

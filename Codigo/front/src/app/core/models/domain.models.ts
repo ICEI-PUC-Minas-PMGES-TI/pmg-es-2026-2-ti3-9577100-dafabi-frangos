@@ -1,8 +1,9 @@
 export type Role = 'ADMIN' | 'CASHIER';
 export type SaleOrigin = 'COUNTER' | 'IFOOD' | '99FOOD';
-export type PaymentMethod = 'CASH' | 'PIX' | 'DEBIT' | 'CREDIT';
+export type PaymentMethod = 'CASH' | 'PIX' | 'DEBIT' | 'CREDIT' | 'BOLETO_TRANSFER';
 export type SaleStatus = 'OPEN' | 'COMPLETED' | 'CANCELED' | 'REFUNDED';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE';
+export type PurchaseStatus = 'REGISTERED' | 'CANCELED';
 
 export interface User { id: string; name: string; email: string; role: Role; active: boolean; passwordHash?: string; }
 export interface Category { id: string; name: string; }
@@ -14,7 +15,7 @@ export interface CashRegister { id: string; operator: string; openedAt: string; 
 export interface CashMovement { id: string; date: string; description: string; type: 'IN' | 'OUT'; amount: number; origin: string; referenceId?: string; }
 export interface Supplier { id: string; name: string; phone: string; email: string; notes?: string; active: boolean; }
 export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; }
-export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; total: number; status: 'REGISTERED' | 'CANCELED'; }
+export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; total: number; status: PurchaseStatus; }
 export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; }
 export interface StockMovement { id: string; productId: string; productName: string; date: string; previousQuantity: number; newQuantity: number; difference: number; origin: string; user: string; reason: string; }
 export interface PerishableProduct { id: string; productId: string; productName: string; batch: string; receivedAt: string; expiry: string; quantity: number; status: 'VALID' | 'EXPIRED' | 'USED'; }

@@ -1,53 +1,42 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { Purchase, StockMovement } from '../../../core/models/domain.models';
-import { MockDatabaseService } from '../../../core/services/mock-database.service';
+import { Product, Purchase } from '../../../core/models/domain.models';
+import { ProductsService } from '../../products/services/products.service';
+import { SuppliersService } from '../../suppliers/services/suppliers.service';
 import { PurchaseDraft } from '../models/purchase.models';
+import { PurchasesApiService } from './purchases-api.service';
+import { toCreatePurchaseRequest, toPurchase } from './purchases.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class PurchasesService {
-  readonly purchases = signal<Purchase[]>([
-    { id: 'c1', supplierId: 'f1', supplierName: 'Granja Santa Clara', date: '2026-09-14',
-      items: [{ productId: 'p1', productName: 'Frango assado tradicional', quantity: 40, unitCost: 24.5, total: 980 },
-        { productId: 'p3', productName: 'Meio frango assado', quantity: 20, unitCost: 13, total: 260 }],
-      total: 1240, status: 'REGISTERED' },
-    { id: 'c2', supplierId: 'f2', supplierName: 'Distribuidora Bom Sabor', date: '2026-09-12',
-      items: [{ productId: 'p4', productName: 'Farofa da casa 300 g', quantity: 40, unitCost: 4.1, total: 164 },
-        { productId: 'p5', productName: 'Refrigerante 2 L', quantity: 52, unitCost: 8.2, total: 426.4 }],
-      total: 590.4, status: 'REGISTERED' }
-  ]);
-  readonly products = this.db.products.asReadonly();
-  readonly suppliers = this.db.suppliers.asReadonly();
+  private readonly api = inject(PurchasesApiService); private readonly auth = inject(AuthService); private readonly productsService = inject(ProductsService); private readonly suppliersService = inject(SuppliersService);
+  readonly purchases = signal<Purchase[]>([]); readonly loading = signal(false); readonly loadingData = signal(false); readonly error = signal<string | null>(null);
+  readonly products = this.productsService.products; readonly suppliers = this.suppliersService.suppliers;
 
-  constructor(private readonly db: MockDatabaseService, private readonly auth: AuthService) {}
+  async load(supplierId?: string): Promise<void> {
+    this.loading.set(true); this.error.set(null);
+    try { this.purchases.set((await firstValueFrom(this.api.list(supplierId))).map(toPurchase)); }
+    catch (error) { this.error.set(error instanceof Error ? error.message : 'Não foi possível carregar as compras.'); }
+    finally { this.loading.set(false); }
+  }
 
-  async create(draft: PurchaseDraft) {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const items = draft.items.map(item => {
-      const product = this.db.products().find(candidate => candidate.id === item.productId)!;
-      return { productId: product.id, productName: product.name, quantity: item.quantity,
-        unitCost: item.unitCost, total: item.quantity * item.unitCost };
-    });
-    const supplier = this.db.suppliers().find(item => item.id === draft.supplierId)!;
-    const purchase: Purchase = {
-      id: `c${Date.now()}`, supplierId: supplier.id, supplierName: supplier.name,
-      date: draft.date, items, total: items.reduce((sum, item) => sum + item.total, 0), status: 'REGISTERED'
-    };
-    const movements: StockMovement[] = [];
-    this.db.products.update(products => products.map(product => {
-      const line = items.find(item => item.productId === product.id);
-      if (!line) return product;
-      movements.push({
-        id: `mov-${purchase.id}-${product.id}`, productId: product.id, productName: product.name,
-        date: new Date().toISOString(), previousQuantity: product.stock,
-        newQuantity: product.stock + line.quantity, difference: line.quantity,
-        origin: 'Compra', user: this.auth.currentUser()?.name ?? 'Administradora',
-        reason: `Compra registrada de ${supplier.name}`
-      });
-      return { ...product, stock: product.stock + line.quantity, cost: line.unitCost };
-    }));
-    this.db.movements.update(current => [...movements, ...current]);
-    this.purchases.update(list => [purchase, ...list]);
+  async loadFormData(): Promise<void> {
+    this.loadingData.set(true); this.error.set(null);
+    try {
+      await Promise.all([
+        this.suppliers().length ? Promise.resolve() : this.suppliersService.load(),
+        this.products().length ? Promise.resolve() : this.productsService.load({ status: 'ACTIVE', size: 100 })
+      ]);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Não foi possível carregar os dados da compra.');
+    } finally { this.loadingData.set(false); }
+  }
+
+  async create(draft: PurchaseDraft): Promise<Purchase> {
+    const response = await firstValueFrom(this.api.create(toCreatePurchaseRequest(draft, this.products(), this.auth.currentUser()?.name)));
+    const purchase = toPurchase(response); this.purchases.update(items => [purchase, ...items]);
+    await Promise.all([this.load(), this.productsService.load({ status: 'ACTIVE', size: 100 })]);
     return purchase;
   }
 }

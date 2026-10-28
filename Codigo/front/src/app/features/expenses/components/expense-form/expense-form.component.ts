@@ -5,7 +5,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Expense } from '../../../../core/models/domain.models';
+import { Expense, PaymentMethod } from '../../../../core/models/domain.models';
+import { toDateInputValue } from '../../../../shared/utils/date.utils';
 import { ExpenseFormValue } from '../../models/expense.models';
 
 @Component({
@@ -17,7 +18,7 @@ import { ExpenseFormValue } from '../../models/expense.models';
       <mat-form-field appearance="outline"><mat-label>Categoria</mat-label><mat-select formControlName="category"><mat-option value="Operacional">Operacional</mat-option><mat-option value="Materiais">Materiais</mat-option><mat-option value="Serviços">Serviços</mat-option><mat-option value="Outros">Outros</mat-option></mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Valor</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0.01" step="0.01" formControlName="amount">@if(form.controls.amount.touched&&form.controls.amount.invalid){<mat-error>Informe um valor maior que zero.</mat-error>}</mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Data</mat-label><input matInput type="date" formControlName="date"></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Forma de pagamento</mat-label><mat-select formControlName="paymentMethod"><mat-option value="CASH">Dinheiro</mat-option><mat-option value="PIX">Pix</mat-option><mat-option value="DEBIT">Débito</mat-option><mat-option value="CREDIT">Crédito</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Forma de pagamento</mat-label><mat-select formControlName="paymentMethod"><mat-option value="CASH">Dinheiro</mat-option><mat-option value="PIX">Pix</mat-option><mat-option value="DEBIT">Débito</mat-option><mat-option value="CREDIT">Crédito</mat-option><mat-option value="BOLETO_TRANSFER">Boleto / transferência</mat-option></mat-select></mat-form-field>
       <mat-form-field appearance="outline" class="full"><mat-label>Observação</mat-label><textarea matInput rows="3" formControlName="notes"></textarea></mat-form-field>
       <div class="form-note"><mat-icon>query_stats</mat-icon>Esta despesa será considerada no resultado estimado. Pagamentos em dinheiro também atualizam o caixa.</div>
       <div class="form-actions"><button mat-button type="button" (click)="cancel.emit()">Cancelar</button><button mat-flat-button class="primary-button" type="submit" [disabled]="saving()"><mat-icon>save</mat-icon>{{saving()?'Salvando…':expense()?'Salvar alterações':'Registrar despesa'}}</button></div>
@@ -33,8 +34,8 @@ export class ExpenseFormComponent {
     description: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(3)] }),
     category: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     amount: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(.01)] }),
-    date: new FormControl('2026-09-15', { nonNullable: true, validators: [Validators.required] }),
-    paymentMethod: new FormControl<'CASH' | 'PIX' | 'DEBIT' | 'CREDIT'>('PIX', { nonNullable: true }),
+    date: new FormControl(toDateInputValue(), { nonNullable: true, validators: [Validators.required] }),
+    paymentMethod: new FormControl<PaymentMethod>('PIX', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
     status: new FormControl<'PENDING' | 'CONSOLIDATED' | 'CANCELED'>('PENDING', { nonNullable: true })
   });

@@ -1,6 +1,6 @@
 # DaFabi Frangos — Backend
 
-API Spring Boot da primeira versão do sistema. Nesta etapa, disponibiliza os domínios de **Produtos**, **Estoque**, **Caixa**, **Vendas** e **Fornecedores**, persistidos em PostgreSQL e versionados com Flyway.
+API Spring Boot da primeira versão do sistema. Nesta etapa, disponibiliza os domínios de **Produtos**, **Estoque**, **Caixa**, **Vendas**, **Fornecedores** e **Compras**, persistidos em PostgreSQL e versionados com Flyway.
 
 ## Pré-requisitos
 
@@ -63,6 +63,9 @@ A API fica em `http://localhost:8080/api/v1`.
 - `POST /api/v1/suppliers`
 - `PUT /api/v1/suppliers/{id}`
 - `PATCH /api/v1/suppliers/{id}/status`
+- `GET /api/v1/purchases?supplierId=`
+- `GET /api/v1/purchases/{id}`
+- `POST /api/v1/purchases`
 
 ## Estoque
 
@@ -95,6 +98,16 @@ de estoque, evitando venda acima do disponível em acessos concorrentes.
 O domínio de Fornecedores (`supplier`) gerencia o cadastro, consulta, busca e atualização
 dos parceiros que abastecem a loja, garantindo unicidade de e-mail (`lower(email)`) por
 estabelecimento e inativação lógica (`active`) sem exclusão física.
+
+## Compras
+
+A compra (`purchase` e `purchase_item`) recebe o fornecedor, a data e os itens com
+produto, quantidade e custo unitário; o custo total de cada item e o valor total da
+compra são calculados no backend. Fornecedor e produtos precisam estar ativos. Na mesma
+transação, a quantidade comprada é somada ao `product_stock` de cada produto e uma
+movimentação `PURCHASE` (origem "Compra") é registrada em `stock_movement`. Qualquer item
+inválido rejeita a compra inteira sem alterar o estoque. Os saldos são bloqueados de forma
+pessimista e em ordem fixa, evitando perda de atualização e deadlocks em acessos concorrentes.
 
 ## Testes
 

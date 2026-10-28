@@ -1,0 +1,299 @@
+---
+title: DaFabi Frangos — Diagrama de Classes de Domínio
+---
+classDiagram
+    direction TB
+
+    %% ============ ACESSO / LOJA ============
+    class Loja {
+        -id: UUID
+        -nome: String
+        -telefone: String
+        -endereco: String
+        -formaPagamentoPadrao: FormaPagamento
+        -modoCompacto: boolean
+    }
+
+    class Usuario["Usuário"] {
+        -id: UUID
+        -nome: String
+        -email: String
+        -senhaHash: String
+        -perfil: Perfil
+        -ativo: boolean
+    }
+
+    %% ============ CATÁLOGO ============
+    class Categoria {
+        -id: UUID
+        -nome: String
+        -ativa: boolean
+    }
+
+    class Produto {
+        -id: UUID
+        -nome: String
+        -precoVenda: Decimal
+        -custoAtual: Decimal
+        -unidade: String = "UN"
+        -codigoBarras: String [0..1] «único»
+        -perecivel: boolean
+        -frequente: boolean
+        -status: StatusProduto
+        +ativar() void
+        +inativar() void
+    }
+
+    %% ============ ESTOQUE ============
+    class EstoqueProduto {
+        -quantidade: int
+        -atualizadoEm: DataHora
+        +ajustar(novaQtd: int, motivo: String) MovimentacaoEstoque
+    }
+
+    class Lote {
+        -id: UUID
+        -codigoLote: String
+        -dataRecebimento: Data
+        -validade: Data
+        -quantidade: int
+        +/status: StatusLote
+        +estaVencido() boolean
+    }
+
+    class MovEstoque["MovimentaçãoEstoque"] {
+        -id: UUID
+        -ocorridoEm: DataHora
+        -tipo: TipoMovEstoque
+        -qtdAnterior: int
+        -qtdNova: int
+        -delta: int
+        -origem: String
+        -motivo: String [0..1]
+        -realizadoPor: String
+        -tipoReferencia: String [0..1]
+        -idReferencia: UUID [0..1]
+    }
+
+    %% ============ CAIXA ============
+    class Caixa {
+        -id: UUID
+        -abertoEm: DataHora
+        -fechadoEm: DataHora [0..1]
+        -saldoInicial: Decimal
+        -saldoEsperadoFechamento: Decimal [0..1]
+        -saldoContado: Decimal [0..1]
+        -diferenca: Decimal [0..1]
+        -justificativa: String [0..1]
+        -status: StatusCaixa
+        +abrir(saldoInicial: Decimal) void
+        +registrarMovimentacao(m: MovimentaçãoCaixa) void
+        +calcularSaldoEsperado() Decimal
+        +fechar(saldoContado: Decimal, justificativa: String) void
+    }
+
+    class MovCaixa["MovimentaçãoCaixa"] {
+        -id: UUID
+        -direcao: DirecaoMovCaixa
+        -tipo: TipoMovCaixa
+        -valor: Decimal
+        -origem: String [0..1]
+        -tipoReferencia: String [0..1]
+        -idReferencia: UUID [0..1]
+        -descricao: String
+        -ocorridoEm: DataHora
+    }
+
+    %% ============ VENDAS ============
+    class Venda {
+        -id: UUID
+        -numero: long
+        -dataHora: DataHora
+        -origem: OrigemVenda
+        -formaPagamento: FormaPagamento
+        -subtotal: Decimal
+        -total: Decimal
+        -status: StatusVenda
+        +adicionarItem(item: ItemVenda) void
+        +removerItem(item: ItemVenda) void
+        +calcularTotal() Decimal
+    }
+
+    class ItemVenda {
+        -id: UUID
+        -quantidade: Decimal
+        -precoUnitario: Decimal
+        -subtotal: Decimal
+    }
+
+    %% ============ COMPRAS / FORNECEDORES ============
+    class Fornecedor {
+        -id: UUID
+        -nome: String
+        -telefone: String
+        -email: String «único por loja»
+        -observacoes: String [0..1]
+        -ativo: boolean
+        +ativar() void
+        +inativar() void
+    }
+
+    class Compra {
+        -id: UUID
+        -dataCompra: Data
+        -valorTotal: Decimal
+        -status: StatusCompra
+        -criadoPor: String
+        +adicionarItem(item: ItemCompra) void
+        +removerItem(item: ItemCompra) void
+        +recalcularTotal() void
+    }
+
+    class ItemCompra {
+        -id: UUID
+        -nomeProduto: String
+        -quantidade: int
+        -custoUnitario: Decimal
+        -valorTotal: Decimal
+        +calcularTotalLinha() Decimal
+    }
+
+    %% ============ DESPESAS ============
+    class Despesa {
+        -id: UUID
+        -descricao: String
+        -categoria: String
+        -valor: Decimal
+        -data: Data
+        -formaPagamento: FormaPagamentoDespesa
+        -observacao: String [0..1]
+        -status: StatusDespesa
+    }
+
+    %% ============ ENUMERAÇÕES ============
+    class Perfil {
+        <<enumeration>>
+        ADMIN
+        OPERADOR_CAIXA
+    }
+    class StatusProduto {
+        <<enumeration>>
+        ATIVO
+        INATIVO
+    }
+    class StatusLote {
+        <<enumeration>>
+        VALIDO
+        VENCIDO
+        UTILIZADO
+    }
+    class TipoMovEstoque {
+        <<enumeration>>
+        SALDO_INICIAL
+        AJUSTE_MANUAL
+        RECEBIMENTO_LOTE
+        COMPRA
+        VENDA_BALCAO
+        VENDA_INTEGRADA
+        CANCELAMENTO_INTEGRADO
+        DEVOLUCAO
+    }
+    class StatusCaixa {
+        <<enumeration>>
+        ABERTO
+        FECHADO
+    }
+    class DirecaoMovCaixa {
+        <<enumeration>>
+        ENTRADA
+        SAIDA
+    }
+    class TipoMovCaixa {
+        <<enumeration>>
+        VENDA
+        DESPESA
+        DEVOLUCAO
+        SUPRIMENTO
+        SANGRIA
+    }
+    class OrigemVenda {
+        <<enumeration>>
+        BALCAO
+        IFOOD
+        FOOD_99
+    }
+    class FormaPagamento {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+    }
+    class StatusVenda {
+        <<enumeration>>
+        CONCLUIDA
+        CANCELADA
+        ESTORNADA
+    }
+    class StatusCompra {
+        <<enumeration>>
+        REGISTRADA
+        CANCELADA
+    }
+    class FormaPagamentoDespesa {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+        BOLETO_TRANSFERENCIA
+    }
+    class StatusDespesa {
+        <<enumeration>>
+        PENDENTE
+        CONSOLIDADA
+        CANCELADA
+    }
+
+    %% ============ RELACIONAMENTOS ============
+    Categoria "0..1" <-- "*" Produto : classifica
+    Produto "1" *-- "1" EstoqueProduto : possui
+    Produto "1" <-- "*" Lote : pertence a
+    Produto "1" <-- "*" MovEstoque : afeta
+    Lote "0..1" <-- "*" MovEstoque : refere-se a
+
+    Loja "1" o-- "*" Caixa : opera
+    Loja "1" o-- "*" Fornecedor : cadastra
+    Usuario "1" <-- "*" Caixa : operador
+    Caixa "1" *-- "*" MovCaixa : contém
+
+    Caixa "0..1" <-- "*" Venda : registrada em
+    Usuario "1" <-- "*" Venda : operador
+    Venda "1" *-- "1..*" ItemVenda : contém
+    ItemVenda "*" --> "1" Produto : vende
+
+    Fornecedor "1" <-- "*" Compra : fornece
+    Compra "1" *-- "1..*" ItemCompra : contém
+    ItemCompra "*" --> "1" Produto : repõe
+
+    Usuario "0..1" <-- "*" Despesa : lançada por
+
+    MovCaixa ..> Venda : «referencia»
+    MovCaixa ..> Despesa : «referencia»
+    MovEstoque ..> Venda : «referencia»
+    MovEstoque ..> Compra : «referencia»
+
+    %% Enums (uso)
+    Usuario ..> Perfil
+    Produto ..> StatusProduto
+    Lote ..> StatusLote
+    MovEstoque ..> TipoMovEstoque
+    Caixa ..> StatusCaixa
+    MovCaixa ..> DirecaoMovCaixa
+    MovCaixa ..> TipoMovCaixa
+    Venda ..> OrigemVenda
+    Venda ..> FormaPagamento
+    Venda ..> StatusVenda
+    Compra ..> StatusCompra
+    Despesa ..> FormaPagamentoDespesa
+    Despesa ..> StatusDespesa
