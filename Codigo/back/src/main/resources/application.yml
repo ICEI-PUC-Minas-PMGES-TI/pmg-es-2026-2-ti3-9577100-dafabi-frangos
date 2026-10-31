@@ -10,6 +10,10 @@ spring:
       fail-on-unknown-properties: false
   jpa:
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -20,3 +24,7 @@ logging:
   level:
     root: INFO
     com.dafabi: DEBUG
+
+app:
+  integrations:
+    max-file-bytes: 10485760
