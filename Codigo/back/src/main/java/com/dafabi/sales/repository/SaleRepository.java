@@ -14,10 +14,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, UUID> {
+
+    List<Sale> findByDateTimeGreaterThanEqualAndDateTimeLessThanOrderByDateTimeDesc(
+            OffsetDateTime start, OffsetDateTime endExclusive);
 
     @Query("select coalesce(max(sale.saleNumber), 0) from Sale sale")
     Long findMaxSaleNumber();
