@@ -1,31 +1,40 @@
-cff-version: 1.0.1
-message: Please cite this software using these metadata.
-title: 
+cff-version: 1.2.0
+message: "Please cite this software using these metadata."
+type: software
+title: "Sistema de Gestão da DaFabi Frangos"
+abstract: "Projeto desenvolvido para a unidade curricular Trabalho Interdisciplinar: Aplicações para Cenários Reais, do curso de Engenharia de Software da PUC Minas."
+
 authors:
-  - family-names: Sobrenome do aluno 1
-    given-names: Nome do aluno 1
-  - family-names: Sobrenome do aluno 2
-    given-names: Nome do aluno 2
-  - family-names: Sobrenome do aluno 3
-    given-names: Nome do aluno 3
-  - family-names: Sobrenome do aluno 4
-    given-names: Nome do aluno 4
-  - family-names: Sobrenome do aluno 5
-    given-names: Nome do aluno 5
-  - family-names: Sobrenome do aluno 6
-    given-names: Nome do aluno 6
-  - name-suffix: Professora
-    affiliation: PUC Minas
-    family-names: Alonso Veloso
-    given-names: Eveline
-  - name-suffix: Professora
-    affiliation: PUC Minas
-    family-names: Amaral Baroni de Carvalho
-    given-names: Juliana
+  - family-names: "Jales"
+    given-names: "André Leôncio"
+    affiliation: "PUC Minas"
+  - family-names: "de Oliveira"
+    given-names: "Davi Vinicius Barbosa"
+    affiliation: "PUC Minas"
+  - family-names: "Carvalho"
+    given-names: "Gustavo Alvarenga Ribeiro"
+    affiliation: "PUC Minas"
+  - family-names: "Felix"
+    given-names: "Gustavo Pereira"
+    affiliation: "PUC Minas"
+  - family-names: "de Araujo"
+    given-names: "Luca Moreira Ribeiro Mazala"
+    affiliation: "PUC Minas"
+  - family-names: "Guelman"
+    given-names: "Ian"
+    affiliation: "PUC Minas"
+  - family-names: "Diniz"
+    given-names: "Rafael Henriques Nogueira"
+    affiliation: "PUC Minas"
+
 keywords:
-  - 
-  - 
-repository-code: 
+  - "Gestão comercial"
+  - "Controle de estoque"
+  - "Vendas"
+  - "Pequenos negócios"
+  - "Aplicação web"
+
+repository-code: "https://github.com/ICEI-PUC-Minas-PMGES-TI/pmg-es-2026-2-ti3-9577100-dafabi-frangos"
 license: CC-BY-4.0
 version: 1.0.0
-date-released:
+date-released: "2026-11-02"
