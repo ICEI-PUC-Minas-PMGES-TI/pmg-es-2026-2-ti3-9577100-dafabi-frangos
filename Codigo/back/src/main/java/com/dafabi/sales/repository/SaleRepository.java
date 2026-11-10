@@ -4,8 +4,10 @@ import com.dafabi.sales.domain.Sale;
 import com.dafabi.sales.domain.PaymentMethod;
 import com.dafabi.sales.domain.SaleOrigin;
 import com.dafabi.sales.domain.SaleStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,6 +26,10 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
     @EntityGraph(attributePaths = {"items", "items.product"})
     Optional<Sale> findWithItemsById(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select sale from Sale sale where sale.id = :id")
+    Optional<Sale> findByIdForUpdate(@Param("id") UUID id);
 
     @Query("""
         select s from Sale s

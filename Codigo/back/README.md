@@ -58,6 +58,9 @@ A API fica em `http://localhost:8080/api/v1`.
 - `POST /api/v1/cash-registers/{id}/movements`
 - `POST /api/v1/sales`
 - `GET /api/v1/sales/{id}`
+- `GET /api/v1/sales/{id}/refund-eligibility`
+- `GET /api/v1/sales/{id}/refund`
+- `POST /api/v1/sales/{id}/refund`
 - `GET /api/v1/suppliers?query=&active=`
 - `GET /api/v1/suppliers/{id}`
 - `POST /api/v1/suppliers`
@@ -92,6 +95,21 @@ suficiente. Ao concluir, o estoque de cada produto é baixado com uma movimenta�
 `COUNTER_SALE` e, se o pagamento for em dinheiro, uma entrada é registrada no caixa.
 Todo o processo é transacional e usa bloqueio pessimista do caixa aberto e dos saldos
 de estoque, evitando venda acima do disponível em acessos concorrentes.
+
+## Estorno de vendas
+
+O estorno (`sale_refund`) só pode ser registrado por usuários com perfil `ADMIN`,
+identificados pelos cabeçalhos `X-User-Id`, `X-User-Name` e `X-User-Role` (sem eles a
+API responde `401`; com outro perfil, `403`). O motivo é obrigatório (5 a 500 caracteres)
+e o usuário responsável fica gravado no estorno e nas movimentações geradas.
+`GET /sales/{id}/refund-eligibility` informa se a venda pode ser estornada e o valor em
+dinheiro que sairá do caixa. Na mesma transação, o estorno devolve ao `product_stock` as
+quantidades vendidas (movimentação `REFUND`), registra uma saída `REFUND` no caixa aberto
+com exatamente o valor que entrou em dinheiro pela venda (vendas por PIX ou cartão não
+movimentam o caixa) e marca a venda como `REFUNDED`. Vendas canceladas ou já estornadas
+são bloqueadas com `409`. A venda é bloqueada de forma pessimista e cada venda aceita um
+único estorno (`uk_sale_refund_sale`), então nunca há reversão duplicada; reenviar a
+requisição com o mesmo cabeçalho `Idempotency-Key` devolve o estorno já registrado com `200`.
 
 ## Fornecedores
 
