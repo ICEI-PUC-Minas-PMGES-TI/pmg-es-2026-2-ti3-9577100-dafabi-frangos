@@ -69,6 +69,25 @@ A API fica em `http://localhost:8080/api/v1`.
 - `GET /api/v1/purchases?supplierId=`
 - `GET /api/v1/purchases/{id}`
 - `POST /api/v1/purchases`
+- `GET /api/v1/dashboard/financial-summary?period=today`
+
+### Resumo financeiro do dashboard
+
+`GET /api/v1/dashboard/financial-summary` consolida vendas concluídas, despesas não
+canceladas e movimentações de caixa no período informado. O parâmetro `period` aceita
+`today`, `7d`, `month` e `custom`. Para `custom`, informe também `startDate` e
+`endDate` no formato `yyyy-MM-dd`; os dois limites são inclusivos. Se `period` for
+omitido e houver datas, o período personalizado é usado.
+
+A resposta contém `startDate`, `endDate`, `summary`, `salesByOrigin` e `daily`.
+`summary.revenue`, `summary.expenses`, `summary.estimatedResult`, `summary.salesCount`,
+as quantidades por origem e `daily[].revenue` são calculados dos registros persistidos.
+`cashIn` e `cashOut` consolidam os movimentos do caixa. As taxas (`fees`,
+`ifoodFees` e `food99Fees`) retornam zero até que uma taxa seja persistida no domínio;
+nenhuma taxa é estimada a partir da origem da venda.
+
+Períodos sem dados retornam HTTP 200, totais monetários zerados, contagens zeradas e
+um ponto diário zerado para cada data do intervalo.
 
 ## Estoque
 

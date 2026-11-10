@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,25 +25,28 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     @Query("select coalesce(max(sale.saleNumber), 0) from Sale sale")
     Long findMaxSaleNumber();
 
-    @EntityGraph(attributePaths = {"items", "items.product"})
+    @EntityGraph(attributePaths = { "items", "items.product" })
     Optional<Sale> findWithItemsById(UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select sale from Sale sale where sale.id = :id")
     Optional<Sale> findByIdForUpdate(@Param("id") UUID id);
 
+    List<Sale> findByDateTimeGreaterThanEqualAndDateTimeLessThan(
+            OffsetDateTime startDateTime, OffsetDateTime endDateTime);
+
     @Query("""
-        select s from Sale s
-        where (:hasQuery = false
-               or cast(s.saleNumber as string) like concat('%', cast(:query as string), '%'))
-          and (:hasStartDate = false or s.dateTime >= :startDate)
-          and (:hasEndDate = false or s.dateTime <= :endDate)
-          and (:hasOrigin = false or s.origin = :origin)
-          and (:hasStatus = false or s.status = :status)
-          and (:hasPaymentMethod = false or s.paymentMethod = :paymentMethod)
-          and (:hasOperatorId = false or s.operatorId = :operatorId)
-        order by s.dateTime desc
-        """)
+            select s from Sale s
+            where (:hasQuery = false
+                   or cast(s.saleNumber as string) like concat('%', cast(:query as string), '%'))
+              and (:hasStartDate = false or s.dateTime >= :startDate)
+              and (:hasEndDate = false or s.dateTime <= :endDate)
+              and (:hasOrigin = false or s.origin = :origin)
+              and (:hasStatus = false or s.status = :status)
+              and (:hasPaymentMethod = false or s.paymentMethod = :paymentMethod)
+              and (:hasOperatorId = false or s.operatorId = :operatorId)
+            order by s.dateTime desc
+            """)
     Page<Sale> findAllWithFilters(
             @Param("query") String query,
             @Param("hasQuery") boolean hasQuery,

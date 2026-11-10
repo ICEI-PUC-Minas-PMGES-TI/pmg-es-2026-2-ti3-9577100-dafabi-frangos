@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class InventoryService {
@@ -78,8 +77,8 @@ public class InventoryService {
         }
         List<StockMovement> movements = productId == null
                 ? stockMovementRepository.findAll().stream()
-                    .sorted(Comparator.comparing(StockMovement::getOccurredAt).reversed())
-                    .toList()
+                        .sorted(Comparator.comparing(StockMovement::getOccurredAt).reversed())
+                        .toList()
                 : stockMovementRepository.findByProduct_IdOrderByOccurredAtDesc(productId);
         return movements.stream().map(inventoryMapper::toMovementResponse).toList();
     }
@@ -119,14 +118,16 @@ public class InventoryService {
             throw new BusinessException("INVALID_EXPIRY", "A validade deve ser hoje ou uma data futura.");
         }
         if (inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(request.productId(), request.batch().trim())) {
-            throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.", HttpStatus.CONFLICT);
+            throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.",
+                    HttpStatus.CONFLICT);
         }
 
         ProductStock stock = productStockRepository.findByProductIdForUpdate(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", request.productId()));
         Product product = stock.getProduct();
         if (!product.isPerishable()) {
-            throw new BusinessException("PRODUCT_NOT_PERISHABLE", "O produto informado não está marcado como perecível.");
+            throw new BusinessException("PRODUCT_NOT_PERISHABLE",
+                    "O produto informado não está marcado como perecível.");
         }
 
         InventoryLot lot = inventoryLotRepository.save(new InventoryLot(
@@ -144,7 +145,8 @@ public class InventoryService {
     }
 
     private Map<UUID, StockMovement> lastMovementByProductId(Collection<UUID> productIds) {
-        if (productIds.isEmpty()) return Map.of();
+        if (productIds.isEmpty())
+            return Map.of();
         Map<UUID, StockMovement> lastMovements = new HashMap<>();
         for (StockMovement movement : stockMovementRepository.findByProduct_IdInOrderByOccurredAtDesc(productIds)) {
             lastMovements.putIfAbsent(movement.getProduct().getId(), movement);

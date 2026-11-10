@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,10 +38,10 @@ public class ExpenseService {
     private final ExpenseMapper mapper;
 
     public ExpenseService(ExpenseRepository expenseRepository,
-                          CashRegisterRepository cashRegisterRepository,
-                          CashMovementRepository cashMovementRepository,
-                          CashRegisterService cashRegisterService,
-                          ExpenseMapper mapper) {
+            CashRegisterRepository cashRegisterRepository,
+            CashMovementRepository cashMovementRepository,
+            CashRegisterService cashRegisterService,
+            ExpenseMapper mapper) {
         this.expenseRepository = expenseRepository;
         this.cashRegisterRepository = cashRegisterRepository;
         this.cashMovementRepository = cashMovementRepository;
@@ -62,14 +61,19 @@ public class ExpenseService {
 
     @Transactional(readOnly = true)
     public List<ExpenseResponse> findAll(LocalDate startDate, LocalDate endDate,
-                                         String category, ExpensePaymentMethod paymentMethod,
-                                         ExpenseStatus status) {
+            String category, ExpensePaymentMethod paymentMethod,
+            ExpenseStatus status) {
         Specification<Expense> specification = Specification.where(null);
-        if (startDate != null) specification = specification.and((root, q, cb) -> cb.greaterThanOrEqualTo(root.get("date"), startDate));
-        if (endDate != null) specification = specification.and((root, q, cb) -> cb.lessThanOrEqualTo(root.get("date"), endDate));
-        if (category != null && !category.isBlank()) specification = specification.and((root, q, cb) -> cb.equal(root.get("category"), category.trim()));
-        if (paymentMethod != null) specification = specification.and((root, q, cb) -> cb.equal(root.get("paymentMethod"), paymentMethod));
-        if (status != null) specification = specification.and((root, q, cb) -> cb.equal(root.get("status"), status));
+        if (startDate != null)
+            specification = specification.and((root, q, cb) -> cb.greaterThanOrEqualTo(root.get("date"), startDate));
+        if (endDate != null)
+            specification = specification.and((root, q, cb) -> cb.lessThanOrEqualTo(root.get("date"), endDate));
+        if (category != null && !category.isBlank())
+            specification = specification.and((root, q, cb) -> cb.equal(root.get("category"), category.trim()));
+        if (paymentMethod != null)
+            specification = specification.and((root, q, cb) -> cb.equal(root.get("paymentMethod"), paymentMethod));
+        if (status != null)
+            specification = specification.and((root, q, cb) -> cb.equal(root.get("status"), status));
         return expenseRepository.findAll(specification, Sort.by(Sort.Order.desc("date"), Sort.Order.desc("createdAt")))
                 .stream().map(mapper::toResponse).toList();
     }
@@ -118,9 +122,10 @@ public class ExpenseService {
     }
 
     private void syncCashMovement(Expense expense) {
-        if (expense.getPaymentMethod() != ExpensePaymentMethod.CASH || expense.getStatus() == ExpenseStatus.CANCELLED) return;
+        if (expense.getPaymentMethod() != ExpensePaymentMethod.CASH || expense.getStatus() == ExpenseStatus.CANCELLED)
+            return;
         CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(
-                        CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
+                CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
                 .orElseThrow(() -> new BusinessException("CASH_CLOSED",
                         "Abra o caixa antes de registrar uma despesa em dinheiro.", HttpStatus.CONFLICT));
         cashRegisterService.recordMovement(register.getId(), CashMovementDirection.OUT, "EXPENSE",
@@ -129,11 +134,17 @@ public class ExpenseService {
     }
 
     private void removeCashMovement(UUID expenseId) {
-        List<com.dafabi.cash.domain.CashMovement> movements =
-                cashMovementRepository.findByReferenceTypeAndReferenceId(EXPENSE_REFERENCE_TYPE, expenseId);
-        if (!movements.isEmpty()) cashMovementRepository.deleteAll(movements);
+        List<com.dafabi.cash.domain.CashMovement> movements = cashMovementRepository
+                .findByReferenceTypeAndReferenceId(EXPENSE_REFERENCE_TYPE, expenseId);
+        if (!movements.isEmpty())
+            cashMovementRepository.deleteAll(movements);
     }
 
-    private static String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
-    private static java.math.BigDecimal money(java.math.BigDecimal value) { return value.setScale(2, RoundingMode.HALF_UP); }
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static java.math.BigDecimal money(java.math.BigDecimal value) {
+        return value.setScale(2, RoundingMode.HALF_UP);
+    }
 }

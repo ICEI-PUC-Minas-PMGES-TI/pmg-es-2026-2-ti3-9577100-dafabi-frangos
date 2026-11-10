@@ -17,7 +17,7 @@ public class Role {
 
     public Role(UUID id, String name) {
         this.id = id != null ? id : UUID.randomUUID();
-        this.name = name;
+        this.name = name == null ? null : name.trim().toUpperCase();
     }
 
     public UUID getId() {

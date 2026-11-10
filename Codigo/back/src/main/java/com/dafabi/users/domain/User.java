@@ -1,6 +1,8 @@
 package com.dafabi.users.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -13,12 +15,16 @@ public class User {
     @Id
     private UUID id;
 
+    @Email
+    @NotBlank
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank
     @Column(nullable = false)
     private String password;
 
+    @NotBlank
     @Column(nullable = false)
     private String name;
 
@@ -40,7 +46,7 @@ public class User {
 
     public User(UUID id, String email, String password, String name, Set<Role> roles) {
         this.id = id != null ? id : UUID.randomUUID();
-        this.email = email;
+        this.email = email == null ? null : email.trim().toLowerCase();
         this.password = password;
         this.name = name;
         this.active = true;
@@ -66,6 +72,14 @@ public class User {
 
     public boolean isActive() {
         return active;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
     }
 
     public Set<Role> getRoles() {
