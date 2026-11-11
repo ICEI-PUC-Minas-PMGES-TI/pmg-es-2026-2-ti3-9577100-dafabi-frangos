@@ -15,6 +15,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    ignore-migration-patterns: '*:missing'
     locations: classpath:db/migration
 app:
   security:

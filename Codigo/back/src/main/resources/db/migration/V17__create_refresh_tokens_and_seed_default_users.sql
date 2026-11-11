@@ -1,4 +1,4 @@
--- V11: Criação da tabela de refresh tokens e carga inicial de perfis padrão.
+-- V17: Criação idempotente de refresh tokens e perfis padrão para bancos existentes.
 
 CREATE TABLE IF NOT EXISTS tb_refresh_tokens (
     id UUID PRIMARY KEY,

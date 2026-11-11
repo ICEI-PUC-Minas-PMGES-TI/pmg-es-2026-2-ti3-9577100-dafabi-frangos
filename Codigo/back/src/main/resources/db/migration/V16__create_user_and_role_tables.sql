@@ -1,4 +1,4 @@
--- V10: Criação das tabelas de usuários, perfis e relacionamento entre eles.
+-- V16: Criação idempotente das tabelas de usuários e perfis para bancos existentes.
 
 CREATE TABLE IF NOT EXISTS tb_roles (
     id UUID PRIMARY KEY,

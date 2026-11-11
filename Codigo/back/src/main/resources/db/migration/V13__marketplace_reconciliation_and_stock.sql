@@ -1,4 +1,4 @@
-CREATE TABLE marketplace_product_mapping (
+CREATE TABLE IF NOT EXISTS marketplace_product_mapping (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     external_store_id VARCHAR(120) NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE marketplace_product_mapping (
         (provider, external_store_id, external_item_name, product_id)
 );
 
-CREATE TABLE marketplace_stock_baseline (
+CREATE TABLE IF NOT EXISTS marketplace_stock_baseline (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     external_store_id VARCHAR(120) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE marketplace_stock_baseline (
     CONSTRAINT uk_marketplace_stock_baseline UNIQUE (provider, external_store_id)
 );
 
-CREATE TABLE marketplace_stock_application (
+CREATE TABLE IF NOT EXISTS marketplace_stock_application (
     id UUID PRIMARY KEY,
     snapshot_id UUID NOT NULL REFERENCES marketplace_item_snapshot(id),
     product_id UUID NOT NULL REFERENCES product(id),
@@ -34,14 +34,14 @@ CREATE TABLE marketplace_stock_application (
     CONSTRAINT uk_marketplace_stock_application UNIQUE (snapshot_id, product_id)
 );
 
-CREATE INDEX ix_marketplace_mapping_source
+CREATE INDEX IF NOT EXISTS ix_marketplace_mapping_source
     ON marketplace_product_mapping(provider, external_store_id, external_item_name);
-CREATE INDEX ix_marketplace_stock_baseline_source
+CREATE INDEX IF NOT EXISTS ix_marketplace_stock_baseline_source
     ON marketplace_stock_baseline(provider, external_store_id, start_date);
-CREATE INDEX ix_marketplace_stock_application_status
+CREATE INDEX IF NOT EXISTS ix_marketplace_stock_application_status
     ON marketplace_stock_application(status, updated_at DESC);
 
-CREATE TABLE marketplace_settlement (
+CREATE TABLE IF NOT EXISTS marketplace_settlement (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     external_store_id VARCHAR(120) NOT NULL,
@@ -63,5 +63,5 @@ CREATE TABLE marketplace_settlement (
         (provider, external_store_id, external_settlement_id)
 );
 
-CREATE INDEX ix_marketplace_settlement_period
+CREATE INDEX IF NOT EXISTS ix_marketplace_settlement_period
     ON marketplace_settlement(provider, period_start, period_end);

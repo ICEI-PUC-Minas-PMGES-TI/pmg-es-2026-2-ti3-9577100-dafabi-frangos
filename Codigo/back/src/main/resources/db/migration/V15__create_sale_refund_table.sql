@@ -1,4 +1,4 @@
--- V9: Criação da tabela de Estorno de Venda (sale_refund)
+-- V15: Criação idempotente da tabela de Estorno de Venda para bancos existentes.
 -- Cada venda pode ter no máximo um estorno (uk_sale_refund_sale), o que impede
 -- reversões duplicadas de caixa e estoque mesmo sob acesso concorrente.
 

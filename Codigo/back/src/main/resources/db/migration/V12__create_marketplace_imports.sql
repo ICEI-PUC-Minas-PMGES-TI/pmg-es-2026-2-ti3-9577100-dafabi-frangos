@@ -1,4 +1,4 @@
-CREATE TABLE integration_import_batch (
+CREATE TABLE IF NOT EXISTS integration_import_batch (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     report_type VARCHAR(20) NOT NULL CHECK (report_type IN ('ORDERS', 'ITEMS')),
@@ -17,9 +17,9 @@ CREATE TABLE integration_import_batch (
     CONSTRAINT uk_integration_import_file UNIQUE (provider, file_sha256)
 );
 
-CREATE INDEX ix_integration_import_created_at ON integration_import_batch(created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_integration_import_created_at ON integration_import_batch(created_at DESC);
 
-CREATE TABLE integration_import_row (
+CREATE TABLE IF NOT EXISTS integration_import_row (
     id UUID PRIMARY KEY,
     batch_id UUID NOT NULL REFERENCES integration_import_batch(id) ON DELETE CASCADE,
     row_number INTEGER NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE integration_import_row (
     CONSTRAINT uk_integration_import_row UNIQUE (batch_id, row_number)
 );
 
-CREATE TABLE marketplace_order (
+CREATE TABLE IF NOT EXISTS marketplace_order (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     external_store_id VARCHAR(120) NOT NULL,
@@ -61,10 +61,10 @@ CREATE TABLE marketplace_order (
     CONSTRAINT uk_marketplace_order_external UNIQUE (provider, external_store_id, external_order_id)
 );
 
-CREATE INDEX ix_marketplace_order_date ON marketplace_order(order_at DESC);
-CREATE INDEX ix_marketplace_order_provider_status ON marketplace_order(provider, normalized_status);
+CREATE INDEX IF NOT EXISTS ix_marketplace_order_date ON marketplace_order(order_at DESC);
+CREATE INDEX IF NOT EXISTS ix_marketplace_order_provider_status ON marketplace_order(provider, normalized_status);
 
-CREATE TABLE marketplace_item_snapshot (
+CREATE TABLE IF NOT EXISTS marketplace_item_snapshot (
     id UUID PRIMARY KEY,
     provider VARCHAR(20) NOT NULL CHECK (provider IN ('IFOOD', 'FOOD_99')),
     external_store_id VARCHAR(120) NOT NULL,
@@ -80,5 +80,5 @@ CREATE TABLE marketplace_item_snapshot (
     CONSTRAINT uk_marketplace_item_snapshot UNIQUE (provider, external_store_id, business_date, external_item_name)
 );
 
-CREATE INDEX ix_marketplace_item_date ON marketplace_item_snapshot(provider, business_date);
+CREATE INDEX IF NOT EXISTS ix_marketplace_item_date ON marketplace_item_snapshot(provider, business_date);
 
