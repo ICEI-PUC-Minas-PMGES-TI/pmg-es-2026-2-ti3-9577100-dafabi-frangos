@@ -62,7 +62,9 @@ public class PurchaseMapper {
                 item.getProductName(),
                 item.getQuantity(),
                 normalize(item.getUnitCost()),
-                normalize(item.getTotalAmount())
+                normalize(item.getTotalAmount()),
+                item.getBatch(),
+                item.getExpiry()
         );
     }
 

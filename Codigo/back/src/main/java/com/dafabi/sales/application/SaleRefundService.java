@@ -9,6 +9,7 @@ import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.InventoryLot;
 import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.domain.ProductStock;
 import com.dafabi.products.repository.ProductStockRepository;
@@ -193,6 +194,12 @@ public class SaleRefundService {
             quantitiesByProduct.merge(item.getProduct().getId(), item.getQuantity().intValueExact(), Integer::sum);
         }
 
+        Map<UUID, java.util.List<StockMovement>> allocatedMovements = new java.util.HashMap<>();
+        stockMovementRepository.findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                        SALE_REFERENCE_TYPE, sale.getId(), StockMovementType.COUNTER_SALE)
+                .forEach(movement -> allocatedMovements.computeIfAbsent(movement.getProduct().getId(), ignored -> new java.util.ArrayList<>())
+                        .add(movement));
+
         for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
             UUID productId = entry.getKey();
             ProductStock stock = productStockRepository.findByProductIdForUpdate(productId)
@@ -201,11 +208,24 @@ public class SaleRefundService {
             int previousQuantity = stock.getQuantity();
             int newQuantity = previousQuantity + entry.getValue();
             stock.setQuantity(newQuantity);
-            stockMovementRepository.save(new StockMovement(
-                    stock.getProduct(), null, StockMovementType.REFUND,
-                    previousQuantity, newQuantity, REFUND_ORIGIN,
-                    refund.getReason(), refund.getRefundedByName(),
-                    REFUND_REFERENCE_TYPE, refund.getId()));
+            int balance = previousQuantity;
+            java.util.List<StockMovement> saleMovements = allocatedMovements.getOrDefault(productId, java.util.List.of());
+            if (saleMovements.isEmpty()) {
+                stockMovementRepository.save(new StockMovement(stock.getProduct(), null, StockMovementType.REFUND,
+                        previousQuantity, newQuantity, REFUND_ORIGIN, refund.getReason(),
+                        refund.getRefundedByName(), REFUND_REFERENCE_TYPE, refund.getId()));
+                continue;
+            }
+            for (StockMovement saleMovement : saleMovements) {
+                int restored = Math.negateExact(saleMovement.getQuantityDelta());
+                InventoryLot lot = saleMovement.getLot();
+                if (lot != null) lot.setQuantity(lot.getQuantity() + restored);
+                int nextBalance = balance + restored;
+                stockMovementRepository.save(new StockMovement(stock.getProduct(), lot, StockMovementType.REFUND,
+                        balance, nextBalance, REFUND_ORIGIN, refund.getReason(),
+                        refund.getRefundedByName(), REFUND_REFERENCE_TYPE, refund.getId()));
+                balance = nextBalance;
+            }
         }
     }
 

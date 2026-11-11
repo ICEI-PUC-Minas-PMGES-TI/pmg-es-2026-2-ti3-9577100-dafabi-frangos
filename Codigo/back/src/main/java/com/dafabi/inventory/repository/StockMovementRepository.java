@@ -1,6 +1,7 @@
 package com.dafabi.inventory.repository;
 
 import com.dafabi.inventory.domain.StockMovement;
+import com.dafabi.inventory.domain.StockMovementType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -19,4 +20,8 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, UU
 
     boolean existsByProduct_IdAndReferenceTypeAndOccurredAtAfter(
             UUID productId, String referenceType, OffsetDateTime occurredAt);
+
+    @EntityGraph(attributePaths = {"product", "lot"})
+    List<StockMovement> findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+            String referenceType, UUID referenceId, StockMovementType movementType);
 }

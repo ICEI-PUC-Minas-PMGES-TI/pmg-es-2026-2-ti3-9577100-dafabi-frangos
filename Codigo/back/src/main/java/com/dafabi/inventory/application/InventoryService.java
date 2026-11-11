@@ -94,12 +94,30 @@ public class InventoryService {
         }
 
         stock.setQuantity(newQuantity);
-        StockMovement movement = new StockMovement(
-                stock.getProduct(), null, StockMovementType.MANUAL_ADJUSTMENT,
-                previousQuantity, newQuantity, "Ajuste manual", request.reason().trim(),
-                actor(request.performedBy()), "STOCK_ADJUSTMENT", null);
-        stockMovementRepository.save(movement);
-        return inventoryMapper.toMovementResponse(movement);
+        List<StockMovement> adjustments = new java.util.ArrayList<>();
+        int aggregateBalance = previousQuantity;
+        int reduction = previousQuantity - newQuantity;
+        if (reduction > 0 && stock.getProduct().isPerishable()) {
+            for (InventoryLot lot : inventoryLotRepository.findAvailableByProductForUpdate(stock.getProduct().getId())) {
+                if (reduction == 0) break;
+                int amount = Math.min(reduction, lot.getQuantity());
+                lot.setQuantity(lot.getQuantity() - amount);
+                int next = aggregateBalance - amount;
+                adjustments.add(stockMovementRepository.save(new StockMovement(
+                        stock.getProduct(), lot, StockMovementType.MANUAL_ADJUSTMENT,
+                        aggregateBalance, next, "Ajuste manual", request.reason().trim(),
+                        actor(request.performedBy()), "STOCK_ADJUSTMENT", null)));
+                aggregateBalance = next;
+                reduction -= amount;
+            }
+        }
+        if (aggregateBalance != newQuantity || adjustments.isEmpty()) {
+            adjustments.add(stockMovementRepository.save(new StockMovement(
+                    stock.getProduct(), null, StockMovementType.MANUAL_ADJUSTMENT,
+                    aggregateBalance, newQuantity, "Ajuste manual", request.reason().trim(),
+                    actor(request.performedBy()), "STOCK_ADJUSTMENT", null)));
+        }
+        return inventoryMapper.toMovementResponse(adjustments.get(adjustments.size() - 1));
     }
 
     @Transactional(readOnly = true)

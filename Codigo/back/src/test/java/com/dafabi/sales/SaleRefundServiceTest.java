@@ -9,6 +9,7 @@ import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.InventoryLot;
 import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -44,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -169,6 +171,34 @@ class SaleRefundServiceTest {
         assertThat(chickenStock.getQuantity()).isEqualTo(5);
         verify(cashRegisterRepository, never()).findByStoreIdAndStatusForUpdate(any(), any());
         verifyNoInteractions(cashRegisterService);
+    }
+
+    @Test
+    @DisplayName("Estorno recompõe a quantidade no lote original consumido pela venda")
+    void shouldRestoreOriginalLotOnRefund() {
+        Sale sale = saleOf(PaymentMethod.PIX, SaleStatus.COMPLETED);
+        mockLockedSale(sale);
+        when(cashMovementRepository.findByReferenceTypeAndReferenceId("SALE", sale.getId())).thenReturn(List.of());
+        mockStock(chickenStock);
+        mockStock(farofaStock);
+        InventoryLot lot = new InventoryLot(chickenStock.getProduct(), "LOTE-FEFO", LocalDate.now().minusDays(1),
+                LocalDate.now().plusDays(2), 0);
+        StockMovement fromLot = new StockMovement(chickenStock.getProduct(), lot, StockMovementType.COUNTER_SALE,
+                3, 2, "Venda balcão", "Venda nº 12", "Carlos Oliveira", "SALE", sale.getId());
+        StockMovement fromUntracked = new StockMovement(chickenStock.getProduct(), null, StockMovementType.COUNTER_SALE,
+                2, 1, "Venda balcão", "Venda nº 12", "Carlos Oliveira", "SALE", sale.getId());
+        when(stockMovementRepository.findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                "SALE", sale.getId(), StockMovementType.COUNTER_SALE)).thenReturn(List.of(fromLot, fromUntracked));
+        when(saleRefundRepository.save(any(SaleRefund.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        saleRefundService.refund(sale.getId(), request, admin, null);
+
+        assertThat(lot.getQuantity()).isEqualTo(1);
+        ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
+        verify(stockMovementRepository, times(3)).save(movementCaptor.capture());
+        assertThat(movementCaptor.getAllValues()).anyMatch(movement -> movement.getLot() == lot
+                && movement.getMovementType() == StockMovementType.REFUND
+                && movement.getQuantityDelta() == 1);
     }
 
     @Test

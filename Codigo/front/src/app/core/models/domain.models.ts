@@ -14,7 +14,7 @@ export interface Sale { id: string; externalId?: string; number: string; created
 export interface CashRegister { id: string; operator: string; openedAt: string; closedAt?: string; initialBalance: number; expectedBalance: number; countedBalance?: number; difference?: number; justification?: string; status: 'OPEN' | 'CLOSED'; }
 export interface CashMovement { id: string; date: string; description: string; type: 'IN' | 'OUT'; amount: number; origin: string; referenceId?: string; }
 export interface Supplier { id: string; name: string; phone: string; email: string; notes?: string; active: boolean; }
-export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; }
+export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; batch?: string; expiry?: string; }
 export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; itemCount: number; total: number; status: PurchaseStatus; paymentStatus?: 'PENDING' | 'PAID'; paymentMethod?: PaymentMethod | null; paidAt?: string | null; }
 export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; paidAt?: string | null; }
 export interface StockMovement { id: string; productId: string; productName: string; date: string; previousQuantity: number; newQuantity: number; difference: number; origin: string; user: string; reason: string; }

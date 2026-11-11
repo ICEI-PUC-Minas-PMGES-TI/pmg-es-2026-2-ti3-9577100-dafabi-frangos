@@ -17,6 +17,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -56,6 +57,11 @@ public class PurchaseItem {
     @Column(name = "resulting_product_cost", nullable = false, precision = 14, scale = 2)
     private BigDecimal resultingProductCost = BigDecimal.ZERO;
 
+    @Column(length = 100)
+    private String batch;
+
+    private LocalDate expiry;
+
     @NotNull
     @DecimalMin(value = "0.01")
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
@@ -70,6 +76,12 @@ public class PurchaseItem {
 
     public PurchaseItem(Product product, Integer quantity, BigDecimal unitCost,
                         BigDecimal previousProductCost, BigDecimal resultingProductCost) {
+        this(product, quantity, unitCost, previousProductCost, resultingProductCost, null, null);
+    }
+
+    public PurchaseItem(Product product, Integer quantity, BigDecimal unitCost,
+                        BigDecimal previousProductCost, BigDecimal resultingProductCost,
+                        String batch, LocalDate expiry) {
         this(
                 null,
                 null,
@@ -81,6 +93,8 @@ public class PurchaseItem {
         );
         this.previousProductCost = normalize(previousProductCost);
         this.resultingProductCost = normalize(resultingProductCost);
+        this.batch = batch == null || batch.isBlank() ? null : batch.trim();
+        this.expiry = expiry;
     }
 
     public PurchaseItem(UUID id, Purchase purchase, Product product, String productName,
@@ -172,6 +186,8 @@ public class PurchaseItem {
 
     public BigDecimal getPreviousProductCost() { return previousProductCost; }
     public BigDecimal getResultingProductCost() { return resultingProductCost; }
+    public String getBatch() { return batch; }
+    public LocalDate getExpiry() { return expiry; }
 
     public void setUnitCost(BigDecimal unitCost) {
         this.unitCost = unitCost != null ? unitCost.setScale(2, RoundingMode.HALF_UP) : null;

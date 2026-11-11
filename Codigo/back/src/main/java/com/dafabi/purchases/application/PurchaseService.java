@@ -8,6 +8,8 @@ import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
 import com.dafabi.inventory.repository.StockMovementRepository;
+import com.dafabi.inventory.domain.InventoryLot;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.expenses.domain.ExpensePaymentMethod;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -39,6 +41,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -56,6 +59,7 @@ public class PurchaseService {
     private final PurchaseMapper purchaseMapper;
     private final CashRegisterRepository cashRegisterRepository;
     private final CashRegisterService cashRegisterService;
+    private final InventoryLotRepository inventoryLotRepository;
 
     public PurchaseService(PurchaseRepository purchaseRepository,
                            SupplierRepository supplierRepository,
@@ -63,7 +67,8 @@ public class PurchaseService {
                            StockMovementRepository stockMovementRepository,
                            PurchaseMapper purchaseMapper,
                            CashRegisterRepository cashRegisterRepository,
-                           CashRegisterService cashRegisterService) {
+                           CashRegisterService cashRegisterService,
+                           InventoryLotRepository inventoryLotRepository) {
         this.purchaseRepository = purchaseRepository;
         this.supplierRepository = supplierRepository;
         this.productStockRepository = productStockRepository;
@@ -71,6 +76,7 @@ public class PurchaseService {
         this.purchaseMapper = purchaseMapper;
         this.cashRegisterRepository = cashRegisterRepository;
         this.cashRegisterService = cashRegisterService;
+        this.inventoryLotRepository = inventoryLotRepository;
     }
 
     @Transactional
@@ -103,6 +109,7 @@ public class PurchaseService {
 
         Map<UUID, Product> productsById = new HashMap<>();
         Map<UUID, CostChange> costsByProduct = new HashMap<>();
+        Map<UUID, Integer> previousQuantities = new HashMap<>();
         for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
             UUID productId = entry.getKey();
             int quantity = entry.getValue();
@@ -129,19 +136,43 @@ public class PurchaseService {
             BigDecimal resultingCost = totalInventoryCost.divide(BigDecimal.valueOf(newQuantity), 2, RoundingMode.HALF_UP);
             product.setCurrentCost(resultingCost);
             stock.setQuantity(newQuantity);
-            stockMovementRepository.save(new StockMovement(
-                    product, null, StockMovementType.PURCHASE,
-                    previousQuantity, newQuantity, PURCHASE_ORIGIN,
-                    "Compra registrada de " + supplier.getName(), actor,
-                    PURCHASE_REFERENCE_TYPE, purchase.getId()));
             productsById.put(productId, product);
             costsByProduct.put(productId, new CostChange(previousCost, resultingCost));
+            previousQuantities.put(productId, previousQuantity);
         }
 
         for (PurchaseItemRequest item : request.items()) {
+            Product product = productsById.get(item.productId());
             CostChange costs = costsByProduct.get(item.productId());
-            purchase.addItem(new PurchaseItem(productsById.get(item.productId()), item.quantity(), item.unitCost(),
-                    costs.previous(), costs.resulting()));
+            if (product.isPerishable()) {
+                validateAndEnsureLot(item, product, request.date());
+            } else if (item.batch() != null || item.expiry() != null) {
+                throw new BusinessException("LOT_NOT_ALLOWED", "Lote e validade só podem ser informados para produtos perecíveis.");
+            }
+            purchase.addItem(new PurchaseItem(product, item.quantity(), item.unitCost(),
+                    costs.previous(), costs.resulting(), item.batch(), item.expiry()));
+        }
+
+        Map<UUID, Integer> aggregateBalances = new HashMap<>(previousQuantities);
+        Set<String> batchesInRequest = new java.util.HashSet<>();
+        for (PurchaseItemRequest item : request.items()) {
+            Product product = productsById.get(item.productId());
+            InventoryLot lot = null;
+            if (product.isPerishable()) {
+                String batchKey = product.getId() + ":" + item.batch().trim().toLowerCase();
+                if (!batchesInRequest.add(batchKey) || inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(
+                        product.getId(), item.batch().trim())) {
+                    throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.", HttpStatus.CONFLICT);
+                }
+                lot = inventoryLotRepository.save(new InventoryLot(product, item.batch(), request.date(), item.expiry(), item.quantity()));
+            }
+            int previous = aggregateBalances.get(item.productId());
+            int next = previous + item.quantity();
+            aggregateBalances.put(item.productId(), next);
+            stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.PURCHASE,
+                    previous, next, PURCHASE_ORIGIN,
+                    "Compra registrada de " + supplier.getName(), actor,
+                    PURCHASE_REFERENCE_TYPE, purchase.getId()));
         }
 
         Purchase saved = purchaseRepository.save(purchase);
@@ -204,6 +235,9 @@ public class PurchaseService {
         Map<UUID, Integer> quantitiesByProduct = new TreeMap<>(Comparator.comparing(UUID::toString));
         purchase.getItems().forEach(item -> quantitiesByProduct.merge(
                 item.getProduct().getId(), item.getQuantity(), Integer::sum));
+        List<StockMovement> receiptMovements = stockMovementRepository
+                .findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                        PURCHASE_REFERENCE_TYPE, purchase.getId(), StockMovementType.PURCHASE);
         for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
             ProductStock stock = productStockRepository.findByProductIdForUpdate(entry.getKey())
                     .orElseThrow(() -> new ResourceNotFoundException("Produto", entry.getKey()));
@@ -216,6 +250,14 @@ public class PurchaseService {
                 throw new BusinessException("PURCHASE_COST_CHANGED",
                         "Não é possível cancelar: há compras posteriores que alteraram o custo médio do produto.",
                         HttpStatus.CONFLICT);
+            }
+            boolean lotAlreadyConsumed = receiptMovements.stream()
+                    .filter(movement -> movement.getProduct().getId().equals(entry.getKey()))
+                    .filter(movement -> movement.getLot() != null)
+                    .anyMatch(movement -> movement.getLot().getQuantity() < movement.getQuantityDelta());
+            if (lotAlreadyConsumed) {
+                throw new BusinessException("PURCHASE_LOT_ALREADY_CONSUMED",
+                        "Não é possível cancelar: parte de um lote recebido nesta compra já foi consumida.", HttpStatus.CONFLICT);
             }
         }
 
@@ -232,10 +274,26 @@ public class PurchaseService {
                         HttpStatus.CONFLICT);
             }
             stock.getProduct().setCurrentCost(money(costSource.getPreviousProductCost()));
-            stockMovementRepository.save(new StockMovement(stock.getProduct(), null,
-                    StockMovementType.PURCHASE_CANCELLATION, previousQuantity, newQuantity,
-                    "Cancelamento de compra", "Cancelamento da compra " + purchase.getId(),
-                    actor(purchase.getCreatedBy()), PURCHASE_REFERENCE_TYPE, purchase.getId()));
+            List<StockMovement> productReceipts = receiptMovements.stream()
+                    .filter(movement -> movement.getProduct().getId().equals(entry.getKey())).toList();
+            if (productReceipts.isEmpty()) {
+                stockMovementRepository.save(new StockMovement(stock.getProduct(), null,
+                        StockMovementType.PURCHASE_CANCELLATION, previousQuantity, newQuantity,
+                        "Cancelamento de compra", "Cancelamento da compra " + purchase.getId(),
+                        actor(purchase.getCreatedBy()), PURCHASE_REFERENCE_TYPE, purchase.getId()));
+                continue;
+            }
+            int balance = previousQuantity;
+            for (StockMovement receipt : productReceipts) {
+                int received = receipt.getQuantityDelta();
+                if (receipt.getLot() != null) receipt.getLot().setQuantity(receipt.getLot().getQuantity() - received);
+                int next = balance - received;
+                stockMovementRepository.save(new StockMovement(stock.getProduct(), receipt.getLot(),
+                        StockMovementType.PURCHASE_CANCELLATION, balance, next,
+                        "Cancelamento de compra", "Cancelamento da compra " + purchase.getId(),
+                        actor(purchase.getCreatedBy()), PURCHASE_REFERENCE_TYPE, purchase.getId()));
+                balance = next;
+            }
         }
         purchase.setStatus(PurchaseStatus.CANCELED);
         return purchaseMapper.toResponse(purchaseRepository.save(purchase));
@@ -248,6 +306,17 @@ public class PurchaseService {
     private static BigDecimal money(BigDecimal value) {
         return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void validateAndEnsureLot(PurchaseItemRequest item, Product product, java.time.LocalDate purchaseDate) {
+        if (item.batch() == null || item.batch().isBlank() || item.expiry() == null) {
+            throw new BusinessException("PERISHABLE_LOT_REQUIRED",
+                    "Informe lote e validade para cada produto perecível recebido.", HttpStatus.BAD_REQUEST);
+        }
+        if (item.expiry().isBefore(purchaseDate) || item.expiry().isBefore(java.time.LocalDate.now())) {
+            throw new BusinessException("INVALID_EXPIRY",
+                    "A validade do lote não pode ser anterior à data da compra nem já estar vencida.", HttpStatus.BAD_REQUEST);
+        }
     }
 
     private record CostChange(BigDecimal previous, BigDecimal resulting) { }

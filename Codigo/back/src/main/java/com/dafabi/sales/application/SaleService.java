@@ -7,6 +7,8 @@ import com.dafabi.cash.domain.CashRegisterStatus;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.InventoryLot;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -47,6 +49,7 @@ public class SaleService {
     private final CashRegisterService cashRegisterService;
     private final ProductStockRepository productStockRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final InventoryLotRepository inventoryLotRepository;
     private final SaleMapper saleMapper;
 
     public SaleService(SaleRepository saleRepository,
@@ -54,12 +57,14 @@ public class SaleService {
                        CashRegisterService cashRegisterService,
                        ProductStockRepository productStockRepository,
                        StockMovementRepository stockMovementRepository,
+                       InventoryLotRepository inventoryLotRepository,
                        SaleMapper saleMapper) {
         this.saleRepository = saleRepository;
         this.cashRegisterRepository = cashRegisterRepository;
         this.cashRegisterService = cashRegisterService;
         this.productStockRepository = productStockRepository;
         this.stockMovementRepository = stockMovementRepository;
+        this.inventoryLotRepository = inventoryLotRepository;
         this.saleMapper = saleMapper;
     }
 
@@ -125,11 +130,7 @@ public class SaleService {
 
             int newQuantity = previousQuantity - quantity;
             stock.setQuantity(newQuantity);
-            stockMovementRepository.save(new StockMovement(
-                    product, null, StockMovementType.COUNTER_SALE,
-                    previousQuantity, newQuantity, "Venda balcão",
-                    "Venda nº " + sale.getSaleNumber(), register.getOperatorName(),
-                    SALE_REFERENCE_TYPE, sale.getId()));
+            consumeLotsForSale(product, quantity, previousQuantity, newQuantity, sale, register.getOperatorName());
         }
 
         sale.setSubtotal(subtotal);
@@ -209,5 +210,30 @@ public class SaleService {
             throw new BusinessException("OPERATOR_REQUIRED", "O operador da venda é obrigatório.");
         }
         return operatorId;
+    }
+
+    private void consumeLotsForSale(Product product, int quantity, int aggregateBefore, int aggregateAfter,
+                                    Sale sale, String operator) {
+        int remaining = quantity;
+        int aggregateBalance = aggregateBefore;
+        if (product.isPerishable()) {
+            for (InventoryLot lot : inventoryLotRepository.findAvailableByProductForUpdate(product.getId())) {
+                if (remaining == 0) break;
+                int consumed = Math.min(remaining, lot.getQuantity());
+                int lotBefore = lot.getQuantity();
+                lot.setQuantity(lotBefore - consumed);
+                remaining -= consumed;
+                int nextBalance = aggregateBalance - consumed;
+                stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.COUNTER_SALE,
+                        aggregateBalance, nextBalance, "Venda balcão", "Venda nº " + sale.getSaleNumber(),
+                        operator, SALE_REFERENCE_TYPE, sale.getId()));
+                aggregateBalance = nextBalance;
+            }
+        }
+        if (remaining > 0) {
+            stockMovementRepository.save(new StockMovement(product, null, StockMovementType.COUNTER_SALE,
+                    aggregateBalance, aggregateAfter, "Venda balcão", "Venda nº " + sale.getSaleNumber(),
+                    operator, SALE_REFERENCE_TYPE, sale.getId()));
+        }
     }
 }

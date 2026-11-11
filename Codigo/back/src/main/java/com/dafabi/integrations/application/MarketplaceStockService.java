@@ -5,6 +5,8 @@ import com.dafabi.integrations.dto.*;
 import com.dafabi.integrations.repository.*;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.InventoryLot;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStock;
@@ -31,13 +33,14 @@ public class MarketplaceStockService {
     private final ProductRepository products;
     private final ProductStockRepository stocks;
     private final StockMovementRepository movements;
+    private final InventoryLotRepository lots;
 
     public MarketplaceStockService(MarketplaceItemSnapshotRepository snapshots,
             MarketplaceProductMappingRepository mappings, MarketplaceStockBaselineRepository baselines,
             MarketplaceStockApplicationRepository applications, ProductRepository products,
-            ProductStockRepository stocks, StockMovementRepository movements) {
+            ProductStockRepository stocks, StockMovementRepository movements, InventoryLotRepository lots) {
         this.snapshots=snapshots; this.mappings=mappings; this.baselines=baselines;
-        this.applications=applications; this.products=products; this.stocks=stocks; this.movements=movements;
+        this.applications=applications; this.products=products; this.stocks=stocks; this.movements=movements; this.lots=lots;
     }
 
     @Transactional(readOnly=true)
@@ -186,12 +189,68 @@ public class MarketplaceStockService {
         }
         if(delta.signum()>0) stock.setQuantity(previous-amount);
         else if(delta.signum()<0) stock.setQuantity(previous+amount);
-        if(amount>0) movements.save(new StockMovement(stock.getProduct(),null,
-                delta.signum()>0?StockMovementType.INTEGRATED_SALE:StockMovementType.INTEGRATED_CANCELLATION,
-                previous,stock.getQuantity(),item.getProvider()==IntegrationProvider.IFOOD?"iFood":"99Food",
-                "Relatório de itens · "+item.getExternalItemName(),"Importação de marketplace",
-                "MARKETPLACE_STOCK_APPLICATION",application.getId()));
+        if(amount>0) adjustLots(stock.getProduct(), delta.signum(), amount, previous, stock.getQuantity(), item, application);
         application.markApplied(newReported); applications.save(application);
+    }
+
+    private void adjustLots(Product product, int direction, int amount, int aggregateBefore, int aggregateAfter,
+                            MarketplaceItemSnapshot item, MarketplaceStockApplication application) {
+        int remaining = amount;
+        int aggregateBalance = aggregateBefore;
+        String origin = item.getProvider() == IntegrationProvider.IFOOD ? "iFood" : "99Food";
+        if (direction > 0 && product.isPerishable()) {
+            for (InventoryLot lot : lots.findAvailableByProductForUpdate(product.getId())) {
+                if (remaining == 0) break;
+                int consumed = Math.min(remaining, lot.getQuantity());
+                lot.setQuantity(lot.getQuantity() - consumed);
+                int next = aggregateBalance - consumed;
+                movements.save(new StockMovement(product, lot, StockMovementType.INTEGRATED_SALE,
+                        aggregateBalance, next, origin, "Relatório de itens · " + item.getExternalItemName(),
+                        "Importação de marketplace", "MARKETPLACE_STOCK_APPLICATION", application.getId()));
+                aggregateBalance = next;
+                remaining -= consumed;
+            }
+        } else if (direction < 0 && product.isPerishable()) {
+            List<StockMovement> previous = new ArrayList<>();
+            previous.addAll(movements.findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                    "MARKETPLACE_STOCK_APPLICATION", application.getId(), StockMovementType.INTEGRATED_SALE));
+            previous.addAll(movements.findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                    "MARKETPLACE_STOCK_APPLICATION", application.getId(), StockMovementType.INTEGRATED_CANCELLATION));
+            Map<UUID, LotBalance> balances = new LinkedHashMap<>();
+            for (StockMovement movement : previous) {
+                if (movement.getLot() == null) continue;
+                balances.computeIfAbsent(movement.getLot().getId(), ignored -> new LotBalance(movement.getLot()))
+                        .remaining += -movement.getQuantityDelta();
+            }
+            for (LotBalance balance : balances.values()) {
+                if (remaining == 0) break;
+                int restored = Math.min(remaining, Math.max(0, balance.remaining));
+                if (restored == 0) continue;
+                balance.lot.setQuantity(balance.lot.getQuantity() + restored);
+                int next = aggregateBalance + restored;
+                movements.save(new StockMovement(product, balance.lot, StockMovementType.INTEGRATED_CANCELLATION,
+                        aggregateBalance, next, origin, "Recomposição · " + item.getExternalItemName(),
+                        "Cancelamento de venda integrada", "MARKETPLACE_STOCK_APPLICATION", application.getId()));
+                aggregateBalance = next;
+                balance.remaining -= restored;
+                remaining -= restored;
+            }
+        }
+        if (remaining > 0) {
+            int next = aggregateAfter;
+            movements.save(new StockMovement(product, null,
+                    direction > 0 ? StockMovementType.INTEGRATED_SALE : StockMovementType.INTEGRATED_CANCELLATION,
+                    aggregateBalance, next, origin,
+                    direction > 0 ? "Relatório de itens · " + item.getExternalItemName() : "Recomposição · " + item.getExternalItemName(),
+                    direction > 0 ? "Importação de marketplace" : "Cancelamento de venda integrada",
+                    "MARKETPLACE_STOCK_APPLICATION", application.getId()));
+        }
+    }
+
+    private static final class LotBalance {
+        private final InventoryLot lot;
+        private int remaining;
+        private LotBalance(InventoryLot lot) { this.lot = lot; }
     }
 
     private List<MarketplaceStockEffectView> effectViews(IntegrationProvider provider,String storeId,LocalDate start,LocalDate end) {
