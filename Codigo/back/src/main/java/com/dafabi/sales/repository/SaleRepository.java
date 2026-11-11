@@ -35,6 +35,9 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     List<Sale> findByDateTimeGreaterThanEqualAndDateTimeLessThan(
             OffsetDateTime startDateTime, OffsetDateTime endDateTime);
 
+    List<Sale> findByDateTimeGreaterThanEqualAndDateTimeLessThanOrderByDateTimeDesc(
+            OffsetDateTime startDateTime, OffsetDateTime endDateTime);
+
     @Query("""
             select s from Sale s
             where (:hasQuery = false

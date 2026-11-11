@@ -10,6 +10,10 @@ spring:
       fail-on-unknown-properties: false
   jpa:
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -17,6 +21,8 @@ server:
     context-path: /api/v1
 
 app:
+  integrations:
+    max-file-bytes: 10485760
   security:
     jwt:
       expiration-seconds: ${JWT_EXPIRATION_SECONDS:28800}

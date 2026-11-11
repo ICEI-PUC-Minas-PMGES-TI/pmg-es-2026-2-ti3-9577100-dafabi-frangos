@@ -10,4 +10,5 @@ import java.util.List;
 
 public interface ExpenseRepository extends JpaRepository<Expense, UUID>, JpaSpecificationExecutor<Expense> {
     List<Expense> findByDateGreaterThanEqualAndDateLessThanEqual(LocalDate startDate, LocalDate endDate);
+    List<Expense> findByDateBetween(LocalDate startDate, LocalDate endDate);
 }
