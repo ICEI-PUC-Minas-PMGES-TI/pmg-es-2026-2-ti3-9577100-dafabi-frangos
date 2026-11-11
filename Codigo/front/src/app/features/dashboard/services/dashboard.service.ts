@@ -11,12 +11,11 @@ export class DashboardService {
   private readonly endpoint = `${environment.apiBaseUrl}/dashboard/financial-summary`;
 
   async load(period: string, startDate: string, endDate: string): Promise<DashboardView> {
-    let params = new HttpParams().set('period', period);
-    if (period === 'custom') {
-      params = params.set('startDate', startDate).set('endDate', endDate);
-    }
-
-    const dashboard = await firstValueFrom(this.http.get<ApiFinancialDashboardResponse>(this.endpoint, { params }));
+    const dashboardRequest = this.fetch(period, startDate, endDate);
+    const chartRequest = period === 'today'
+      ? this.fetch('month', startDate, endDate)
+      : dashboardRequest;
+    const [dashboard, chartDashboard] = await Promise.all([dashboardRequest, chartRequest]);
     const summary: DashboardSummary = {
       revenue: Number(dashboard.summary.revenue),
       expenses: Number(dashboard.summary.expenses),
@@ -29,12 +28,12 @@ export class DashboardService {
       food99Sales: Number(dashboard.summary.food99Sales)
     };
 
-    const rawDaily = dashboard.daily.map(point => ({
+    const rawDaily = chartDashboard.daily.map(point => ({
       date: point.date,
       day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(new Date(`${point.date}T12:00:00Z`)),
       value: Number(point.revenue)
     }));
-    const periodDays = Math.max(1, Math.round((Date.parse(`${dashboard.endDate}T00:00:00Z`) - Date.parse(`${dashboard.startDate}T00:00:00Z`)) / 86_400_000) + 1);
+    const periodDays = Math.max(1, Math.round((Date.parse(`${chartDashboard.endDate}T00:00:00Z`) - Date.parse(`${chartDashboard.startDate}T00:00:00Z`)) / 86_400_000) + 1);
     const chartGranularity: DashboardView['chartGranularity'] = periodDays <= 14 ? 'dia' : periodDays <= 90 ? 'semana' : 'mês';
 
     return {
@@ -54,6 +53,14 @@ export class DashboardService {
         status: sale.status === 'CANCELLED' || sale.status === 'PARTIALLY_CANCELLED' ? 'CANCELED' : 'COMPLETED'
       }))
     };
+  }
+
+  private fetch(period: string, startDate: string, endDate: string): Promise<ApiFinancialDashboardResponse> {
+    let params = new HttpParams().set('period', period);
+    if (period === 'custom') {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    }
+    return firstValueFrom(this.http.get<ApiFinancialDashboardResponse>(this.endpoint, { params }));
   }
 }
 
