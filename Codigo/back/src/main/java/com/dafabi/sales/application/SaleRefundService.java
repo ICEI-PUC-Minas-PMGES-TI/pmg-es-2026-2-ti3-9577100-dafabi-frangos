@@ -27,6 +27,8 @@ import com.dafabi.shared.exception.ResourceNotFoundException;
 import com.dafabi.shared.security.RequestUser;
 import com.dafabi.shared.security.UserRole;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,6 +100,12 @@ public class SaleRefundService {
         return saleRefundRepository.findBySale_Id(saleId)
                 .map(saleRefundMapper::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Estorno da venda", saleId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SaleRefundResponse> findAll(Pageable pageable) {
+        return saleRefundRepository.findAllByOrderByRefundedAtDesc(pageable)
+                .map(saleRefundMapper::toResponse);
     }
 
     @Transactional
