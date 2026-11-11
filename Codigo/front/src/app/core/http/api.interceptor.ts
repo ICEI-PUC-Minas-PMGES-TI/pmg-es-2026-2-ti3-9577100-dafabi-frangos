@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { Injector, inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthSession, AuthService, SESSION_KEY } from '../auth/auth.service';
 import { toApiError } from './api-error';
 
@@ -37,11 +37,31 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(request).pipe(
     catchError(error => {
-      const isAuthEndpoint = req.url.endsWith('/auth/login') || req.url.endsWith('/auth/logout');
-      if (error instanceof HttpErrorResponse && error.status === 401 && !isAuthEndpoint) {
-        injector.get(AuthService).logout(true);
+      const isAuthEndpoint = ['/auth/login', '/auth/logout', '/auth/refresh']
+        .some(endpoint => req.url.endsWith(endpoint));
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401 || isAuthEndpoint) {
+        return throwError(() => toApiError(error));
       }
-      return throwError(() => toApiError(error));
+
+      const auth = injector.get(AuthService);
+      return from(auth.refreshSession()).pipe(
+        switchMap(refreshed => {
+          const accessToken = auth.accessToken();
+          if (!refreshed || !accessToken) {
+            auth.logout(true);
+            return throwError(() => toApiError(error));
+          }
+
+          return next(req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })).pipe(
+            catchError(retryError => {
+              if (retryError instanceof HttpErrorResponse && retryError.status === 401) {
+                auth.logout(true);
+              }
+              return throwError(() => toApiError(retryError));
+            })
+          );
+        })
+      );
     })
   );
 };

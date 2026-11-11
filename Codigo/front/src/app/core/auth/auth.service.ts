@@ -35,6 +35,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly sessionState = signal<AuthSession | null>(this.restoreSession());
+  private refreshRequest: Promise<boolean> | null = null;
 
   readonly currentUser = computed<User | null>(() => this.sessionState()?.user ?? null);
   readonly accessToken = computed<string | null>(() => this.sessionState()?.accessToken ?? null);
@@ -57,16 +58,45 @@ export class AuthService {
       active: response.user.active
     };
 
-    const session: AuthSession = {
+    this.saveSession({
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       expiresAt: response.expiresAt,
       user
-    };
-
-    this.sessionState.set(session);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    });
     return user;
+  }
+
+  refreshSession(): Promise<boolean> {
+    if (this.refreshRequest) return this.refreshRequest;
+
+    const current = this.sessionState();
+    if (!current?.refreshToken) return Promise.resolve(false);
+
+    this.refreshRequest = firstValueFrom(
+      this.http.post<ApiLoginResponse>(`${environment.apiBaseUrl}/auth/refresh`, {
+        refreshToken: current.refreshToken
+      })
+    ).then(response => {
+      const user: User = {
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        role: response.user.role,
+        active: response.user.active
+      };
+      this.saveSession({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        expiresAt: response.expiresAt,
+        user
+      });
+      return true;
+    }).catch(() => false).finally(() => {
+      this.refreshRequest = null;
+    });
+
+    return this.refreshRequest;
   }
 
   hasRole(roles: User['role'][]): boolean {
@@ -76,16 +106,19 @@ export class AuthService {
 
   logout(expired = false): void {
     const currentSession = this.sessionState();
-    this.sessionState.set(null);
-    sessionStorage.removeItem(SESSION_KEY);
 
     if (!expired && currentSession?.accessToken) {
       firstValueFrom(
         this.http.post(`${environment.apiBaseUrl}/auth/logout`, {
           refreshToken: currentSession.refreshToken ?? null
+        }, {
+          headers: { Authorization: `Bearer ${currentSession.accessToken}` }
         })
       ).catch(() => undefined);
     }
+
+    this.sessionState.set(null);
+    sessionStorage.removeItem(SESSION_KEY);
 
     void this.router.navigate(['/login'], {
       queryParams: expired ? { motivo: 'sessao-expirada' } : undefined
@@ -110,7 +143,7 @@ export class AuthService {
         return null;
       }
 
-      if (parsed.expiresAt && new Date(parsed.expiresAt).getTime() <= Date.now()) {
+      if (parsed.expiresAt && new Date(parsed.expiresAt).getTime() <= Date.now() && !parsed.refreshToken) {
         sessionStorage.removeItem(SESSION_KEY);
         return null;
       }
@@ -131,5 +164,10 @@ export class AuthService {
       sessionStorage.removeItem(SESSION_KEY);
       return null;
     }
+  }
+
+  private saveSession(session: AuthSession): void {
+    this.sessionState.set(session);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
 }
