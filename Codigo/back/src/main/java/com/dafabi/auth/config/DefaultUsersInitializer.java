@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
-@Profile("!test")
+@Profile("dev")
 public class DefaultUsersInitializer implements ApplicationRunner {
 
     public static final UUID ADMIN_ROLE_ID = UUID.fromString("00000000-0000-0000-0000-000000000201");

@@ -23,14 +23,15 @@ public class JwtService {
     private final long refreshTokenExpirationSeconds;
 
     public JwtService(
-            @Value("${app.security.jwt.secret:dafabi-frangos-jwt-secret-key-2026-minimum-32-bytes-long-key}") String secret,
+            @Value("${app.security.jwt.secret}") String secret,
             @Value("${app.security.jwt.expiration-seconds:28800}") long accessTokenExpirationSeconds,
             @Value("${app.security.jwt.refresh-expiration-seconds:604800}") long refreshTokenExpirationSeconds) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET deve ser configurado para iniciar a API.");
+        }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
-            keyBytes = padded;
+            throw new IllegalStateException("JWT_SECRET deve ter pelo menos 32 bytes.");
         }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenExpirationSeconds = accessTokenExpirationSeconds;

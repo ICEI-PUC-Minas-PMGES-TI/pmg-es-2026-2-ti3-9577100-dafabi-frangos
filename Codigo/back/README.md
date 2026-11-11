@@ -23,16 +23,21 @@ As migrations do Flyway criam o esquema e inserem as categorias iniciais quando 
 Ainda em `Codigo/back`:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 No PowerShell, use:
 
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 A API fica em `http://localhost:8080/api/v1`.
+
+O perfil local `dev` cria dados demonstrativos, incluindo usuários de teste. Use esse perfil
+somente em desenvolvimento. O perfil padrão da aplicação é `prod` e exige `JWT_SECRET`
+com pelo menos 32 bytes; configure-o no ambiente do servidor e nunca use o segredo local
+de desenvolvimento em uma implantação.
 
 ## Endpoints disponíveis
 

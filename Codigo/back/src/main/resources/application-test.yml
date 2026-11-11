@@ -14,3 +14,7 @@ spring:
     show-sql: false
   flyway:
     enabled: false
+app:
+  security:
+    jwt:
+      secret: test-only-jwt-secret-key-that-is-long-enough-123456
