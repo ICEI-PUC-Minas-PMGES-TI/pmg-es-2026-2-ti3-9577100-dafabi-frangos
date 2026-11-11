@@ -6,8 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/refunds")
@@ -23,5 +26,10 @@ public class SaleRefundHistoryController {
     @GetMapping
     public Page<SaleRefundResponse> findAll(Pageable pageable) {
         return saleRefundService.findAll(pageable);
+    }
+
+    @GetMapping("/{refundId}")
+    public SaleRefundResponse findById(@PathVariable UUID refundId) {
+        return saleRefundService.findById(refundId);
     }
 }

@@ -108,6 +108,13 @@ public class SaleRefundService {
                 .map(saleRefundMapper::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public SaleRefundResponse findById(UUID refundId) {
+        return saleRefundRepository.findById(refundId)
+                .map(saleRefundMapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Estorno", refundId));
+    }
+
     @Transactional
     public SaleRefundOutcome refund(UUID saleId,
                                     CreateSaleRefundRequest request,
