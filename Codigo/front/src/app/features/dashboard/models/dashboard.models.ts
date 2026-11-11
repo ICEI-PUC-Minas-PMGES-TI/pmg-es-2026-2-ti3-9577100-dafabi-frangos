@@ -21,6 +21,7 @@ export interface DashboardView {
   summary: DashboardSummary;
   otherMarketplaceCosts: number;
   marketplaceFeesComplete: boolean;
+  chartGranularity: 'dia' | 'semana' | 'mês';
   daily: DailyRevenue[];
   recentSales: DashboardRecentSale[];
 }

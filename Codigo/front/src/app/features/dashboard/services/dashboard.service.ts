@@ -29,17 +29,22 @@ export class DashboardService {
       food99Sales: Number(dashboard.summary.food99Sales)
     };
 
+    const rawDaily = dashboard.daily.map(point => ({
+      date: point.date,
+      day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(new Date(`${point.date}T12:00:00Z`)),
+      value: Number(point.revenue)
+    }));
+    const periodDays = Math.max(1, Math.round((Date.parse(`${dashboard.endDate}T00:00:00Z`) - Date.parse(`${dashboard.startDate}T00:00:00Z`)) / 86_400_000) + 1);
+    const chartGranularity: DashboardView['chartGranularity'] = periodDays <= 14 ? 'dia' : periodDays <= 90 ? 'semana' : 'mês';
+
     return {
       startDate: dashboard.startDate,
       endDate: dashboard.endDate,
       summary,
       otherMarketplaceCosts: Number(dashboard.summary.otherMarketplaceCosts ?? 0),
       marketplaceFeesComplete: dashboard.summary.marketplaceFeesComplete !== false,
-      daily: dashboard.daily.map(point => ({
-        date: point.date,
-        day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(new Date(`${point.date}T12:00:00Z`)),
-        value: Number(point.revenue)
-      })),
+      chartGranularity,
+      daily: aggregateRevenue(rawDaily, chartGranularity),
       recentSales: (dashboard.recentSales ?? []).map(sale => ({
         id: sale.id,
         number: sale.number,
@@ -50,4 +55,29 @@ export class DashboardService {
       }))
     };
   }
+}
+
+function aggregateRevenue(points: DashboardView['daily'], granularity: DashboardView['chartGranularity']): DashboardView['daily'] {
+  if (granularity === 'dia') return points;
+
+  const grouped = new Map<string, DashboardView['daily'][number]>();
+  for (const point of points) {
+    const date = new Date(`${point.date}T00:00:00Z`);
+    let key: string;
+    let label: string;
+    if (granularity === 'semana') {
+      const monday = new Date(date);
+      monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+      key = monday.toISOString().slice(0, 10);
+      label = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(monday);
+    } else {
+      key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      label = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(date).replace('.', '');
+    }
+
+    const current = grouped.get(key);
+    if (current) current.value += point.value;
+    else grouped.set(key, { date: key, day: label, value: point.value });
+  }
+  return [...grouped.values()];
 }
