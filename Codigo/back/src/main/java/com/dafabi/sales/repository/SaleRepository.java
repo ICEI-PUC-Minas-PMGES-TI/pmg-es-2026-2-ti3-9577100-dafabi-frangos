@@ -32,6 +32,7 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     @Query("select sale from Sale sale where sale.id = :id")
     Optional<Sale> findByIdForUpdate(@Param("id") UUID id);
 
+    @EntityGraph(attributePaths = "items")
     List<Sale> findByDateTimeGreaterThanEqualAndDateTimeLessThan(
             OffsetDateTime startDateTime, OffsetDateTime endDateTime);
 

@@ -19,6 +19,7 @@ export class DashboardService {
     const summary: DashboardSummary = {
       revenue: Number(dashboard.summary.revenue),
       expenses: Number(dashboard.summary.expenses),
+      costOfGoodsSold: Number(dashboard.summary.costOfGoodsSold ?? 0),
       ifoodFees: Number(dashboard.summary.ifoodFees),
       food99Fees: Number(dashboard.summary.food99Fees),
       estimatedResult: Number(dashboard.summary.estimatedResult),

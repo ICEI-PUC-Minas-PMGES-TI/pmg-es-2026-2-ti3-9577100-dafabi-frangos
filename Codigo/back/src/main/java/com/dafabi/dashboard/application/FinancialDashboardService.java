@@ -61,7 +61,7 @@ public class FinancialDashboardService {
                 .toList();
         List<Expense> expenses = expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(
                         range.start(), range.end()).stream()
-                .filter(expense -> expense.getStatus() != ExpenseStatus.CANCELLED)
+                .filter(expense -> expense.getStatus() == ExpenseStatus.CONSOLIDATED)
                 .toList();
         List<MarketplaceOrder> marketplaceOrders = java.util.Arrays.stream(IntegrationProvider.values())
                 .flatMap(provider -> marketplaceOrderRepository
@@ -79,6 +79,8 @@ public class FinancialDashboardService {
         BigDecimal revenue = sum(sales.stream().map(Sale::getTotal).toList())
                 .add(sum(marketplaceOrders.stream().map(MarketplaceOrder::getItemsValue).toList()));
         BigDecimal expenseTotal = sum(expenses.stream().map(Expense::getAmount).toList());
+        BigDecimal costOfGoodsSold = sum(sales.stream().flatMap(sale -> sale.getItems().stream())
+                .map(item -> zero(item.getUnitCost()).multiply(item.getQuantity())).toList());
         BigDecimal ifoodFees = sum(marketplaceOrders.stream().filter(o -> o.getProvider() == IntegrationProvider.IFOOD)
                 .map(o -> absolute(o.getFeesAndCommissions()).add(absolute(o.getServiceFee()))).toList());
         BigDecimal food99Fees = sum(marketplaceOrders.stream().filter(o -> o.getProvider() == IntegrationProvider.FOOD_99)
@@ -92,7 +94,8 @@ public class FinancialDashboardService {
                     : o.getMarketingCost() != null && o.getFreeDeliveryCost() != null
                         && o.getLogisticsCost() != null && o.getRefundAmount() != null));
         BigDecimal fees = ifoodFees.add(food99Fees);
-        BigDecimal estimatedResult = revenue.subtract(expenseTotal).subtract(fees).subtract(otherMarketplaceCosts)
+        BigDecimal estimatedResult = revenue.subtract(expenseTotal).subtract(costOfGoodsSold)
+                .subtract(fees).subtract(otherMarketplaceCosts)
                 .setScale(2, RoundingMode.HALF_UP);
 
         Map<String, Long> salesByOrigin = new LinkedHashMap<>();
@@ -108,6 +111,7 @@ public class FinancialDashboardService {
                 new FinancialDashboardResponse.Summary(
                         revenue,
                         expenseTotal,
+                        costOfGoodsSold,
                         fees,
                         ifoodFees,
                         food99Fees,

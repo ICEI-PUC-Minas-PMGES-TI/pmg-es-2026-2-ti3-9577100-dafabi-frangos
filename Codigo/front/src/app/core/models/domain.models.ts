@@ -22,4 +22,4 @@ export interface PerishableProduct { id: string; productId: string; productName:
 export interface Integration { id: 'IFOOD' | '99FOOD'; name: string; status: 'CONNECTED' | 'UNAVAILABLE' | 'PENDING'; lastSync?: string; importedOrders: number; }
 export interface ImportedSale { externalId: string; origin: Exclude<SaleOrigin, 'COUNTER'>; gross: number; discounts: number; fees: number; cancellations: number; net: number; importedAt: string; }
 export interface Refund { id: string; saleId: string; saleNumber: string; date: string; user: string; reason: string; amount: number; paymentMethod: PaymentMethod; status: 'COMPLETED' | 'CANCELED'; }
-export interface DashboardSummary { revenue: number; expenses: number; ifoodFees: number; food99Fees: number; estimatedResult: number; salesCount: number; counterSales: number; ifoodSales: number; food99Sales: number; }
+export interface DashboardSummary { revenue: number; expenses: number; costOfGoodsSold: number; ifoodFees: number; food99Fees: number; estimatedResult: number; salesCount: number; counterSales: number; ifoodSales: number; food99Sales: number; }

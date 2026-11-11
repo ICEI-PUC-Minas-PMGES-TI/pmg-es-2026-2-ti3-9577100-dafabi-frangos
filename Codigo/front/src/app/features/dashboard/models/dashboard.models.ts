@@ -32,6 +32,7 @@ export interface ApiFinancialDashboardResponse {
   summary: {
     revenue: number;
     expenses: number;
+    costOfGoodsSold: number;
     fees: number;
     ifoodFees: number;
     food99Fees: number;

@@ -119,7 +119,8 @@ public class SaleService {
 
             BigDecimal unitPrice = product.getSalePrice().setScale(2, RoundingMode.HALF_UP);
             BigDecimal itemSubtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
-            sale.addItem(new SaleItem(null, sale, product, BigDecimal.valueOf(quantity), unitPrice, itemSubtotal));
+            sale.addItem(new SaleItem(null, sale, product, BigDecimal.valueOf(quantity), unitPrice,
+                    product.getCurrentCost().setScale(2, RoundingMode.HALF_UP), itemSubtotal));
             subtotal = subtotal.add(itemSubtotal);
 
             int newQuantity = previousQuantity - quantity;

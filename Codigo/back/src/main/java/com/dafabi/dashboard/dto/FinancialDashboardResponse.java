@@ -17,6 +17,7 @@ public record FinancialDashboardResponse(
     public record Summary(
             BigDecimal revenue,
             BigDecimal expenses,
+            BigDecimal costOfGoodsSold,
             BigDecimal fees,
             BigDecimal ifoodFees,
             BigDecimal food99Fees,

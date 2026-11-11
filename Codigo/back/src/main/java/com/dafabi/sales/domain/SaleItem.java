@@ -26,6 +26,9 @@ public class SaleItem {
   @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
   private BigDecimal unitPrice;
 
+  @Column(name = "unit_cost", nullable = false, precision = 14, scale = 2)
+  private BigDecimal unitCost;
+
   @Column(nullable = false, precision = 14, scale = 2)
   private BigDecimal subtotal;
 
@@ -35,11 +38,20 @@ public class SaleItem {
   public SaleItem(UUID id, Sale sale, Product product,
       BigDecimal quantity, BigDecimal unitPrice,
       BigDecimal subtotal) {
+    this(id, sale, product, quantity, unitPrice,
+        product != null && product.getCurrentCost() != null ? product.getCurrentCost() : BigDecimal.ZERO,
+        subtotal);
+  }
+
+  public SaleItem(UUID id, Sale sale, Product product,
+      BigDecimal quantity, BigDecimal unitPrice, BigDecimal unitCost,
+      BigDecimal subtotal) {
     this.id = id;
     this.sale = sale;
     this.product = product;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
+    this.unitCost = unitCost;
     this.subtotal = subtotal;
   }
 
@@ -89,6 +101,10 @@ public class SaleItem {
   public void setUnitPrice(BigDecimal unitPrice) {
     this.unitPrice = unitPrice;
   }
+
+  public BigDecimal getUnitCost() { return unitCost; }
+
+  public void setUnitCost(BigDecimal unitCost) { this.unitCost = unitCost; }
 
   public BigDecimal getSubtotal() {
     return subtotal;

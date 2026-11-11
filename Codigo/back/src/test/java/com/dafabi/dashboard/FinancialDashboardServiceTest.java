@@ -7,8 +7,11 @@ import com.dafabi.expenses.repository.ExpenseRepository;
 import com.dafabi.integrations.domain.IntegrationProvider;
 import com.dafabi.integrations.domain.MarketplaceOrder;
 import com.dafabi.integrations.repository.MarketplaceOrderRepository;
+import com.dafabi.products.domain.Product;
+import com.dafabi.products.domain.ProductStatus;
 import com.dafabi.sales.domain.PaymentMethod;
 import com.dafabi.sales.domain.Sale;
+import com.dafabi.sales.domain.SaleItem;
 import com.dafabi.sales.domain.SaleOrigin;
 import com.dafabi.sales.domain.SaleStatus;
 import com.dafabi.sales.repository.SaleRepository;
@@ -90,6 +93,29 @@ class FinancialDashboardServiceTest {
         assertThat(response.summary().salesCount()).isEqualTo(1);
         assertThat(response.salesByOrigin()).containsEntry("IFOOD", 1L).containsEntry("COUNTER", 0L);
         assertThat(response.daily().get(0).revenue()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void shouldSubtractCostOfGoodsSoldFromEstimatedResult() {
+        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
+        when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
+                .thenReturn(List.of());
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(any(), any(), any()))
+                .thenReturn(List.of());
+        Sale sale = new Sale(UUID.randomUUID(), null, null, 1L,
+                OffsetDateTime.parse("2026-10-02T12:00:00-03:00"), SaleOrigin.COUNTER,
+                PaymentMethod.PIX, new BigDecimal("40.00"), new BigDecimal("40.00"), SaleStatus.COMPLETED);
+        Product product = new Product(UUID.randomUUID(), null, "Frango", new BigDecimal("20.00"),
+                new BigDecimal("5.00"), "UN", null, false, false, ProductStatus.ACTIVE, null, null);
+        sale.setItems(List.of(new SaleItem(UUID.randomUUID(), sale, product,
+                new BigDecimal("2.000"), new BigDecimal("20.00"), new BigDecimal("5.00"), new BigDecimal("40.00"))));
+        when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of(sale));
+
+        FinancialDashboardResponse response = service.getSummary(
+                "custom", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 2));
+
+        assertThat(response.summary().costOfGoodsSold()).isEqualByComparingTo("10.00");
+        assertThat(response.summary().estimatedResult()).isEqualByComparingTo("30.00");
     }
 
     @Test
