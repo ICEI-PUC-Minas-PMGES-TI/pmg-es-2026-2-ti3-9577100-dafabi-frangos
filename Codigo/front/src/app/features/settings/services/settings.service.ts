@@ -9,7 +9,8 @@ import { PermissionRow, StoreSettings } from '../models/settings.models';
 export class SettingsService {
   private readonly http = inject(HttpClient);
   private readonly usersEndpoint = `${environment.apiBaseUrl}/users`;
-  readonly store = signal<StoreSettings>({ name: 'DaFabi Frangos', phone: '(31) 99123-4567', address: 'Rua das Palmeiras, 125 — Belo Horizonte/MG', defaultPayment: 'PIX', compactMode: false });
+  private readonly storeEndpoint = `${environment.apiBaseUrl}/settings/store`;
+  readonly store = signal<StoreSettings>({ name: 'DaFabi Frangos', phone: '', address: '', defaultPayment: 'PIX', compactMode: false });
   readonly permissions: PermissionRow[] = [
     { area: 'Dashboard financeiro', admin: true, cashier: false }, { area: 'PDV e vendas', admin: true, cashier: true },
     { area: 'Produtos e estoque', admin: true, cashier: true }, { area: 'Caixa', admin: true, cashier: true },
@@ -17,7 +18,16 @@ export class SettingsService {
     { area: 'Integrações', admin: true, cashier: false }, { area: 'Estornos', admin: true, cashier: false },
     { area: 'Usuários e configurações', admin: true, cashier: false }
   ];
-  async saveStore(value: StoreSettings) { await new Promise(resolve => setTimeout(resolve, 400)); this.store.set(value); }
+  async loadStore() {
+    const value = await firstValueFrom(this.http.get<StoreSettings>(this.storeEndpoint));
+    this.store.set(value);
+    return value;
+  }
+  async saveStore(value: StoreSettings) {
+    const saved = await firstValueFrom(this.http.put<StoreSettings>(this.storeEndpoint, value));
+    this.store.set(saved);
+    return saved;
+  }
   listUsers() { return firstValueFrom(this.http.get<User[]>(this.usersEndpoint)); }
   createUser(user: { name: string; email: string; password: string; role: User['role'] }) {
     return firstValueFrom(this.http.post<User>(this.usersEndpoint, user));
