@@ -100,6 +100,7 @@ public class ProductMapper {
                 product.getName(),
                 toCategoryResponse(product.getCategory()),
                 product.getSalePrice(),
+                product.getCurrentCost(),
                 stockQuantity,
                 product.getUnit(),
                 product.getBarcode(),
