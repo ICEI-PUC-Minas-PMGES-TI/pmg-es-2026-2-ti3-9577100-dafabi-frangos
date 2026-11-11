@@ -4,6 +4,8 @@ import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.dashboard.application.FinancialDashboardService;
 import com.dafabi.dashboard.dto.FinancialDashboardResponse;
 import com.dafabi.expenses.repository.ExpenseRepository;
+import com.dafabi.integrations.domain.IntegrationProvider;
+import com.dafabi.integrations.repository.MarketplaceOrderRepository;
 import com.dafabi.sales.domain.PaymentMethod;
 import com.dafabi.sales.domain.Sale;
 import com.dafabi.sales.domain.SaleOrigin;
@@ -31,18 +33,21 @@ class FinancialDashboardServiceTest {
     @Mock private SaleRepository saleRepository;
     @Mock private ExpenseRepository expenseRepository;
     @Mock private CashMovementRepository cashMovementRepository;
+    @Mock private MarketplaceOrderRepository marketplaceOrderRepository;
 
     private FinancialDashboardService service;
 
     @BeforeEach
     void setUp() {
-        service = new FinancialDashboardService(saleRepository, expenseRepository, cashMovementRepository);
+        service = new FinancialDashboardService(saleRepository, expenseRepository, cashMovementRepository, marketplaceOrderRepository);
     }
 
     private void stubNoData() {
         when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
         when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
         when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
+                .thenReturn(List.of());
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(any(), any(), any()))
                 .thenReturn(List.of());
     }
 

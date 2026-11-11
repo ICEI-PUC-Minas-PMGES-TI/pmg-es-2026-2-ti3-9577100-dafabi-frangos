@@ -2,6 +2,7 @@ package com.dafabi.dashboard.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +11,8 @@ public record FinancialDashboardResponse(
         LocalDate endDate,
         Summary summary,
         Map<String, Long> salesByOrigin,
-        List<DailyRevenue> daily) {
+        List<DailyRevenue> daily,
+        List<RecentSale> recentSales) {
 
     public record Summary(
             BigDecimal revenue,
@@ -18,6 +20,8 @@ public record FinancialDashboardResponse(
             BigDecimal fees,
             BigDecimal ifoodFees,
             BigDecimal food99Fees,
+            BigDecimal otherMarketplaceCosts,
+            boolean marketplaceFeesComplete,
             BigDecimal estimatedResult,
             long salesCount,
             long counterSales,
@@ -28,5 +32,8 @@ public record FinancialDashboardResponse(
     }
 
     public record DailyRevenue(LocalDate date, BigDecimal revenue) {
+    }
+
+    public record RecentSale(String id, String number, OffsetDateTime dateTime, String origin, BigDecimal total, String status) {
     }
 }
