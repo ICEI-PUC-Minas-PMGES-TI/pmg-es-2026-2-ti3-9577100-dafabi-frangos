@@ -67,6 +67,9 @@ public class Expense {
   @Column(name = "updated_at", nullable = false)
   private OffsetDateTime updatedAt;
 
+  @Column(name = "paid_at")
+  private OffsetDateTime paidAt;
+
   public Expense() {
   }
 
@@ -186,6 +189,10 @@ public class Expense {
   public OffsetDateTime getUpdatedAt() {
     return updatedAt;
   }
+
+  public OffsetDateTime getPaidAt() { return paidAt; }
+
+  public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }
 
   public void setUpdatedAt(OffsetDateTime updatedAt) {
     this.updatedAt = updatedAt;

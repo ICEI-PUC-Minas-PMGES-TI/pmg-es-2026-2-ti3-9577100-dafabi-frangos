@@ -4,6 +4,8 @@ import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.dashboard.application.FinancialDashboardService;
 import com.dafabi.dashboard.dto.FinancialDashboardResponse;
 import com.dafabi.expenses.repository.ExpenseRepository;
+import com.dafabi.expenses.domain.Expense;
+import com.dafabi.expenses.domain.ExpenseStatus;
 import com.dafabi.integrations.domain.IntegrationProvider;
 import com.dafabi.integrations.domain.MarketplaceOrder;
 import com.dafabi.integrations.repository.MarketplaceOrderRepository;
@@ -116,6 +118,28 @@ class FinancialDashboardServiceTest {
 
         assertThat(response.summary().costOfGoodsSold()).isEqualByComparingTo("10.00");
         assertThat(response.summary().estimatedResult()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void shouldOnlyCountConsolidatedExpensesInEstimatedResult() {
+        when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
+        when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
+                .thenReturn(List.of());
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(any(), any(), any()))
+                .thenReturn(List.of());
+        Expense pending = mock(Expense.class);
+        when(pending.getStatus()).thenReturn(ExpenseStatus.PENDING);
+        Expense paid = mock(Expense.class);
+        when(paid.getStatus()).thenReturn(ExpenseStatus.CONSOLIDATED);
+        when(paid.getAmount()).thenReturn(new BigDecimal("15.00"));
+        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any()))
+                .thenReturn(List.of(pending, paid));
+
+        FinancialDashboardResponse response = service.getSummary(
+                "custom", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 2));
+
+        assertThat(response.summary().expenses()).isEqualByComparingTo("15.00");
+        assertThat(response.summary().estimatedResult()).isEqualByComparingTo("-15.00");
     }
 
     @Test

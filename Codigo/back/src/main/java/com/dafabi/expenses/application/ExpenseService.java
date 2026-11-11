@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +56,6 @@ public class ExpenseService {
                 money(request.amount()), request.date(), request.paymentMethod(), normalize(request.observation()),
                 ExpenseStatus.PENDING, request.userId(), null, null);
         Expense saved = expenseRepository.save(expense);
-        syncCashMovement(saved);
         return mapper.toResponse(saved);
     }
 
@@ -96,7 +96,6 @@ public class ExpenseService {
         expense.setPaymentMethod(request.paymentMethod());
         expense.setObservation(normalize(request.observation()));
         Expense saved = expenseRepository.save(expense);
-        syncCashMovement(saved);
         return mapper.toResponse(saved);
     }
 
@@ -106,6 +105,24 @@ public class ExpenseService {
         ensurePending(expense);
         expense.setStatus(ExpenseStatus.CANCELLED);
         removeCashMovement(expense.getId());
+        return mapper.toResponse(expenseRepository.save(expense));
+    }
+
+    @Transactional
+    public ExpenseResponse consolidate(UUID id) {
+        Expense expense = findEntity(id);
+        ensurePending(expense);
+        if (expense.getPaymentMethod() == ExpensePaymentMethod.CASH) {
+            CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(
+                            CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
+                    .orElseThrow(() -> new BusinessException("CASH_CLOSED",
+                            "Abra o caixa antes de registrar o pagamento em dinheiro.", HttpStatus.CONFLICT));
+            cashRegisterService.recordMovement(register.getId(), CashMovementDirection.OUT, "EXPENSE",
+                    expense.getAmount(), "Despesa em dinheiro", expense.getDescription(),
+                    EXPENSE_REFERENCE_TYPE, expense.getId());
+        }
+        expense.setStatus(ExpenseStatus.CONSOLIDATED);
+        expense.setPaidAt(OffsetDateTime.now());
         return mapper.toResponse(expenseRepository.save(expense));
     }
 
@@ -119,18 +136,6 @@ public class ExpenseService {
             throw new BusinessException("EXPENSE_NOT_PENDING",
                     "Somente despesas pendentes podem ser alteradas ou canceladas.", HttpStatus.CONFLICT);
         }
-    }
-
-    private void syncCashMovement(Expense expense) {
-        if (expense.getPaymentMethod() != ExpensePaymentMethod.CASH || expense.getStatus() == ExpenseStatus.CANCELLED)
-            return;
-        CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(
-                CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
-                .orElseThrow(() -> new BusinessException("CASH_CLOSED",
-                        "Abra o caixa antes de registrar uma despesa em dinheiro.", HttpStatus.CONFLICT));
-        cashRegisterService.recordMovement(register.getId(), CashMovementDirection.OUT, "EXPENSE",
-                expense.getAmount(), "Despesa em dinheiro", expense.getDescription(),
-                EXPENSE_REFERENCE_TYPE, expense.getId());
     }
 
     private void removeCashMovement(UUID expenseId) {

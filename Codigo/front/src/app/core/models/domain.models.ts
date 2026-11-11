@@ -16,7 +16,7 @@ export interface CashMovement { id: string; date: string; description: string; t
 export interface Supplier { id: string; name: string; phone: string; email: string; notes?: string; active: boolean; }
 export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; }
 export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; itemCount: number; total: number; status: PurchaseStatus; paymentStatus?: 'PENDING' | 'PAID'; paymentMethod?: PaymentMethod | null; paidAt?: string | null; }
-export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; }
+export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; paidAt?: string | null; }
 export interface StockMovement { id: string; productId: string; productName: string; date: string; previousQuantity: number; newQuantity: number; difference: number; origin: string; user: string; reason: string; }
 export interface PerishableProduct { id: string; productId: string; productName: string; batch: string; receivedAt: string; expiry: string; quantity: number; status: 'VALID' | 'EXPIRED' | 'USED'; }
 export interface Integration { id: 'IFOOD' | '99FOOD'; name: string; status: 'CONNECTED' | 'UNAVAILABLE' | 'PENDING'; lastSync?: string; importedOrders: number; }

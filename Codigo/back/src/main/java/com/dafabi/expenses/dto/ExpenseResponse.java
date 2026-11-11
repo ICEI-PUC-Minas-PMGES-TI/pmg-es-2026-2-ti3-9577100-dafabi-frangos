@@ -19,5 +19,6 @@ public record ExpenseResponse(
         ExpenseStatus status,
         UUID userId,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        OffsetDateTime paidAt
 ) {}

@@ -51,4 +51,7 @@ public class ExpenseController {
 
     @PatchMapping("/{id}/cancel")
     public ExpenseResponse cancel(@PathVariable UUID id) { return service.cancel(id); }
+
+    @PatchMapping("/{id}/consolidate")
+    public ExpenseResponse consolidate(@PathVariable UUID id) { return service.consolidate(id); }
 }
