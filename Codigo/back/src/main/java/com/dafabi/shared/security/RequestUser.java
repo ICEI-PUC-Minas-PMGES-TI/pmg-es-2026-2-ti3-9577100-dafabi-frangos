@@ -2,13 +2,14 @@ package com.dafabi.shared.security;
 
 import com.dafabi.shared.exception.BusinessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.UUID;
 
 /**
- * Usuário responsável pela requisição, identificado pelos cabeçalhos enviados pelo front-end.
- * Enquanto a API não possui autenticação própria, é a forma de identificar o autor das
- * operações sensíveis e validar o seu perfil.
+ * Usuário responsável pela requisição, identificado pelo token JWT autenticado
+ * no contexto de segurança ou pelos cabeçalhos enviados pelo cliente.
  */
 public record RequestUser(UUID id, String name, UserRole role) {
 
@@ -18,6 +19,17 @@ public record RequestUser(UUID id, String name, UserRole role) {
 
     private static final String DEFAULT_NAME = "Usuário local";
     private static final int MAX_NAME_LENGTH = 150;
+
+    public static RequestUser resolve(String headerId, String headerName, String headerRole) {
+        if (!isBlank(headerId) || !isBlank(headerRole)) {
+            return fromHeaders(headerId, headerName, headerRole);
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof RequestUser requestUser) {
+            return requestUser;
+        }
+        throw unauthenticated();
+    }
 
     public static RequestUser fromHeaders(String id, String name, String role) {
         if (isBlank(id) || isBlank(role)) {

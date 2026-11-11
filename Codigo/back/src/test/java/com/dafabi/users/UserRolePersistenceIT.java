@@ -1,5 +1,6 @@
 package com.dafabi.users;
 
+import com.dafabi.auth.repository.RefreshTokenRepository;
 import com.dafabi.users.domain.Role;
 import com.dafabi.users.domain.User;
 import com.dafabi.users.repository.RoleRepository;
@@ -19,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserRolePersistenceIT {
 
     @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
     private RoleRepository roleRepository;
 
     @Autowired
@@ -26,6 +30,7 @@ class UserRolePersistenceIT {
 
     @BeforeEach
     void setUp() {
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
     }

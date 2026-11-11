@@ -36,6 +36,10 @@ A API fica em `http://localhost:8080/api/v1`.
 
 ## Endpoints disponíveis
 
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
 - `GET /api/v1/categories`
 - `GET /api/v1/products?query=&categoryId=&status=&includeInactive=`
 - `GET /api/v1/products/{id}`
@@ -152,6 +156,6 @@ pessimista e em ordem fixa, evitando perda de atualização e deadlocks em acess
 ./mvnw test
 ```
 
-## Observação de segurança
+## Autenticação e autorização
 
-Autenticação e autorização ainda não fazem parte desta primeira API. Ela deve ficar protegida antes de qualquer publicação pública.
+A autenticação é realizada via `POST /api/v1/auth/login`, que valida o usuário ou e-mail e a senha (hash BCrypt), verifica se o cadastro está ativo e emite um token JWT (`accessToken`) acompanhado de um `refreshToken` e dos dados do perfil (`ADMIN` ou `CASHIER`). As demais rotas exigem o cabeçalho `Authorization: Bearer <token>`, com controle de acesso por perfil via Spring Security e `@PreAuthorize`. Tokens ausentes, inválidos ou expirados retornam `401` (`SESSION_EXPIRED`), credenciais incorretas retornam `401` (`INVALID_CREDENTIALS`) e acessos sem permissão retornam `403` (`ACCESS_DENIED`).

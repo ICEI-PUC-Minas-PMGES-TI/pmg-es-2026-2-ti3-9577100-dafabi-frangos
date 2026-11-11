@@ -8,6 +8,7 @@ import com.dafabi.sales.dto.SaleRefundResponse;
 import com.dafabi.shared.security.RequestUser;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/sales/{saleId}")
+@PreAuthorize("hasRole('ADMIN')")
 public class SaleRefundController {
 
     private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
@@ -42,7 +44,7 @@ public class SaleRefundController {
         return ResponseEntity.ok(saleRefundService.findBySaleId(saleId));
     }
 
-    @PostMapping("/refund")
+    @PostMapping({"/refund", "/refunds"})
     public ResponseEntity<SaleRefundResponse> refund(
             @PathVariable UUID saleId,
             @Valid @RequestBody CreateSaleRefundRequest request,
@@ -50,7 +52,7 @@ public class SaleRefundController {
             @RequestHeader(value = RequestUser.NAME_HEADER, required = false) String userName,
             @RequestHeader(value = RequestUser.ROLE_HEADER, required = false) String userRole,
             @RequestHeader(value = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey) {
-        RequestUser user = RequestUser.fromHeaders(userId, userName, userRole);
+        RequestUser user = RequestUser.resolve(userId, userName, userRole);
         SaleRefundOutcome outcome = saleRefundService.refund(saleId, request, user, idempotencyKey);
 
         if (!outcome.created()) {

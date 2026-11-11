@@ -3,6 +3,7 @@ package com.dafabi.products.controller;
 import com.dafabi.products.application.CategoryService;
 import com.dafabi.products.dto.CategoryResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/categories")
+@PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
 public class CategoryController {
 
     private final CategoryService categoryService;
