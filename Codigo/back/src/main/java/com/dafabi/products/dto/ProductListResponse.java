@@ -14,6 +14,7 @@ public record ProductListResponse(
     Integer stockQuantity,
     String unit,
     String barcode,
+    boolean perishable,
     boolean frequent,
     ProductStatus status) {
 }

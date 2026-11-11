@@ -24,5 +24,6 @@ class ProductMapperTest {
         ProductListResponse response = new ProductMapper().toListResponse(product);
 
         assertThat(response.currentCost()).isEqualByComparingTo("27.50");
+        assertThat(response.perishable()).isFalse();
     }
 }

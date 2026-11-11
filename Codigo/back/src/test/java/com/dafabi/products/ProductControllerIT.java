@@ -224,6 +224,7 @@ class ProductControllerIT {
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].perishable", is(true)))
                 .andExpect(jsonPath("$.content[0].frequent", is(true)))
                 .andExpect(jsonPath("$.content[0].stockQuantity", is(18)));
     }

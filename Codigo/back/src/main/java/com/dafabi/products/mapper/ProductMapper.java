@@ -104,6 +104,7 @@ public class ProductMapper {
                 stockQuantity,
                 product.getUnit(),
                 product.getBarcode(),
+                product.isPerishable(),
                 product.isFrequent(),
                 product.getStatus());
     }

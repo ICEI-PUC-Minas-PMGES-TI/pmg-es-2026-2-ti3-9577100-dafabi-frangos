@@ -31,6 +31,7 @@ export interface ApiProductListItem {
   stockQuantity: number;
   unit: string;
   barcode: string | null;
+  perishable?: boolean;
   frequent?: boolean;
   status: ProductStatus;
 }
