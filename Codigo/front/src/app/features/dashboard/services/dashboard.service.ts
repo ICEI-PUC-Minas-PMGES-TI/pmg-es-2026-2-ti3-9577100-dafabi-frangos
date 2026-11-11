@@ -72,7 +72,8 @@ function aggregateRevenue(points: DashboardView['daily'], granularity: Dashboard
       label = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(monday);
     } else {
       key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-      label = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(date).replace('.', '');
+      const month = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' }).format(date).replace('.', '');
+      label = `${month}/${String(date.getUTCFullYear()).slice(-2)}`;
     }
 
     const current = grouped.get(key);
