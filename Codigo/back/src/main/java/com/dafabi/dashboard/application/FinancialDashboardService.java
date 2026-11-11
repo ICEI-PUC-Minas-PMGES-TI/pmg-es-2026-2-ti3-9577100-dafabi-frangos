@@ -184,7 +184,8 @@ public class FinancialDashboardService {
     }
 
     private static BigDecimal sum(List<BigDecimal> values) {
-        return values.stream().reduce(ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+        return values.stream().map(FinancialDashboardService::zero)
+                .reduce(ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
     }
 
     private static BigDecimal zero(BigDecimal value) {
