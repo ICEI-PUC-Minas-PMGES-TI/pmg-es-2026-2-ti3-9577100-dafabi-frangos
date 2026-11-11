@@ -45,6 +45,8 @@ public class SaleRefundService {
     private static final String REFUND_MOVEMENT_TYPE = "REFUND";
     private static final String REFUND_ORIGIN = "Estorno de venda";
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 100;
+    private static final int MAX_RESPONSIBLE_NAME_LENGTH = 100;
+    private static final String LOCAL_USER = "Usuário local";
 
     private final SaleRepository saleRepository;
     private final SaleRefundRepository saleRefundRepository;
@@ -147,7 +149,7 @@ public class SaleRefundService {
                 register != null ? register.getId() : null,
                 request.reason().trim(),
                 user.id(),
-                user.name(),
+                responsibleName(user),
                 normalizedKey));
 
         reverseStock(sale, refund);
@@ -233,6 +235,15 @@ public class SaleRefundService {
         return cashRegisterRepository.findById(sale.getCashRegisterId())
                 .map(CashRegister::getStoreId)
                 .orElse(CashRegister.DEFAULT_STORE_ID);
+    }
+
+    /**
+     * O nome do responsável é gravado no estorno e em {@code stock_movement.performed_by},
+     * que aceita no máximo 100 caracteres.
+     */
+    private String responsibleName(RequestUser user) {
+        String name = user.name() == null || user.name().isBlank() ? LOCAL_USER : user.name().trim();
+        return name.length() > MAX_RESPONSIBLE_NAME_LENGTH ? name.substring(0, MAX_RESPONSIBLE_NAME_LENGTH) : name;
     }
 
     private String normalizeIdempotencyKey(String idempotencyKey) {

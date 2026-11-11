@@ -121,10 +121,10 @@ de estoque, evitando venda acima do disponível em acessos concorrentes.
 
 ## Estorno de vendas
 
-O estorno (`sale_refund`) só pode ser registrado por usuários com perfil `ADMIN`,
-identificados pelos cabeçalhos `X-User-Id`, `X-User-Name` e `X-User-Role` (sem eles a
-API responde `401`; com outro perfil, `403`). O motivo é obrigatório (5 a 500 caracteres)
-e o usuário responsável fica gravado no estorno e nas movimentações geradas.
+Os endpoints de estorno são restritos ao perfil `ADMIN` (sem token a API responde `401`
+`SESSION_EXPIRED`; com outro perfil, `403` `ACCESS_DENIED`). O motivo é obrigatório (5 a
+500 caracteres) e o usuário responsável é sempre o do token JWT autenticado, gravado no
+estorno e nas movimentações geradas.
 `GET /sales/{id}/refund-eligibility` informa se a venda pode ser estornada e o valor em
 dinheiro que sairá do caixa. Na mesma transação, o estorno devolve ao `product_stock` as
 quantidades vendidas (movimentação `REFUND`), registra uma saída `REFUND` no caixa aberto

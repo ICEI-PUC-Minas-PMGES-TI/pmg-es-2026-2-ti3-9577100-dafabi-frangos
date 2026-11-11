@@ -1,5 +1,6 @@
 package com.dafabi.sales;
 
+import com.dafabi.auth.security.JwtService;
 import com.dafabi.cash.domain.CashMovementDirection;
 import com.dafabi.cash.domain.CashRegister;
 import com.dafabi.cash.repository.CashMovementRepository;
@@ -22,6 +23,7 @@ import com.dafabi.sales.dto.CreateSaleRequest;
 import com.dafabi.sales.dto.SaleItemRequest;
 import com.dafabi.sales.repository.SaleRefundRepository;
 import com.dafabi.sales.repository.SaleRepository;
+import com.dafabi.shared.security.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,13 +32,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -50,13 +53,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@WithMockUser(roles = "ADMIN")
 class SaleRefundControllerIT {
 
-    private static final String ADMIN_ID = "00000000-0000-0000-0000-000000000101";
-    private static final String CASHIER_ID = "00000000-0000-0000-0000-000000000102";
+    private static final UUID ADMIN_ID = UUID.fromString("00000000-0000-0000-0000-000000000101");
+    private static final UUID CASHIER_ID = UUID.fromString("00000000-0000-0000-0000-000000000102");
 
     @Autowired private MockMvc mockMvc;
+    @Autowired private JwtService jwtService;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private SaleRepository saleRepository;
     @Autowired private SaleRefundRepository saleRefundRepository;
@@ -106,7 +109,7 @@ class SaleRefundControllerIT {
                 .andExpect(jsonPath("$.cashAmount", is(94.30)))
                 .andExpect(jsonPath("$.cashRegisterId", is(register.getId().toString())))
                 .andExpect(jsonPath("$.reason", is("Cliente desistiu da compra")))
-                .andExpect(jsonPath("$.refundedById", is(ADMIN_ID)))
+                .andExpect(jsonPath("$.refundedById", is(ADMIN_ID.toString())))
                 .andExpect(jsonPath("$.refundedBy", is("Fabiana Nogueira")));
 
         Sale sale = saleRepository.findById(UUID.fromString(saleId)).orElseThrow();
@@ -117,14 +120,14 @@ class SaleRefundControllerIT {
                 .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
                 .hasSize(2);
 
-        mockMvc.perform(get("/cash-registers/{id}", register.getId()))
+        mockMvc.perform(asAdmin(get("/cash-registers/{id}", register.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expectedBalance", is(100.00)));
-        mockMvc.perform(get("/cash-registers/{id}/summary", register.getId()))
+        mockMvc.perform(asAdmin(get("/cash-registers/{id}/summary", register.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cashRefunds", is(94.30)));
 
-        mockMvc.perform(get("/sales/{id}/refund", saleId))
+        mockMvc.perform(asAdmin(get("/sales/{id}/refund", saleId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reason", is("Cliente desistiu da compra")));
     }
@@ -190,25 +193,46 @@ class SaleRefundControllerIT {
         String saleId = createSale(PaymentMethod.CASH);
         String body = objectMapper.writeValueAsString(new CreateSaleRefundRequest("Cliente desistiu da compra"));
 
-        mockMvc.perform(post("/sales/{id}/refund", saleId)
-                        .header("X-User-Id", CASHIER_ID)
-                        .header("X-User-Name", "Carlos Oliveira")
-                        .header("X-User-Role", "CASHIER")
+        mockMvc.perform(asCashier(post("/sales/{id}/refund", saleId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code", is("FORBIDDEN")));
+                .andExpect(jsonPath("$.code", is("ACCESS_DENIED")));
+
+        mockMvc.perform(asCashier(get("/sales/{id}/refund-eligibility", saleId)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("ACCESS_DENIED")));
 
         mockMvc.perform(post("/sales/{id}/refund", saleId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code", is("UNAUTHENTICATED")));
+                .andExpect(jsonPath("$.code", is("SESSION_EXPIRED")));
 
         assertThat(saleRefundRepository.count()).isZero();
         assertThat(saleRepository.findById(UUID.fromString(saleId)).orElseThrow().getStatus())
                 .isEqualTo(SaleStatus.COMPLETED);
         assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("POST /sales/{id}/refund deve registrar como responsável o usuário do token, ignorando cabeçalhos do cliente")
+    void shouldUseAuthenticatedUserAsResponsible() throws Exception {
+        String saleId = createSale(PaymentMethod.PIX);
+
+        mockMvc.perform(asAdmin(post("/sales/{id}/refund", saleId))
+                        .header("X-User-Id", CASHIER_ID.toString())
+                        .header("X-User-Name", "Carlos Oliveira")
+                        .header("X-User-Role", "ADMIN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateSaleRefundRequest("Cliente desistiu da compra"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.refundedById", is(ADMIN_ID.toString())))
+                .andExpect(jsonPath("$.refundedBy", is("Fabiana Nogueira")));
+
+        assertThat(stockMovementRepository.findAll())
+                .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
+                .allMatch(movement -> movement.getPerformedBy().equals("Fabiana Nogueira"));
     }
 
     @Test
@@ -231,7 +255,7 @@ class SaleRefundControllerIT {
     void shouldReturnEligibility() throws Exception {
         String saleId = createSale(PaymentMethod.CASH);
 
-        mockMvc.perform(get("/sales/{id}/refund-eligibility", saleId))
+        mockMvc.perform(asAdmin(get("/sales/{id}/refund-eligibility", saleId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eligible", is(true)))
                 .andExpect(jsonPath("$.status", is("COMPLETED")))
@@ -245,21 +269,28 @@ class SaleRefundControllerIT {
                         .content(objectMapper.writeValueAsString(new CreateSaleRefundRequest("Cliente desistiu da compra"))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/sales/{id}/refund-eligibility", saleId))
+        mockMvc.perform(asAdmin(get("/sales/{id}/refund-eligibility", saleId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eligible", is(false)))
                 .andExpect(jsonPath("$.ineligibilityCode", is("SALE_ALREADY_REFUNDED")))
                 .andExpect(jsonPath("$.refund.reason", is("Cliente desistiu da compra")));
 
-        mockMvc.perform(get("/sales/{id}/refund-eligibility", UUID.randomUUID()))
+        mockMvc.perform(asAdmin(get("/sales/{id}/refund-eligibility", UUID.randomUUID())))
                 .andExpect(status().isNotFound());
     }
 
     private MockHttpServletRequestBuilder asAdmin(MockHttpServletRequestBuilder builder) {
-        return builder
-                .header("X-User-Id", ADMIN_ID)
-                .header("X-User-Name", "Fabiana Nogueira")
-                .header("X-User-Role", "ADMIN");
+        return withToken(builder, ADMIN_ID, "admin@dafabi.com.br", "Fabiana Nogueira", UserRole.ADMIN);
+    }
+
+    private MockHttpServletRequestBuilder asCashier(MockHttpServletRequestBuilder builder) {
+        return withToken(builder, CASHIER_ID, "caixa@dafabi.com.br", "Carlos Oliveira", UserRole.CASHIER);
+    }
+
+    private MockHttpServletRequestBuilder withToken(MockHttpServletRequestBuilder builder,
+                                                    UUID userId, String email, String name, UserRole role) {
+        String token = jwtService.generateAccessToken(userId, email, name, role, Duration.ofMinutes(5));
+        return builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
     }
 
     private String createSale(PaymentMethod paymentMethod) throws Exception {
@@ -268,7 +299,7 @@ class SaleRefundControllerIT {
                 new SaleItemRequest(farofa.getId(), 1)
         ), paymentMethod);
 
-        String body = mockMvc.perform(post("/sales")
+        String body = mockMvc.perform(asAdmin(post("/sales"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())

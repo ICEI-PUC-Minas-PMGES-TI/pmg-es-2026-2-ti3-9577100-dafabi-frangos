@@ -172,11 +172,30 @@ class SaleRefundServiceTest {
     }
 
     @Test
+    @DisplayName("Deve limitar o nome do responsável ao tamanho aceito pelas movimentações de estoque")
+    void shouldTruncateLongResponsibleName() {
+        RequestUser longNameAdmin = new RequestUser(UUID.randomUUID(), "A".repeat(200), UserRole.ADMIN);
+        Sale sale = saleOf(PaymentMethod.PIX, SaleStatus.COMPLETED);
+        mockLockedSale(sale);
+        when(cashMovementRepository.findByReferenceTypeAndReferenceId("SALE", sale.getId())).thenReturn(List.of());
+        mockStock(chickenStock);
+        mockStock(farofaStock);
+        when(saleRefundRepository.save(any(SaleRefund.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SaleRefundOutcome outcome = saleRefundService.refund(sale.getId(), request, longNameAdmin, null);
+
+        assertThat(outcome.refund().refundedBy()).hasSize(100);
+        ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
+        verify(stockMovementRepository, times(2)).save(movementCaptor.capture());
+        assertThat(movementCaptor.getAllValues()).allMatch(movement -> movement.getPerformedBy().length() == 100);
+    }
+
+    @Test
     @DisplayName("Deve impedir que um usuário sem perfil ADMIN estorne a venda")
     void shouldRejectRefundFromNonAdmin() {
         assertThatThrownBy(() -> saleRefundService.refund(UUID.randomUUID(), request, cashier, null))
                 .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("code", "FORBIDDEN");
+                .hasFieldOrPropertyWithValue("code", "ACCESS_DENIED");
 
         verifyNoInteractions(saleRepository, saleRefundRepository, productStockRepository,
                 stockMovementRepository, cashRegisterService);
