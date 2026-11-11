@@ -23,6 +23,7 @@ export class CashService {
   readonly error = signal<string | null>(null);
   readonly cashSales = computed(() => Number(this.summary()?.cashSales ?? 0));
   readonly cashExpenses = computed(() => Number(this.summary()?.cashExpenses ?? 0));
+  readonly cashPurchases = computed(() => Number(this.summary()?.cashPurchases ?? 0));
   readonly cashRefunds = computed(() => Number(this.summary()?.cashRefunds ?? 0));
   readonly expected = computed(() => Number(this.summary()?.expectedBalance ?? this.register()?.expectedBalance ?? 0));
   readonly cashOpen = computed(() => this.register()?.status === 'OPEN');

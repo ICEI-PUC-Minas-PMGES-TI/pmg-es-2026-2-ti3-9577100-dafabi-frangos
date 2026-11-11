@@ -24,6 +24,9 @@ public class PurchaseMapper {
                 purchase.getItems().size(),
                 normalize(purchase.getTotalAmount()),
                 purchase.getStatus(),
+                purchase.getPaymentStatus(),
+                purchase.getPaymentMethod(),
+                purchase.getPaidAt(),
                 purchase.getCreatedBy(),
                 purchase.getCreatedAt(),
                 purchase.getItems().stream()
@@ -43,6 +46,9 @@ public class PurchaseMapper {
                 purchase.getItems().size(),
                 normalize(purchase.getTotalAmount()),
                 purchase.getStatus(),
+                purchase.getPaymentStatus(),
+                purchase.getPaymentMethod(),
+                purchase.getPaidAt(),
                 purchase.getCreatedAt()
         );
     }

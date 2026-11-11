@@ -27,6 +27,7 @@ export interface ApiCashSummary {
   initialBalance: number;
   cashSales: number;
   cashExpenses: number;
+  cashPurchases: number;
   cashRefunds: number;
   expectedBalance: number;
   countedBalance: number | null;

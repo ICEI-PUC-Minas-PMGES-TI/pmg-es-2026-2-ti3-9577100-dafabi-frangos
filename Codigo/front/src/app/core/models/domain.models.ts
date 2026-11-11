@@ -15,7 +15,7 @@ export interface CashRegister { id: string; operator: string; openedAt: string; 
 export interface CashMovement { id: string; date: string; description: string; type: 'IN' | 'OUT'; amount: number; origin: string; referenceId?: string; }
 export interface Supplier { id: string; name: string; phone: string; email: string; notes?: string; active: boolean; }
 export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; }
-export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; itemCount: number; total: number; status: PurchaseStatus; }
+export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; itemCount: number; total: number; status: PurchaseStatus; paymentStatus?: 'PENDING' | 'PAID'; paymentMethod?: PaymentMethod | null; paidAt?: string | null; }
 export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; }
 export interface StockMovement { id: string; productId: string; productName: string; date: string; previousQuantity: number; newQuantity: number; difference: number; origin: string; user: string; reason: string; }
 export interface PerishableProduct { id: string; productId: string; productName: string; batch: string; receivedAt: string; expiry: string; quantity: number; status: 'VALID' | 'EXPIRED' | 'USED'; }

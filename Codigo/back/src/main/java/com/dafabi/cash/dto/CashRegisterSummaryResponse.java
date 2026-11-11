@@ -16,6 +16,7 @@ public record CashRegisterSummaryResponse(
         BigDecimal initialBalance,
         BigDecimal cashSales,
         BigDecimal cashExpenses,
+        BigDecimal cashPurchases,
         BigDecimal cashRefunds,
         BigDecimal expectedBalance,
         BigDecimal countedBalance,

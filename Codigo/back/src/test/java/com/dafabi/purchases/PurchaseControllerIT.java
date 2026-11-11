@@ -35,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -94,6 +95,7 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$.supplierName", is("Granja Santa Clara")))
                 .andExpect(jsonPath("$.date", is(LocalDate.now().toString())))
                 .andExpect(jsonPath("$.status", is("REGISTERED")))
+                .andExpect(jsonPath("$.paymentStatus", is("PENDING")))
                 .andExpect(jsonPath("$.createdBy", is("Fabiana Nogueira")))
                 .andExpect(jsonPath("$.itemCount", is(2)))
                 .andExpect(jsonPath("$.total", is(1240.00)))
@@ -113,6 +115,57 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$.total", is(1240.00)))
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andExpect(jsonPath("$.items[*].unitCost", containsInAnyOrder(24.50, 13.00)));
+    }
+
+    @Test
+    @DisplayName("Compra atualiza custo médio e cancelamento reverte custo e saldo quando o estoque continua disponível")
+    void shouldRevertPurchaseCostAndStockWhenCanceled() throws Exception {
+        String response = mockMvc.perform(post("/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreatePurchaseRequest(
+                                supplier.getId(), LocalDate.now(), List.of(
+                                new PurchaseItemRequest(chicken.getId(), 10, new BigDecimal("30.00")))))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paymentStatus", is("PENDING")))
+                .andReturn().getResponse().getContentAsString();
+        UUID purchaseId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+        assertThat(productRepository.findById(chicken.getId()).orElseThrow().getCurrentCost())
+                .isEqualByComparingTo("27.25");
+
+        mockMvc.perform(patch("/purchases/{id}/cancel", purchaseId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CANCELED")));
+
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productRepository.findById(chicken.getId()).orElseThrow().getCurrentCost())
+                .isEqualByComparingTo("24.50");
+    }
+
+    @Test
+    @DisplayName("Pagamento por Pix não altera o caixa físico e impede duplicidade")
+    void shouldRegisterNonCashPaymentOnlyOnce() throws Exception {
+        String response = mockMvc.perform(post("/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreatePurchaseRequest(
+                                supplier.getId(), LocalDate.now(), List.of(
+                                new PurchaseItemRequest(chicken.getId(), 1, new BigDecimal("24.50")))))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID purchaseId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+        mockMvc.perform(patch("/purchases/{id}/pay", purchaseId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"PIX\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus", is("PAID")))
+                .andExpect(jsonPath("$.paymentMethod", is("PIX")))
+                .andExpect(jsonPath("$.paidAt", notNullValue()));
+
+        mockMvc.perform(patch("/purchases/{id}/pay", purchaseId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"PIX\"}"))
+                .andExpect(status().isConflict());
     }
 
     @Test
