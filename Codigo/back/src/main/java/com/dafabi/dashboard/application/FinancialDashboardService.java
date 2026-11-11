@@ -80,12 +80,12 @@ public class FinancialDashboardService {
                 .add(sum(marketplaceOrders.stream().map(MarketplaceOrder::getItemsValue).toList()));
         BigDecimal expenseTotal = sum(expenses.stream().map(Expense::getAmount).toList());
         BigDecimal ifoodFees = sum(marketplaceOrders.stream().filter(o -> o.getProvider() == IntegrationProvider.IFOOD)
-                .map(o -> zero(o.getFeesAndCommissions()).add(zero(o.getServiceFee()))).toList());
+                .map(o -> absolute(o.getFeesAndCommissions()).add(absolute(o.getServiceFee()))).toList());
         BigDecimal food99Fees = sum(marketplaceOrders.stream().filter(o -> o.getProvider() == IntegrationProvider.FOOD_99)
-                .map(o -> zero(o.getFeesAndCommissions())).toList());
-        BigDecimal otherMarketplaceCosts = sum(marketplaceOrders.stream().map(o -> zero(o.getMarketingCost())
-                .add(zero(o.getLogisticsCost())).add(zero(o.getRefundAmount())).add(zero(o.getFreeDeliveryCost()))
-                .add(o.getProvider() == IntegrationProvider.IFOOD ? zero(o.getStorePromotion()) : BigDecimal.ZERO)).toList());
+                .map(o -> absolute(o.getFeesAndCommissions())).toList());
+        BigDecimal otherMarketplaceCosts = sum(marketplaceOrders.stream().map(o -> absolute(o.getMarketingCost())
+                .add(absolute(o.getLogisticsCost())).add(absolute(o.getRefundAmount())).add(absolute(o.getFreeDeliveryCost()))
+                .add(o.getProvider() == IntegrationProvider.IFOOD ? absolute(o.getStorePromotion()) : BigDecimal.ZERO)).toList());
         boolean marketplaceFeesComplete = marketplaceOrders.stream().allMatch(o -> o.getFeesAndCommissions() != null
                 && (o.getProvider() == IntegrationProvider.IFOOD
                     ? o.getServiceFee() != null && o.getStorePromotion() != null
@@ -190,6 +190,10 @@ public class FinancialDashboardService {
 
     private static BigDecimal zero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private static BigDecimal absolute(BigDecimal value) {
+        return zero(value).abs();
     }
 
     private record DateRange(LocalDate start, LocalDate end) {
