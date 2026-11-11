@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -53,6 +55,21 @@ public class UserService {
                         "Usuário não encontrado.", HttpStatus.NOT_FOUND));
         user.deactivate();
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public User setActive(UUID id, boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado.", HttpStatus.NOT_FOUND));
+        if (active) user.activate(); else user.deactivate();
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public List<User> findAll() {
+        return userRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     private static String normalizeEmail(String email) {
