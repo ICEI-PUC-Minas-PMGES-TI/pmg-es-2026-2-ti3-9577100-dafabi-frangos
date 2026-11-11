@@ -19,6 +19,8 @@ export interface DashboardView {
   startDate: string;
   endDate: string;
   summary: DashboardSummary;
+  otherMarketplaceCosts: number;
+  marketplaceFeesComplete: boolean;
   daily: DailyRevenue[];
   recentSales: DashboardRecentSale[];
 }
@@ -32,6 +34,8 @@ export interface ApiFinancialDashboardResponse {
     fees: number;
     ifoodFees: number;
     food99Fees: number;
+    otherMarketplaceCosts?: number;
+    marketplaceFeesComplete?: boolean;
     estimatedResult: number;
     salesCount: number;
     counterSales: number;
@@ -42,4 +46,5 @@ export interface ApiFinancialDashboardResponse {
   };
   salesByOrigin: Record<string, number>;
   daily: Array<{ date: string; revenue: number }>;
+  recentSales?: Array<{ id: string; number: string; dateTime: string; origin: string; total: number; status: string }>;
 }

@@ -3,13 +3,11 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { DashboardSummary } from '../../../core/models/domain.models';
-import { SalesApiService } from '../../sales/services/sales-api.service';
 import { ApiFinancialDashboardResponse, DashboardView } from '../models/dashboard.models';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly http = inject(HttpClient);
-  private readonly sales = inject(SalesApiService);
   private readonly endpoint = `${environment.apiBaseUrl}/dashboard/financial-summary`;
 
   async load(period: string, startDate: string, endDate: string): Promise<DashboardView> {
@@ -19,14 +17,6 @@ export class DashboardService {
     }
 
     const dashboard = await firstValueFrom(this.http.get<ApiFinancialDashboardResponse>(this.endpoint, { params }));
-    const recent = await firstValueFrom(this.sales.list({
-      startDate: dashboard.startDate,
-      endDate: dashboard.endDate,
-      status: 'COMPLETED',
-      page: 0,
-      size: 4
-    }));
-
     const summary: DashboardSummary = {
       revenue: Number(dashboard.summary.revenue),
       expenses: Number(dashboard.summary.expenses),
@@ -43,18 +33,20 @@ export class DashboardService {
       startDate: dashboard.startDate,
       endDate: dashboard.endDate,
       summary,
+      otherMarketplaceCosts: Number(dashboard.summary.otherMarketplaceCosts ?? 0),
+      marketplaceFeesComplete: dashboard.summary.marketplaceFeesComplete !== false,
       daily: dashboard.daily.map(point => ({
         date: point.date,
         day: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(new Date(`${point.date}T12:00:00Z`)),
         value: Number(point.revenue)
       })),
-      recentSales: recent.content.map(sale => ({
+      recentSales: (dashboard.recentSales ?? []).map(sale => ({
         id: sale.id,
-        number: `#${sale.saleNumber}`,
+        number: sale.number,
         createdAt: sale.dateTime,
-        origin: sale.origin === 'FOOD_99' ? '99FOOD' : sale.origin,
+        origin: sale.origin === 'FOOD_99' ? '99FOOD' : sale.origin as 'COUNTER' | 'IFOOD',
         total: Number(sale.total),
-        status: sale.status === 'CANCELLED' ? 'CANCELED' : sale.status
+        status: sale.status === 'CANCELLED' || sale.status === 'PARTIALLY_CANCELLED' ? 'CANCELED' : 'COMPLETED'
       }))
     };
   }
