@@ -1,0 +1,76 @@
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+title: "Diagrama de Caso de Uso: DaFabi Frangos — Escopo da Sprint 4 (detalhado)"
+---
+%% O Mermaid não tem diagrama de caso de uso nativo.
+%% Simulação com flowchart: atores = nós de pessoa, casos de uso = elipses (stadium),
+%% «include»/«extend» = setas tracejadas, generalização = seta "herda de".
+flowchart LR
+
+    %% ---------- Atores ----------
+    OP["👤 Operador de caixa"]
+    ADM["👤 Administradora"]
+
+    %% Generalização: a Administradora herda o que o Operador faz
+    ADM -- "herda de" --> OP
+
+    subgraph SYS["Sistema DaFabi Frangos"]
+
+        subgraph AUT["Autenticação e sessão"]
+                UC01(["UC-01: Autenticar Usuário<br/><small>#59 · #60</small>"])
+            UC011(["UC-01.1: Validar Credenciais e Perfil<br/><small>#59</small>"])
+            UC012(["UC-01.2: Encerrar Sessão<br/><small>#60</small>"])
+        end
+
+        subgraph DASH["Dashboard financeiro"]
+                UC02(["UC-02: Visualizar Dashboard<br/><small>#61 · #62</small><br/>──────────<br/><b>pontos de extensão</b><br/>PE1: Filtros do dashboard"])
+            UC021(["UC-02.1: Consultar Resumo Financeiro<br/><small>#61 · #62</small>"])
+            UC022(["UC-02.2: Filtrar por Período<br/><small>#62</small>"])
+        end
+
+        subgraph EST["Estornos"]
+                UC17(["UC-17: Registrar Estorno<br/><small>#63 · #64</small>"])
+            UC04(["UC-04: Consultar Histórico de Vendas<br/><small>#64</small>"])
+            UC171(["UC-17.1: Informar Motivo do Estorno<br/><small>#63 · #64</small>"])
+        end
+
+        subgraph USR["Usuários e perfis"]
+                UC18(["UC-18: Gerenciar Usuários<br/><small>#58</small><br/>──────────<br/><b>pontos de extensão</b><br/>PE1: Ações sobre usuário"])
+            UC181(["UC-18.1: Cadastrar Usuário<br/><small>#58</small>"])
+            UC182(["UC-18.2: Editar Usuário e Perfil<br/><small>#58</small>"])
+            UC183(["UC-18.3: Inativar Usuário<br/><small>#58</small>"])
+        end
+    end
+
+    %% ---------- Associações ator ↔ caso de uso ----------
+    OP --- UC01
+    OP --- UC012
+    UC02 --- ADM
+    UC17 --- ADM
+    UC18 --- ADM
+
+    %% ---------- «include»: o caso base sempre executa o incluído ----------
+    UC01 -. "«include»" .-> UC011
+    UC02 -. "«include»" .-> UC021
+    UC17 -. "«include»" .-> UC04
+    UC17 -. "«include»" .-> UC171
+
+    %% ---------- «extend»: comportamento opcional no ponto PE1 ----------
+    UC022 -. "«extend» (PE1)" .-> UC02
+    UC181 -. "«extend» (PE1)" .-> UC18
+    UC182 -. "«extend» (PE1)" .-> UC18
+    UC183 -. "«extend» (PE1)" .-> UC18
+
+    %% ---------- Estilo ----------
+    classDef ator fill:#ffffff,stroke:#ffffff,color:#222,font-size:16px
+    classDef uc fill:#ffffff,stroke:#333,color:#222
+    class OP,ADM ator
+    class UC01,UC011,UC012,UC02,UC021,UC022,UC17,UC04,UC171,UC18,UC181,UC182,UC183 uc
+    style SYS fill:#ffffff,stroke:#333,stroke-width:1.5px
+    style AUT fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style DASH fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style EST fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style USR fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4

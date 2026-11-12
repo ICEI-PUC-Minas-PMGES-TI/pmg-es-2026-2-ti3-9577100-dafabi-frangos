@@ -7,6 +7,8 @@ import com.dafabi.cash.domain.CashRegisterStatus;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.InventoryLot;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.inventory.repository.StockMovementRepository;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -36,6 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -64,6 +67,9 @@ class SaleServiceTest {
 
     @Mock
     private StockMovementRepository stockMovementRepository;
+
+    @Mock
+    private InventoryLotRepository inventoryLotRepository;
 
     @Spy
     private SaleMapper saleMapper = new SaleMapper();
@@ -125,6 +131,34 @@ class SaleServiceTest {
                 .allMatch(movement -> movement.getMovementType() == StockMovementType.COUNTER_SALE);
 
         verify(cashRegisterService, never()).recordMovement(any(), any(), anyString(), any(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Venda perecível consome primeiro o lote mais próximo da validade")
+    void shouldConsumePerishableLotsByExpiryDate() {
+        mockOpenRegister();
+        chickenStock.getProduct().setPerishable(true);
+        mockStock(chickenStock);
+        when(saleRepository.findMaxSaleNumber()).thenReturn(7L);
+        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        InventoryLot expiresSoon = new InventoryLot(chickenStock.getProduct(), "LOTE-A",
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(1), 2);
+        InventoryLot expiresLater = new InventoryLot(chickenStock.getProduct(), "LOTE-B",
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(5), 3);
+        when(inventoryLotRepository.findAvailableByProductForUpdate(chickenStock.getProductId()))
+                .thenReturn(List.of(expiresSoon, expiresLater));
+
+        saleService.create(new CreateSaleRequest(List.of(
+                new SaleItemRequest(chickenStock.getProductId(), 3)
+        ), PaymentMethod.PIX));
+
+        assertThat(expiresSoon.getQuantity()).isZero();
+        assertThat(expiresLater.getQuantity()).isEqualTo(2);
+        assertThat(chickenStock.getQuantity()).isEqualTo(2);
+        ArgumentCaptor<StockMovement> movements = ArgumentCaptor.forClass(StockMovement.class);
+        verify(stockMovementRepository, times(2)).save(movements.capture());
+        assertThat(movements.getAllValues()).extracting(movement -> movement.getLot().getBatch())
+                .containsExactly("LOTE-A", "LOTE-B");
     }
 
     @Test

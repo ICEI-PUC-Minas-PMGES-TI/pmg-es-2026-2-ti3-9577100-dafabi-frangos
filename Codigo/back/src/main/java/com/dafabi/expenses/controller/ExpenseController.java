@@ -8,6 +8,7 @@ import com.dafabi.expenses.dto.ExpenseResponse;
 import com.dafabi.expenses.dto.UpdateExpenseRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/expenses")
+@PreAuthorize("hasRole('ADMIN')")
 public class ExpenseController {
     private final ExpenseService service;
 
@@ -49,4 +51,7 @@ public class ExpenseController {
 
     @PatchMapping("/{id}/cancel")
     public ExpenseResponse cancel(@PathVariable UUID id) { return service.cancel(id); }
+
+    @PatchMapping("/{id}/consolidate")
+    public ExpenseResponse consolidate(@PathVariable UUID id) { return service.consolidate(id); }
 }

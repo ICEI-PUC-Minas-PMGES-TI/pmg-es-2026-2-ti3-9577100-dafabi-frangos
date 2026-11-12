@@ -146,6 +146,12 @@ public class CashRegisterService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
 
+        BigDecimal cashPurchases = movements.stream()
+                .filter(m -> m.getDirection() == CashMovementDirection.OUT && isPurchaseMovement(m.getMovementType()))
+                .map(CashMovement::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
         BigDecimal cashRefunds = movements.stream()
                 .filter(m -> m.getDirection() == CashMovementDirection.OUT && isRefundMovement(m.getMovementType()))
                 .map(CashMovement::getAmount)
@@ -154,7 +160,7 @@ public class CashRegisterService {
 
         BigDecimal expectedBalance = calculateExpectedBalance(register);
 
-        return cashRegisterMapper.toSummaryResponse(register, cashSales, cashExpenses, cashRefunds, expectedBalance);
+        return cashRegisterMapper.toSummaryResponse(register, cashSales, cashExpenses, cashPurchases, cashRefunds, expectedBalance);
     }
 
     @Transactional(readOnly = true)
@@ -258,5 +264,9 @@ public class CashRegisterService {
         if (type == null) return false;
         String upper = type.toUpperCase();
         return upper.contains("REFUND") || upper.contains("ESTORNO");
+    }
+
+    private boolean isPurchaseMovement(String type) {
+        return type != null && type.toUpperCase().contains("PURCHASE");
     }
 }

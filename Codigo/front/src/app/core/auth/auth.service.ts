@@ -1,74 +1,173 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { User } from '../models/domain.models';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { Role, User } from '../models/domain.models';
 
-const SESSION_KEY = 'dafabi.session';
-const DEMO_USER_IDS = {
-  ADMIN: '00000000-0000-0000-0000-000000000101',
-  CASHIER: '00000000-0000-0000-0000-000000000102'
-} as const;
+export const SESSION_KEY = 'dafabi.session';
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: string;
+  user: User;
+}
+
+interface ApiLoginResponse {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string;
+  expiresIn: number;
+  expiresAt?: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    active: boolean;
+    permissions?: string[];
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly currentUserState = signal<User | null>(this.restoreSession());
-  readonly currentUser = this.currentUserState.asReadonly();
-  readonly isAuthenticated = computed(() => !!this.currentUserState());
-  readonly isAdmin = computed(() => this.currentUserState()?.role === 'ADMIN');
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly sessionState = signal<AuthSession | null>(this.restoreSession());
+  private refreshRequest: Promise<boolean> | null = null;
 
-  constructor(private readonly router: Router) {}
+  readonly currentUser = computed<User | null>(() => this.sessionState()?.user ?? null);
+  readonly accessToken = computed<string | null>(() => this.sessionState()?.accessToken ?? null);
+  readonly isAuthenticated = computed(() => !!this.sessionState()?.accessToken && !!this.sessionState()?.user);
+  readonly isAdmin = computed(() => this.currentUser()?.role === 'ADMIN');
 
   async login(identifier: string, password: string): Promise<User> {
-    await this.delay(650);
-    const digest = await this.hash(password);
-    const adminHash = await this.hash('admin123');
-    const cashierHash = await this.hash('caixa123');
-    let user: User | undefined;
+    const response = await firstValueFrom(
+      this.http.post<ApiLoginResponse>(`${environment.apiBaseUrl}/auth/login`, {
+        identifier: identifier.trim(),
+        password
+      })
+    );
 
-    if (['admin', 'admin@dafabi.com.br'].includes(identifier.trim().toLowerCase()) && digest === adminHash) {
-      user = { id: DEMO_USER_IDS.ADMIN, name: 'Fabiana Nogueira', email: 'admin@dafabi.com.br', role: 'ADMIN', active: true };
-    }
-    if (['caixa', 'caixa@dafabi.com.br'].includes(identifier.trim().toLowerCase()) && digest === cashierHash) {
-      user = { id: DEMO_USER_IDS.CASHIER, name: 'Carlos Oliveira', email: 'caixa@dafabi.com.br', role: 'CASHIER', active: true };
-    }
-    if (!user) throw new Error('INVALID_CREDENTIALS');
+    const user: User = {
+      id: response.user.id,
+      name: response.user.name,
+      email: response.user.email,
+      role: response.user.role,
+      active: response.user.active
+    };
 
-    this.currentUserState.set(user);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    this.saveSession({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      expiresAt: response.expiresAt,
+      user
+    });
     return user;
   }
 
-  hasRole(roles: User['role'][]): boolean { return !!this.currentUserState() && roles.includes(this.currentUserState()!.role); }
+  refreshSession(): Promise<boolean> {
+    if (this.refreshRequest) return this.refreshRequest;
 
-  logout(expired = false): void {
-    this.currentUserState.set(null);
-    sessionStorage.removeItem(SESSION_KEY);
-    void this.router.navigate(['/login'], { queryParams: expired ? { motivo: 'sessao-expirada' } : undefined });
+    const current = this.sessionState();
+    if (!current?.refreshToken) return Promise.resolve(false);
+
+    this.refreshRequest = firstValueFrom(
+      this.http.post<ApiLoginResponse>(`${environment.apiBaseUrl}/auth/refresh`, {
+        refreshToken: current.refreshToken
+      })
+    ).then(response => {
+      const user: User = {
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        role: response.user.role,
+        active: response.user.active
+      };
+      this.saveSession({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        expiresAt: response.expiresAt,
+        user
+      });
+      return true;
+    }).catch(() => false).finally(() => {
+      this.refreshRequest = null;
+    });
+
+    return this.refreshRequest;
   }
 
-  private restoreSession(): User | null {
+  hasRole(roles: User['role'][]): boolean {
+    const current = this.currentUser();
+    return !!current && roles.includes(current.role);
+  }
+
+  logout(expired = false): void {
+    const currentSession = this.sessionState();
+
+    if (!expired && currentSession?.accessToken) {
+      firstValueFrom(
+        this.http.post(`${environment.apiBaseUrl}/auth/logout`, {
+          refreshToken: currentSession.refreshToken ?? null
+        }, {
+          headers: { Authorization: `Bearer ${currentSession.accessToken}` }
+        })
+      ).catch(() => undefined);
+    }
+
+    this.sessionState.set(null);
+    sessionStorage.removeItem(SESSION_KEY);
+
+    void this.router.navigate(['/login'], {
+      queryParams: expired ? { motivo: 'sessao-expirada' } : undefined
+    });
+  }
+
+  private restoreSession(): AuthSession | null {
     try {
-      const stored = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as Partial<User> | null;
-      if (!stored?.id || !stored.name || !stored.email) return null;
-      const role = stored.role === 'ADMIN' ? 'ADMIN' : stored.role === 'CASHIER' ? 'CASHIER' : null;
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw) as Partial<AuthSession> | null;
+      const user = parsed?.user;
+      if (!parsed?.accessToken || !user?.id || !user.name || !user.email) {
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+
+      const role = user.role === 'ADMIN' ? 'ADMIN' : user.role === 'CASHIER' ? 'CASHIER' : null;
       if (!role) {
         sessionStorage.removeItem(SESSION_KEY);
         return null;
       }
-      const id = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(stored.id)
-        ? stored.id
-        : role === 'ADMIN' ? DEMO_USER_IDS.ADMIN : DEMO_USER_IDS.CASHIER;
-      return { id, name: stored.name, email: stored.email, role, active: stored.active !== false };
+
+      if (parsed.expiresAt && new Date(parsed.expiresAt).getTime() <= Date.now() && !parsed.refreshToken) {
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+
+      return {
+        accessToken: parsed.accessToken,
+        refreshToken: parsed.refreshToken,
+        expiresAt: parsed.expiresAt,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role,
+          active: user.active !== false
+        }
+      };
     } catch {
       sessionStorage.removeItem(SESSION_KEY);
       return null;
     }
   }
 
-  private async hash(value: string): Promise<string> {
-    const data = new TextEncoder().encode(value);
-    const buffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+  private saveSession(session: AuthSession): void {
+    this.sessionState.set(session);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
-
-  private delay(ms: number): Promise<void> { return new Promise(resolve => setTimeout(resolve, ms)); }
 }

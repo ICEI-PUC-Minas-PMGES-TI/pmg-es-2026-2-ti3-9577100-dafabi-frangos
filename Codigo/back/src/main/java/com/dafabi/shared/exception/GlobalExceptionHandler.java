@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -55,6 +57,34 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setProperty("traceId", UUID.randomUUID().toString());
 
         return ResponseEntity.status(ex.getStatus()).body(problemDetail);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDeniedException(AccessDeniedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "Acesso negado. Seu perfil não possui permissão para realizar esta operação."
+        );
+        problemDetail.setType(URI.create("about:blank"));
+        problemDetail.setTitle("Acesso negado");
+        problemDetail.setProperty("code", "ACCESS_DENIED");
+        problemDetail.setProperty("traceId", UUID.randomUUID().toString());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ProblemDetail> handleAuthenticationException(AuthenticationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED,
+                "Sua sessão expirou ou você não está autenticado. Faça login novamente."
+        );
+        problemDetail.setType(URI.create("about:blank"));
+        problemDetail.setTitle("Não autenticado");
+        problemDetail.setProperty("code", "SESSION_EXPIRED");
+        problemDetail.setProperty("traceId", UUID.randomUUID().toString());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

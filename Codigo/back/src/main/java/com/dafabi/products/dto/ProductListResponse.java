@@ -10,9 +10,11 @@ public record ProductListResponse(
     String name,
     CategoryResponse category,
     BigDecimal salePrice,
+    BigDecimal currentCost,
     Integer stockQuantity,
     String unit,
     String barcode,
+    boolean perishable,
     boolean frequent,
     ProductStatus status) {
 }

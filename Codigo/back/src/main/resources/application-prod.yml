@@ -22,6 +22,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    ignore-migration-patterns: '*:missing'
     locations: classpath:db/migration
 
 server:
@@ -30,3 +31,7 @@ server:
       max: 20
       min-spare: 4
 
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}

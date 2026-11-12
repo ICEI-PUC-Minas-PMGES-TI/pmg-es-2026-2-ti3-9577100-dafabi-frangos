@@ -27,9 +27,11 @@ export interface ApiProductListItem {
   category: ApiCategory | null;
   name: string;
   salePrice: number;
+  currentCost: number;
   stockQuantity: number;
   unit: string;
   barcode: string | null;
+  perishable?: boolean;
   frequent?: boolean;
   status: ProductStatus;
 }

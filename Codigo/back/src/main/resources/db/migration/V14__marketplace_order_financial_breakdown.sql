@@ -1,0 +1,11 @@
+ALTER TABLE marketplace_order
+    ADD COLUMN IF NOT EXISTS marketing_cost NUMERIC(14,2),
+    ADD COLUMN IF NOT EXISTS logistics_cost NUMERIC(14,2),
+    ADD COLUMN IF NOT EXISTS refund_amount NUMERIC(14,2),
+    ADD COLUMN IF NOT EXISTS free_delivery_cost NUMERIC(14,2),
+    ADD COLUMN IF NOT EXISTS tip_amount NUMERIC(14,2),
+    ADD COLUMN IF NOT EXISTS original_item_count NUMERIC(14,3),
+    ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS cancellation_responsible VARCHAR(180),
+    ADD COLUMN IF NOT EXISTS cancellation_reason VARCHAR(500);

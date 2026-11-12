@@ -9,6 +9,7 @@ import com.dafabi.inventory.dto.StockMovementResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,26 +31,31 @@ public class InventoryController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public List<InventoryPositionResponse> findPositions(@RequestParam(required = false) String query) {
         return inventoryService.findPositions(query);
     }
 
     @GetMapping("/movements")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<StockMovementResponse> findMovements(@RequestParam(required = false) UUID productId) {
         return inventoryService.findMovements(productId);
     }
 
     @PostMapping("/adjustments")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StockMovementResponse> adjust(@Valid @RequestBody StockAdjustmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.adjust(request));
     }
 
     @GetMapping("/lots")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<InventoryLotResponse> findLots() {
         return inventoryService.findLots();
     }
 
     @PostMapping("/lots")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InventoryLotResponse> createLot(@Valid @RequestBody CreateInventoryLotRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.createLot(request));
     }

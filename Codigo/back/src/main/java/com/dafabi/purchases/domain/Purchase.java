@@ -1,6 +1,7 @@
 package com.dafabi.purchases.domain;
 
 import com.dafabi.suppliers.domain.Supplier;
+import com.dafabi.expenses.domain.ExpensePaymentMethod;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,6 +54,18 @@ public class Purchase {
     @Column(nullable = false, length = 20)
     private PurchaseStatus status = PurchaseStatus.REGISTERED;
 
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private PurchasePaymentStatus paymentStatus = PurchasePaymentStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 30)
+    private ExpensePaymentMethod paymentMethod;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
+
     @Size(max = 150)
     @Column(name = "created_by", length = 150)
     private String createdBy;
@@ -86,6 +99,9 @@ public class Purchase {
         }
         if (this.status == null) {
             this.status = PurchaseStatus.REGISTERED;
+        }
+        if (this.paymentStatus == null) {
+            this.paymentStatus = PurchasePaymentStatus.PENDING;
         }
         if (this.createdAt == null) {
             this.createdAt = OffsetDateTime.now();
@@ -154,6 +170,13 @@ public class Purchase {
     public void setStatus(PurchaseStatus status) {
         this.status = status;
     }
+
+    public PurchasePaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(PurchasePaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
+    public ExpensePaymentMethod getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(ExpensePaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    public OffsetDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }
 
     public String getCreatedBy() {
         return createdBy;

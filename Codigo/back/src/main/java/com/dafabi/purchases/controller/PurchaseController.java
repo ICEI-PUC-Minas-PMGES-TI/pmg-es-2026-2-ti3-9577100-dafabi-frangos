@@ -2,10 +2,12 @@ package com.dafabi.purchases.controller;
 
 import com.dafabi.purchases.application.PurchaseService;
 import com.dafabi.purchases.dto.CreatePurchaseRequest;
+import com.dafabi.purchases.dto.PayPurchaseRequest;
 import com.dafabi.purchases.dto.PurchaseResponse;
 import com.dafabi.purchases.dto.PurchaseSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +23,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/purchases")
+@PreAuthorize("hasRole('ADMIN')")
 public class PurchaseController {
 
     private final PurchaseService purchaseService;
@@ -48,5 +51,16 @@ public class PurchaseController {
     @GetMapping("/{id}")
     public ResponseEntity<PurchaseResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(purchaseService.findById(id));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/{id}/pay")
+    public ResponseEntity<PurchaseResponse> pay(@PathVariable UUID id,
+                                                @Valid @RequestBody PayPurchaseRequest request) {
+        return ResponseEntity.ok(purchaseService.pay(id, request));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/{id}/cancel")
+    public ResponseEntity<PurchaseResponse> cancel(@PathVariable UUID id) {
+        return ResponseEntity.ok(purchaseService.cancel(id));
     }
 }

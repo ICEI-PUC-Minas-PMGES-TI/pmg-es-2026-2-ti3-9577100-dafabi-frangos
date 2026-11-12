@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { Product, Purchase } from '../../../core/models/domain.models';
+import { PaymentMethod, Product, Purchase } from '../../../core/models/domain.models';
 import { ProductsService } from '../../products/services/products.service';
 import { SuppliersService } from '../../suppliers/services/suppliers.service';
 import { PurchaseDraft } from '../models/purchase.models';
@@ -38,5 +38,23 @@ export class PurchasesService {
     const purchase = toPurchase(response); this.purchases.update(items => [purchase, ...items]);
     await Promise.all([this.load(), this.productsService.load({ status: 'ACTIVE', size: 100 })]);
     return purchase;
+  }
+
+  async pay(id: string, paymentMethod: PaymentMethod): Promise<Purchase> {
+    const purchase = toPurchase(await firstValueFrom(this.api.pay(id, { paymentMethod })));
+    this.upsert(purchase);
+    await this.load();
+    return purchase;
+  }
+
+  async cancel(id: string): Promise<Purchase> {
+    const purchase = toPurchase(await firstValueFrom(this.api.cancel(id)));
+    this.upsert(purchase);
+    await Promise.all([this.load(), this.productsService.load({ status: 'ACTIVE', size: 100 })]);
+    return purchase;
+  }
+
+  private upsert(purchase: Purchase): void {
+    this.purchases.update(items => items.map(item => item.id === purchase.id ? purchase : item));
   }
 }

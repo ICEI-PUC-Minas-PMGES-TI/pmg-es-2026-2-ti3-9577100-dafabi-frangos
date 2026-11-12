@@ -1,6 +1,7 @@
 package com.dafabi.purchases.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record PurchaseItemResponse(
@@ -9,6 +10,8 @@ public record PurchaseItemResponse(
         String productName,
         Integer quantity,
         BigDecimal unitCost,
-        BigDecimal total
+        BigDecimal total,
+        String batch,
+        LocalDate expiry
 ) {
 }

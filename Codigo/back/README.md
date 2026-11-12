@@ -23,19 +23,28 @@ As migrations do Flyway criam o esquema e inserem as categorias iniciais quando 
 Ainda em `Codigo/back`:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 No PowerShell, use:
 
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 A API fica em `http://localhost:8080/api/v1`.
 
+O perfil local `dev` cria dados demonstrativos, incluindo usuários de teste. Use esse perfil
+somente em desenvolvimento. O perfil padrão da aplicação é `prod` e exige `JWT_SECRET`
+com pelo menos 32 bytes; configure-o no ambiente do servidor e nunca use o segredo local
+de desenvolvimento em uma implantação.
+
 ## Endpoints disponíveis
 
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
 - `GET /api/v1/categories`
 - `GET /api/v1/products?query=&categoryId=&status=&includeInactive=`
 - `GET /api/v1/products/{id}`
@@ -58,6 +67,9 @@ A API fica em `http://localhost:8080/api/v1`.
 - `POST /api/v1/cash-registers/{id}/movements`
 - `POST /api/v1/sales`
 - `GET /api/v1/sales/{id}`
+- `GET /api/v1/sales/{id}/refund-eligibility`
+- `GET /api/v1/sales/{id}/refund`
+- `POST /api/v1/sales/{id}/refund`
 - `GET /api/v1/suppliers?query=&active=`
 - `GET /api/v1/suppliers/{id}`
 - `POST /api/v1/suppliers`
@@ -66,6 +78,25 @@ A API fica em `http://localhost:8080/api/v1`.
 - `GET /api/v1/purchases?supplierId=`
 - `GET /api/v1/purchases/{id}`
 - `POST /api/v1/purchases`
+- `GET /api/v1/dashboard/financial-summary?period=today`
+
+### Resumo financeiro do dashboard
+
+`GET /api/v1/dashboard/financial-summary` consolida vendas concluídas, despesas não
+canceladas e movimentações de caixa no período informado. O parâmetro `period` aceita
+`today`, `7d`, `month` e `custom`. Para `custom`, informe também `startDate` e
+`endDate` no formato `yyyy-MM-dd`; os dois limites são inclusivos. Se `period` for
+omitido e houver datas, o período personalizado é usado.
+
+A resposta contém `startDate`, `endDate`, `summary`, `salesByOrigin` e `daily`.
+`summary.revenue`, `summary.expenses`, `summary.estimatedResult`, `summary.salesCount`,
+as quantidades por origem e `daily[].revenue` são calculados dos registros persistidos.
+`cashIn` e `cashOut` consolidam os movimentos do caixa. As taxas (`fees`,
+`ifoodFees` e `food99Fees`) retornam zero até que uma taxa seja persistida no domínio;
+nenhuma taxa é estimada a partir da origem da venda.
+
+Períodos sem dados retornam HTTP 200, totais monetários zerados, contagens zeradas e
+um ponto diário zerado para cada data do intervalo.
 
 ## Estoque
 
@@ -93,6 +124,21 @@ suficiente. Ao concluir, o estoque de cada produto é baixado com uma movimenta�
 Todo o processo é transacional e usa bloqueio pessimista do caixa aberto e dos saldos
 de estoque, evitando venda acima do disponível em acessos concorrentes.
 
+## Estorno de vendas
+
+Os endpoints de estorno são restritos ao perfil `ADMIN` (sem token a API responde `401`
+`SESSION_EXPIRED`; com outro perfil, `403` `ACCESS_DENIED`). O motivo é obrigatório (5 a
+500 caracteres) e o usuário responsável é sempre o do token JWT autenticado, gravado no
+estorno e nas movimentações geradas.
+`GET /sales/{id}/refund-eligibility` informa se a venda pode ser estornada e o valor em
+dinheiro que sairá do caixa. Na mesma transação, o estorno devolve ao `product_stock` as
+quantidades vendidas (movimentação `REFUND`), registra uma saída `REFUND` no caixa aberto
+com exatamente o valor que entrou em dinheiro pela venda (vendas por PIX ou cartão não
+movimentam o caixa) e marca a venda como `REFUNDED`. Vendas canceladas ou já estornadas
+são bloqueadas com `409`. A venda é bloqueada de forma pessimista e cada venda aceita um
+único estorno (`uk_sale_refund_sale`), então nunca há reversão duplicada; reenviar a
+requisição com o mesmo cabeçalho `Idempotency-Key` devolve o estorno já registrado com `200`.
+
 ## Fornecedores
 
 O domínio de Fornecedores (`supplier`) gerencia o cadastro, consulta, busca e atualização
@@ -115,6 +161,6 @@ pessimista e em ordem fixa, evitando perda de atualização e deadlocks em acess
 ./mvnw test
 ```
 
-## Observação de segurança
+## Autenticação e autorização
 
-Autenticação e autorização ainda não fazem parte desta primeira API. Ela deve ficar protegida antes de qualquer publicação pública.
+A autenticação é realizada via `POST /api/v1/auth/login`, que valida o usuário ou e-mail e a senha (hash BCrypt), verifica se o cadastro está ativo e emite um token JWT (`accessToken`) acompanhado de um `refreshToken` e dos dados do perfil (`ADMIN` ou `CASHIER`). As demais rotas exigem o cabeçalho `Authorization: Bearer <token>`, com controle de acesso por perfil via Spring Security e `@PreAuthorize`. Tokens ausentes, inválidos ou expirados retornam `401` (`SESSION_EXPIRED`), credenciais incorretas retornam `401` (`INVALID_CREDENTIALS`) e acessos sem permissão retornam `403` (`ACCESS_DENIED`).

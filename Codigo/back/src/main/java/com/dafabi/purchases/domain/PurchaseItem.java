@@ -17,6 +17,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -50,6 +51,17 @@ public class PurchaseItem {
     @Column(name = "unit_cost", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitCost;
 
+    @Column(name = "previous_product_cost", nullable = false, precision = 14, scale = 2)
+    private BigDecimal previousProductCost = BigDecimal.ZERO;
+
+    @Column(name = "resulting_product_cost", nullable = false, precision = 14, scale = 2)
+    private BigDecimal resultingProductCost = BigDecimal.ZERO;
+
+    @Column(length = 100)
+    private String batch;
+
+    private LocalDate expiry;
+
     @NotNull
     @DecimalMin(value = "0.01")
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
@@ -59,6 +71,17 @@ public class PurchaseItem {
     }
 
     public PurchaseItem(Product product, Integer quantity, BigDecimal unitCost) {
+        this(product, quantity, unitCost, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    public PurchaseItem(Product product, Integer quantity, BigDecimal unitCost,
+                        BigDecimal previousProductCost, BigDecimal resultingProductCost) {
+        this(product, quantity, unitCost, previousProductCost, resultingProductCost, null, null);
+    }
+
+    public PurchaseItem(Product product, Integer quantity, BigDecimal unitCost,
+                        BigDecimal previousProductCost, BigDecimal resultingProductCost,
+                        String batch, LocalDate expiry) {
         this(
                 null,
                 null,
@@ -68,6 +91,10 @@ public class PurchaseItem {
                 unitCost,
                 calculateLineTotal(quantity, unitCost)
         );
+        this.previousProductCost = normalize(previousProductCost);
+        this.resultingProductCost = normalize(resultingProductCost);
+        this.batch = batch == null || batch.isBlank() ? null : batch.trim();
+        this.expiry = expiry;
     }
 
     public PurchaseItem(UUID id, Purchase purchase, Product product, String productName,
@@ -103,6 +130,11 @@ public class PurchaseItem {
             return null;
         }
         return unitCost.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal normalize(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     public UUID getId() {
@@ -151,6 +183,11 @@ public class PurchaseItem {
     public BigDecimal getUnitCost() {
         return unitCost;
     }
+
+    public BigDecimal getPreviousProductCost() { return previousProductCost; }
+    public BigDecimal getResultingProductCost() { return resultingProductCost; }
+    public String getBatch() { return batch; }
+    public LocalDate getExpiry() { return expiry; }
 
     public void setUnitCost(BigDecimal unitCost) {
         this.unitCost = unitCost != null ? unitCost.setScale(2, RoundingMode.HALF_UP) : null;

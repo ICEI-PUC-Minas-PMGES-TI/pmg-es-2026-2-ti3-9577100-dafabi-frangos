@@ -16,4 +16,5 @@ export class ExpensesApiService {
   create(request: ApiCreateExpenseRequest) { return this.http.post<ApiExpense>(this.baseUrl, request); }
   update(id: string, request: ApiUpdateExpenseRequest) { return this.http.put<ApiExpense>(`${this.baseUrl}/${id}`, request); }
   cancel(id: string) { return this.http.patch<ApiExpense>(`${this.baseUrl}/${id}/cancel`, {}); }
+  consolidate(id: string) { return this.http.patch<ApiExpense>(`${this.baseUrl}/${id}/consolidate`, {}); }
 }

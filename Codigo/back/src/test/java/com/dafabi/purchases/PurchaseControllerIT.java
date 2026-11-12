@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,12 +35,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@WithMockUser(roles = "ADMIN")
 class PurchaseControllerIT {
 
     // Maior UUID em ordem textual: garante que o item inválido seja processado depois dos válidos.
@@ -92,6 +95,7 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$.supplierName", is("Granja Santa Clara")))
                 .andExpect(jsonPath("$.date", is(LocalDate.now().toString())))
                 .andExpect(jsonPath("$.status", is("REGISTERED")))
+                .andExpect(jsonPath("$.paymentStatus", is("PENDING")))
                 .andExpect(jsonPath("$.createdBy", is("Fabiana Nogueira")))
                 .andExpect(jsonPath("$.itemCount", is(2)))
                 .andExpect(jsonPath("$.total", is(1240.00)))
@@ -114,6 +118,57 @@ class PurchaseControllerIT {
     }
 
     @Test
+    @DisplayName("Compra atualiza custo médio e cancelamento reverte custo e saldo quando o estoque continua disponível")
+    void shouldRevertPurchaseCostAndStockWhenCanceled() throws Exception {
+        String response = mockMvc.perform(post("/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreatePurchaseRequest(
+                                supplier.getId(), LocalDate.now(), List.of(
+                                new PurchaseItemRequest(chicken.getId(), 10, new BigDecimal("30.00")))))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paymentStatus", is("PENDING")))
+                .andReturn().getResponse().getContentAsString();
+        UUID purchaseId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+        assertThat(productRepository.findById(chicken.getId()).orElseThrow().getCurrentCost())
+                .isEqualByComparingTo("27.25");
+
+        mockMvc.perform(patch("/purchases/{id}/cancel", purchaseId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CANCELED")));
+
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productRepository.findById(chicken.getId()).orElseThrow().getCurrentCost())
+                .isEqualByComparingTo("24.50");
+    }
+
+    @Test
+    @DisplayName("Pagamento por Pix não altera o caixa físico e impede duplicidade")
+    void shouldRegisterNonCashPaymentOnlyOnce() throws Exception {
+        String response = mockMvc.perform(post("/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreatePurchaseRequest(
+                                supplier.getId(), LocalDate.now(), List.of(
+                                new PurchaseItemRequest(chicken.getId(), 1, new BigDecimal("24.50")))))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID purchaseId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+        mockMvc.perform(patch("/purchases/{id}/pay", purchaseId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"PIX\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus", is("PAID")))
+                .andExpect(jsonPath("$.paymentMethod", is("PIX")))
+                .andExpect(jsonPath("$.paidAt", notNullValue()));
+
+        mockMvc.perform(patch("/purchases/{id}/pay", purchaseId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"PIX\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     @DisplayName("POST /purchases deve registrar movimentações PURCHASE visíveis na posição de estoque")
     void shouldRecordPurchaseStockMovements() throws Exception {
         CreatePurchaseRequest request = new CreatePurchaseRequest(supplier.getId(), LocalDate.now(), List.of(
@@ -130,12 +185,15 @@ class PurchaseControllerIT {
 
         mockMvc.perform(get("/inventory/movements").param("productId", chicken.getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].type", is("PURCHASE")))
                 .andExpect(jsonPath("$[0].origin", is("Compra")))
-                .andExpect(jsonPath("$[0].previousQuantity", is(10)))
+                .andExpect(jsonPath("$[0].previousQuantity", is(25)))
                 .andExpect(jsonPath("$[0].newQuantity", is(30)))
-                .andExpect(jsonPath("$[0].difference", is(20)))
+                .andExpect(jsonPath("$[0].difference", is(5)))
+                .andExpect(jsonPath("$[1].previousQuantity", is(10)))
+                .andExpect(jsonPath("$[1].newQuantity", is(25)))
+                .andExpect(jsonPath("$[1].difference", is(15)))
                 .andExpect(jsonPath("$[0].reason", is("Compra registrada de Granja Santa Clara")));
 
         mockMvc.perform(get("/inventory").param("query", "Frango assado tradicional"))

@@ -65,5 +65,6 @@ public class InventoryLot {
     public LocalDate getReceivedAt() { return receivedAt; }
     public LocalDate getExpiry() { return expiry; }
     public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }

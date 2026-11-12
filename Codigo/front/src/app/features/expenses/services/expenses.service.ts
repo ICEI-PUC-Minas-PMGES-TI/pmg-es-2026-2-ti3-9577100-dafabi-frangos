@@ -25,5 +25,6 @@ export class ExpensesService {
     const expense = toExpense(response); this.upsert(expense); return expense;
   }
   async cancel(id: string): Promise<Expense> { const expense = toExpense(await firstValueFrom(this.api.cancel(id))); this.upsert(expense); return expense; }
+  async consolidate(id: string): Promise<Expense> { const expense = toExpense(await firstValueFrom(this.api.consolidate(id))); this.upsert(expense); return expense; }
   private upsert(expense: Expense): void { this.expenses.update(items => { const index = items.findIndex(item => item.id === expense.id); return index < 0 ? [expense, ...items] : items.map(item => item.id === expense.id ? expense : item); }); }
 }

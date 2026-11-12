@@ -45,6 +45,7 @@ public class CashRegisterMapper {
             CashRegister register,
             BigDecimal cashSales,
             BigDecimal cashExpenses,
+            BigDecimal cashPurchases,
             BigDecimal cashRefunds,
             BigDecimal expectedBalance) {
         if (register == null) return null;
@@ -59,6 +60,7 @@ public class CashRegisterMapper {
                 normalize(register.getInitialBalance()),
                 normalize(cashSales),
                 normalize(cashExpenses),
+                normalize(cashPurchases),
                 normalize(cashRefunds),
                 normalize(expectedBalance),
                 normalize(register.getCountedBalance()),
