@@ -1,0 +1,146 @@
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+title: "Diagrama de Casos de Uso Implementados: DaFabi Frangos — Sprint 5"
+---
+%% Fonte editável do diagrama. A imagem oficial é diagrama-casos-de-uso-implementados.svg.
+%% O Mermaid não tem diagrama de caso de uso nativo.
+%% Simulação com flowchart: atores = nós de pessoa, casos de uso = elipses (stadium),
+%% «include»/«extend» = setas tracejadas, generalização = seta "herda de".
+flowchart LR
+
+    %% ---------- Atores ----------
+    OP["👤 Operador de caixa"]
+    ADM["👤 Administradora"]
+
+    %% Generalização: a Administradora herda o que o Operador faz
+    ADM -- "herda de" --> OP
+
+    subgraph SYS["Sistema DaFabi Frangos"]
+
+        subgraph G0["Acesso e sessão"]
+            UC01(["UC-01: Autenticar Usuário<br/><small>#59</small>"])
+            UC011(["UC-01.1: Renovar Sessão<br/><small>#60</small>"])
+            UC012(["UC-01.2: Encerrar Sessão<br/><small>#60</small>"])
+        end
+
+        subgraph G1["Vendas (PDV)"]
+            UC03(["UC-03: Realizar Venda (PDV)<br/><small>#71 · #72</small>"])
+            UC031(["UC-03.1: Processar Pagamento"])
+            UC04(["UC-04: Consultar Histórico de Vendas<br/><small>#53</small>"])
+        end
+
+        subgraph G2["Caixa"]
+            UC05(["UC-05: Abrir Caixa"])
+            UC20(["UC-20: Consultar Resumo do Caixa"])
+            UC06(["UC-06: Fechar Caixa"])
+            UC061(["UC-06.1: Justificar Diferença"])
+        end
+
+        subgraph G3["Produtos e estoque"]
+            UC10(["UC-10: Consultar Produtos e Estoque"])
+        end
+
+        subgraph G4["Dashboard financeiro (Administradora)"]
+            UC02(["UC-02: Visualizar Dashboard<br/><small>#61 · #62 · #71</small>"])
+            UC021(["UC-02.1: Filtrar por Período<br/><small>#62</small>"])
+        end
+
+        subgraph G5["Produtos e estoque (Administradora)"]
+            UC07(["UC-07 a 09: Manter Produtos (cadastrar, editar, inativar)"])
+            UC11(["UC-11: Ajustar Estoque Manualmente"])
+            UC12(["UC-12: Registrar Lote de Perecível<br/><small>#72</small>"])
+        end
+
+        subgraph G6["Compras e fornecedores (Administradora)"]
+            UC13(["UC-13: Registrar Compra<br/><small>#77</small>"])
+            UC131(["UC-13.1: Registrar Pagamento da Compra<br/><small>#77</small>"])
+            UC132(["UC-13.2: Cancelar Compra<br/><small>#77</small>"])
+            UC14(["UC-14: Manter Fornecedores"])
+        end
+
+        subgraph G7["Despesas (Administradora)"]
+            UC15(["UC-15: Manter Despesas<br/><small>#78</small>"])
+            UC151(["UC-15.1: Registrar Pagamento da Despesa<br/><small>#78</small>"])
+        end
+
+        subgraph G8["Integrações iFood e 99Food (Administradora)"]
+            UC16(["UC-16: Integrar Vendas de Delivery<br/><small>#53</small>"])
+            UC161(["UC-16.1: Importar Relatório do Marketplace<br/><small>#53</small>"])
+            UC162(["UC-16.2: Vincular Itens ao Estoque<br/><small>#53</small>"])
+            UC163(["UC-16.3: Registrar Repasse (conciliação)<br/><small>#53</small>"])
+        end
+
+        subgraph G9["Estornos (Administradora)"]
+            UC17(["UC-17: Registrar Estorno<br/><small>#63 · #64</small>"])
+            UC171(["UC-17.1: Localizar Venda Estornável<br/><small>#64</small>"])
+            UC172(["UC-17.2: Informar Motivo<br/><small>#63</small>"])
+        end
+
+        subgraph G10["Usuários e configurações (Administradora)"]
+            UC18(["UC-18: Gerenciar Usuários<br/><small>#58</small>"])
+            UC181(["UC-18.1: Cadastrar Usuário<br/><small>#58</small>"])
+            UC182(["UC-18.2: Ativar / Inativar Usuário<br/><small>#58</small>"])
+            UC19(["UC-19: Manter Configurações da Loja<br/><small>#73</small>"])
+        end
+    end
+
+    %% ---------- Associações ator ↔ caso de uso ----------
+    OP --- UC01
+    OP --- UC012
+    OP --- UC03
+    OP --- UC04
+    OP --- UC05
+    OP --- UC20
+    OP --- UC06
+    OP --- UC10
+    UC02 --- ADM
+    UC07 --- ADM
+    UC11 --- ADM
+    UC12 --- ADM
+    UC13 --- ADM
+    UC14 --- ADM
+    UC15 --- ADM
+    UC16 --- ADM
+    UC17 --- ADM
+    UC18 --- ADM
+    UC19 --- ADM
+
+    %% ---------- «include»: o caso base sempre executa o incluído ----------
+    UC03 -. "«include»" .-> UC031
+    UC16 -. "«include»" .-> UC161
+    UC17 -. "«include»" .-> UC171
+    UC17 -. "«include»" .-> UC172
+
+    %% ---------- «extend»: comportamento opcional sob condição ----------
+    UC011 -. "«extend» [token expirado]" .-> UC01
+    UC061 -. "«extend» [diferença ≠ 0]" .-> UC06
+    UC021 -. "«extend» [outro período]" .-> UC02
+    UC131 -. "«extend» [compra pendente]" .-> UC13
+    UC132 -. "«extend» [compra registrada]" .-> UC13
+    UC151 -. "«extend» [despesa pendente]" .-> UC15
+    UC162 -. "«extend» [relatório de itens]" .-> UC16
+    UC163 -. "«extend» [período pago]" .-> UC16
+    UC181 -. "«extend» [novo acesso]" .-> UC18
+    UC182 -. "«extend» [mudar acesso]" .-> UC18
+    UC12 -. "«extend» [item perecível]" .-> UC13
+
+    %% ---------- Estilo ----------
+    classDef ator fill:#ffffff,stroke:#ffffff,color:#222,font-size:16px
+    classDef uc fill:#ffffff,stroke:#333,color:#222
+    class OP,ADM ator
+    class UC01,UC011,UC012,UC03,UC031,UC04,UC05,UC20,UC06,UC061,UC10,UC02,UC021,UC07,UC11,UC12,UC13,UC131,UC132,UC14,UC15,UC151,UC16,UC161,UC162,UC163,UC17,UC171,UC172,UC18,UC181,UC182,UC19 uc
+    style SYS fill:#ffffff,stroke:#333,stroke-width:1.5px
+    style G0 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G1 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G2 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G3 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G4 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G5 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G6 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G7 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G8 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G9 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
+    style G10 fill:#fafafa,stroke:#bbb,stroke-dasharray:4 4
