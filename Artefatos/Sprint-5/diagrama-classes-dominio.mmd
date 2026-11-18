@@ -1,0 +1,524 @@
+---
+title: DaFabi Frangos — Diagrama de Classes de Domínio
+config:
+  theme: default
+  look: classic
+---
+classDiagram
+    direction TB
+
+    %% ============ ACESSO / CONFIGURAÇÃO ============
+    class StoreSettings {
+        -id: UUID
+        -name: String
+        -phone: String
+        -address: String
+        -defaultPayment: String
+        -compactMode: boolean
+        -updatedAt: DataHora
+        +update(name, phone, address, defaultPayment, compactMode) void
+    }
+
+    class Usuario["Usuário"] {
+        -id: UUID
+        -nome: String
+        -email: String «único»
+        -senhaHash: String
+        -ativo: boolean
+        -criadoEm: DataHora
+        +ativar() void
+        +inativar() void
+    }
+
+    class Role {
+        -id: UUID
+        -name: String «único»
+    }
+
+    class RefreshToken {
+        -id: UUID
+        -tokenHash: String «único»
+        -expiresAt: DataHora
+        -revokedAt: DataHora [0..1]
+        -createdAt: DataHora
+        +isRevoked() boolean
+        +isExpired() boolean
+        +revoke() void
+    }
+
+    %% ============ CATÁLOGO ============
+    class Categoria {
+        -id: UUID
+        -nome: String
+        -ativa: boolean
+    }
+
+    class Produto {
+        -id: UUID
+        -nome: String
+        -precoVenda: Decimal
+        -custoAtual: Decimal
+        -unidade: String = "UN"
+        -codigoBarras: String [0..1] «único»
+        -perecivel: boolean
+        -frequente: boolean
+        -status: StatusProduto
+        +ativar() void
+        +inativar() void
+    }
+
+    %% ============ ESTOQUE ============
+    class EstoqueProduto {
+        -quantidade: int
+        -atualizadoEm: DataHora
+        +ajustar(novaQtd: int, motivo: String) MovimentacaoEstoque
+    }
+
+    class Lote {
+        -id: UUID
+        -codigoLote: String
+        -dataRecebimento: Data
+        -validade: Data
+        -quantidade: int
+        -criadoEm: DataHora
+        +/status: StatusLote
+        +estaVencido() boolean
+    }
+
+    class MovEstoque["MovimentaçãoEstoque"] {
+        -id: UUID
+        -ocorridoEm: DataHora
+        -tipo: TipoMovEstoque
+        -qtdAnterior: int
+        -qtdNova: int
+        -delta: int
+        -origem: String
+        -motivo: String [0..1]
+        -realizadoPor: String
+        -tipoReferencia: String [0..1]
+        -idReferencia: UUID [0..1]
+    }
+
+    %% ============ CAIXA ============
+    class Caixa {
+        -id: UUID
+        -abertoEm: DataHora
+        -fechadoEm: DataHora [0..1]
+        -saldoInicial: Decimal
+        -saldoEsperadoFechamento: Decimal [0..1]
+        -saldoContado: Decimal [0..1]
+        -diferenca: Decimal [0..1]
+        -justificativa: String [0..1]
+        -status: StatusCaixa
+        +abrir(saldoInicial: Decimal) void
+        +registrarMovimentacao(m: MovimentaçãoCaixa) void
+        +calcularSaldoEsperado() Decimal
+        +fechar(saldoContado: Decimal, justificativa: String) void
+    }
+
+    class MovCaixa["MovimentaçãoCaixa"] {
+        -id: UUID
+        -direcao: DirecaoMovCaixa
+        -tipo: TipoMovCaixa
+        -valor: Decimal
+        -origem: String [0..1]
+        -tipoReferencia: String [0..1]
+        -idReferencia: UUID [0..1]
+        -descricao: String
+        -ocorridoEm: DataHora
+    }
+
+    %% ============ VENDAS ============
+    class Venda {
+        -id: UUID
+        -numero: long
+        -dataHora: DataHora
+        -origem: OrigemVenda
+        -formaPagamento: FormaPagamento
+        -subtotal: Decimal
+        -total: Decimal
+        -status: StatusVenda
+        +adicionarItem(item: ItemVenda) void
+        +removerItem(item: ItemVenda) void
+        +calcularTotal() Decimal
+    }
+
+    class ItemVenda {
+        -id: UUID
+        -quantidade: Decimal
+        -precoUnitario: Decimal
+        -custoUnitario: Decimal
+        -subtotal: Decimal
+    }
+
+    class SaleRefund {
+        -id: UUID
+        -amount: Decimal
+        -cashAmount: Decimal
+        -cashRegisterId: UUID [0..1]
+        -reason: String
+        -refundedById: UUID
+        -refundedByName: String
+        -idempotencyKey: String [0..1] «único»
+        -refundedAt: DataHora
+    }
+
+    %% ============ COMPRAS / FORNECEDORES ============
+    class Fornecedor {
+        -id: UUID
+        -nome: String
+        -telefone: String
+        -email: String «único por loja»
+        -observacoes: String [0..1]
+        -ativo: boolean
+        +ativar() void
+        +inativar() void
+    }
+
+    class Compra {
+        -id: UUID
+        -dataCompra: Data
+        -valorTotal: Decimal
+        -status: StatusCompra
+        -statusPagamento: PurchasePaymentStatus
+        -formaPagamento: FormaPagamentoDespesa [0..1]
+        -pagoEm: DataHora [0..1]
+        -criadoPor: String
+        -criadoEm: DataHora
+        +adicionarItem(item: ItemCompra) void
+        +removerItem(item: ItemCompra) void
+        +recalcularTotal() void
+    }
+
+    class ItemCompra {
+        -id: UUID
+        -nomeProduto: String
+        -quantidade: int
+        -custoUnitario: Decimal
+        -custoAnteriorProduto: Decimal
+        -custoResultanteProduto: Decimal
+        -lote: String [0..1]
+        -validade: Data [0..1]
+        -valorTotal: Decimal
+        +calcularTotalLinha() Decimal
+    }
+
+    %% ============ DESPESAS ============
+    class Despesa {
+        -id: UUID
+        -descricao: String
+        -categoria: String
+        -valor: Decimal
+        -data: Data
+        -formaPagamento: FormaPagamentoDespesa
+        -observacao: String [0..1]
+        -status: StatusDespesa
+        -pagoEm: DataHora [0..1]
+    }
+
+    %% ============ INTEGRAÇÕES / MARKETPLACE ============
+    class IntegrationImportBatch {
+        -id: UUID
+        -provider: IntegrationProvider
+        -reportType: IntegrationReportType
+        -fileName: String
+        -fileSha256: String
+        -periodStart: Data [0..1]
+        -periodEnd: Data [0..1]
+        -status: ImportBatchStatus
+        -rowCount: int
+        -validRowCount: int
+        -invalidRowCount: int
+        -duplicateRowCount: int
+        -summaryJson: String
+        -createdAt: DataHora
+        -importedAt: DataHora [0..1]
+        +markImported(finalStatus: ImportBatchStatus, at: DataHora) void
+    }
+
+    class IntegrationImportRow {
+        -id: UUID
+        -batchId: UUID
+        -rowNumber: int
+        -rowKey: String [0..1]
+        -valid: boolean
+        -duplicateInFile: boolean
+        -duplicateInSystem: boolean
+        -issuesJson: String
+        -payloadJson: String
+    }
+
+    class MarketplaceOrder {
+        -id: UUID
+        -provider: IntegrationProvider
+        -externalStoreId: String
+        -storeName: String [0..1]
+        -externalOrderId: String
+        -orderAt: DataHora
+        -rawStatus: String
+        -normalizedStatus: String
+        -shiftName: String [0..1]
+        -itemsValue: Decimal [0..1]
+        -customerPaid: Decimal [0..1]
+        -customerDeliveryFee: Decimal [0..1]
+        -ifoodPromotion: Decimal [0..1]
+        -storePromotion: Decimal [0..1]
+        -networkPromotion: Decimal [0..1]
+        -serviceFee: Decimal [0..1]
+        -feesAndCommissions: Decimal [0..1]
+        -netReported: Decimal [0..1]
+        -paymentMethodRaw: String [0..1]
+        -deliveryType: String [0..1]
+        -logisticsProduct: String [0..1]
+        -salesChannel: String [0..1]
+        -marketingCost: Decimal [0..1]
+        -logisticsCost: Decimal [0..1]
+        -refundAmount: Decimal [0..1]
+        -freeDeliveryCost: Decimal [0..1]
+        -tipAmount: Decimal [0..1]
+        -originalItemCount: Decimal [0..1]
+        -completedAt: DataHora [0..1]
+        -cancelledAt: DataHora [0..1]
+        -cancellationResponsible: String [0..1]
+        -cancellationReason: String [0..1]
+        -sourceBatchId: UUID
+        -sourcePayloadJson: String
+        -updatedAt: DataHora
+    }
+
+    class MarketplaceSettlement {
+        -id: UUID
+        -provider: IntegrationProvider
+        -externalStoreId: String
+        -externalSettlementId: String
+        -periodStart: Data
+        -periodEnd: Data
+        -grossAmount: Decimal [0..1]
+        -feesAmount: Decimal [0..1]
+        -adjustmentsAmount: Decimal [0..1]
+        -retainedAmount: Decimal [0..1]
+        -amountReceived: Decimal [0..1]
+        -payoutDate: Data [0..1]
+        -status: String
+        -sourceBatchId: UUID [0..1]
+        -sourceReference: String [0..1]
+        -sourcePayloadJson: String
+        -updatedAt: DataHora
+    }
+
+    class MarketplaceProductMapping {
+        -id: UUID
+        -provider: IntegrationProvider
+        -externalStoreId: String
+        -externalItemName: String
+        -productId: UUID [0..1]
+        -quantityPerItem: Decimal [0..1]
+        -updatedAt: DataHora
+    }
+
+    class MarketplaceItemSnapshot {
+        -id: UUID
+        -provider: IntegrationProvider
+        -externalStoreId: String
+        -storeName: String [0..1]
+        -businessDate: Data
+        -externalItemName: String
+        -normalizedItemName: String
+        -itemRevenue: Decimal
+        -soldQuantity: Decimal
+        -sourceBatchId: UUID
+        -sourcePayloadJson: String
+        -updatedAt: DataHora
+    }
+
+    class MarketplaceStockApplication {
+        -id: UUID
+        -snapshotId: UUID
+        -productId: UUID
+        -reportedQuantity: Decimal
+        -appliedQuantity: Decimal
+        -status: String
+        -updatedAt: DataHora
+    }
+
+    class MarketplaceStockBaseline {
+        -id: UUID
+        -provider: IntegrationProvider
+        -externalStoreId: String
+        -startDate: Data
+        -updatedAt: DataHora
+    }
+
+    %% ============ ENUMERAÇÕES ============
+    class Perfil {
+        <<enumeration>>
+        ADMIN
+        OPERADOR_CAIXA
+    }
+    class StatusProduto {
+        <<enumeration>>
+        ATIVO
+        INATIVO
+    }
+    class StatusLote {
+        <<enumeration>>
+        VALIDO
+        VENCIDO
+        UTILIZADO
+    }
+    class TipoMovEstoque {
+        <<enumeration>>
+        SALDO_INICIAL
+        AJUSTE_MANUAL
+        RECEBIMENTO_LOTE
+        COMPRA
+        PURCHASE_CANCELLATION
+        VENDA_BALCAO
+        VENDA_INTEGRADA
+        CANCELAMENTO_INTEGRADO
+        DEVOLUCAO
+    }
+    class StatusCaixa {
+        <<enumeration>>
+        ABERTO
+        FECHADO
+    }
+    class DirecaoMovCaixa {
+        <<enumeration>>
+        ENTRADA
+        SAIDA
+    }
+    class TipoMovCaixa {
+        <<enumeration>>
+        VENDA
+        DESPESA
+        DEVOLUCAO
+        SUPRIMENTO [MANUAL_ENTRY]
+        SANGRIA [MANUAL_WITHDRAWAL]
+    }
+    class OrigemVenda {
+        <<enumeration>>
+        BALCAO
+        IFOOD
+        FOOD_99
+    }
+    class FormaPagamento {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+    }
+    class StatusVenda {
+        <<enumeration>>
+        CONCLUIDA
+        CANCELADA
+        ESTORNADA
+    }
+    class StatusCompra {
+        <<enumeration>>
+        REGISTRADA
+        CANCELADA
+    }
+    class PurchasePaymentStatus {
+        <<enumeration>>
+        PENDING
+        PAID
+    }
+    class FormaPagamentoDespesa {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+        BOLETO_TRANSFERENCIA
+    }
+    class StatusDespesa {
+        <<enumeration>>
+        PENDENTE
+        CONSOLIDADA
+        CANCELADA
+    }
+    class IntegrationProvider {
+        <<enumeration>>
+        IFOOD
+        FOOD_99
+    }
+    class IntegrationReportType {
+        <<enumeration>>
+        ORDERS
+        ITEMS
+    }
+    class ImportBatchStatus {
+        <<enumeration>>
+        READY
+        IMPORTED
+        IMPORTED_WITH_ERRORS
+    }
+
+    %% ============ RELACIONAMENTOS ============
+    Usuario "*" --> "*" Role : possui
+    Usuario "1" <-- "*" RefreshToken : autentica
+    Role ..> Perfil : «mapeia»
+
+    Categoria "0..1" <-- "*" Produto : classifica
+    Produto "1" *-- "1" EstoqueProduto : possui
+    Produto "1" <-- "*" Lote : pertence a
+    Produto "1" <-- "*" MovEstoque : afeta
+    Lote "0..1" <-- "*" MovEstoque : refere-se a
+
+    Usuario "1" <-- "*" Caixa : operador
+    Caixa "1" *-- "*" MovCaixa : contém
+
+    Caixa "0..1" <-- "*" Venda : registrada em
+    Usuario "1" <-- "*" Venda : operador
+    Venda "1" *-- "1..*" ItemVenda : contém
+    Venda "1" <-- "0..1" SaleRefund : estornada por
+    ItemVenda "*" --> "1" Produto : vende
+    SaleRefund ..> Caixa : «referencia»
+
+    Fornecedor "1" <-- "*" Compra : fornece
+    Compra "1" *-- "1..*" ItemCompra : contém
+    ItemCompra "*" --> "1" Produto : repõe
+    ItemCompra "*" ..> "0..1" Lote : associa / gera (#72)
+
+    Usuario "0..1" <-- "*" Despesa : lançada por
+
+    IntegrationImportBatch "1" *-- "*" IntegrationImportRow : contém
+    IntegrationImportBatch "1" <-- "*" MarketplaceOrder : origina
+    IntegrationImportBatch "0..1" <-- "*" MarketplaceSettlement : origina
+    IntegrationImportBatch "1" <-- "*" MarketplaceItemSnapshot : origina
+    MarketplaceItemSnapshot "1" *-- "*" MarketplaceStockApplication : gera
+    MarketplaceStockApplication "*" --> "1" Produto : baixa estoque
+    MarketplaceProductMapping "*" --> "0..1" Produto : mapeia
+
+    MovCaixa ..> Venda : «referencia»
+    MovCaixa ..> Despesa : «referencia»
+    MovCaixa ..> Compra : «referencia»
+    MovEstoque ..> Venda : «referencia»
+    MovEstoque ..> Compra : «referencia»
+    MovEstoque ..> MarketplaceItemSnapshot : «referencia»
+
+    %% Enums (uso)
+    Produto ..> StatusProduto
+    Lote ..> StatusLote
+    MovEstoque ..> TipoMovEstoque
+    Caixa ..> StatusCaixa
+    MovCaixa ..> DirecaoMovCaixa
+    MovCaixa ..> TipoMovCaixa
+    Venda ..> OrigemVenda
+    Venda ..> FormaPagamento
+    Venda ..> StatusVenda
+    Compra ..> StatusCompra
+    Compra ..> PurchasePaymentStatus
+    Compra ..> FormaPagamentoDespesa
+    Despesa ..> FormaPagamentoDespesa
+    Despesa ..> StatusDespesa
+    IntegrationImportBatch ..> IntegrationProvider
+    IntegrationImportBatch ..> IntegrationReportType
+    IntegrationImportBatch ..> ImportBatchStatus
+    MarketplaceOrder ..> IntegrationProvider
+    MarketplaceSettlement ..> IntegrationProvider
+    MarketplaceProductMapping ..> IntegrationProvider
+    MarketplaceItemSnapshot ..> IntegrationProvider
+    MarketplaceStockBaseline ..> IntegrationProvider
