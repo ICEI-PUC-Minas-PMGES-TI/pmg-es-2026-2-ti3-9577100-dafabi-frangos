@@ -1,0 +1,70 @@
+---
+title: DaFabi Frangos — Vendas e estornos (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Venda {
+        +numero
+        +dataHora
+        +origem
+        +formaPagamento
+        +subtotal
+        +descontos
+        +taxasDoCanal
+        +totalLiquido
+        +valorRecebido
+        +troco
+        +status
+    }
+    class ItemVenda {
+        +quantidade
+        +precoUnitario
+        +custoUnitarioNaVenda
+        +subtotal
+    }
+    class Estorno {
+        +dataHora
+        +valor
+        +valorDevolvidoEmDinheiro
+        +motivo
+    }
+    class MovimentacaoCaixa
+    class Produto
+    class Caixa
+    class Usuario["Usuário"]
+
+    class OrigemVenda {
+        <<enumeration>>
+        BALCAO
+        IFOOD
+        FOOD_99
+    }
+    class FormaPagamento {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+    }
+    class StatusVenda {
+        <<enumeration>>
+        CONCLUIDA
+        CANCELADA
+        ESTORNADA
+    }
+
+    Caixa "0..1" <-- "0..*" Venda : caixa da venda presencial
+    Usuario "0..1" <-- "0..*" Venda : operador da venda presencial
+    Venda "1" *-- "1..*" ItemVenda : contém
+    Produto "1" <-- "0..*" ItemVenda : vendido
+    Venda "1" -- "0..1" Estorno : pode receber
+    Usuario "1" <-- "0..*" Estorno : autorizou
+    Venda "0..1" --> "0..1" MovimentacaoCaixa : entrada se pago em dinheiro
+    Estorno "0..1" --> "0..1" MovimentacaoCaixa : devolução em dinheiro
+    Venda ..> OrigemVenda
+    Venda ..> FormaPagamento
+    Venda ..> StatusVenda
+
+    note for Venda "Uma venda representa uma transação de qualquer origem. A origem diferencia balcão, iFood e 99Food."
+    note for Estorno "Guarda o autor e o motivo; reverte os efeitos financeiros aplicáveis e recompõe o estoque."

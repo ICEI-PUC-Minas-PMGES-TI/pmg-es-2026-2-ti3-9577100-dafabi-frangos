@@ -1,0 +1,87 @@
+---
+title: DaFabi Frangos — Catálogo e estoque (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Loja {
+        +nome
+        +telefone
+        +endereco
+        +formaPagamentoPadrao
+        +modoCompacto
+    }
+    class Categoria {
+        +nome
+        +ativa
+    }
+    class Produto {
+        +nome
+        +precoVenda
+        +custoAtual
+        +unidade
+        +codigoBarras [opcional, único]
+        +perecivel
+        +frequenteNoPDV
+        +status
+        +ativar()
+        +inativar()
+    }
+    class EstoqueProduto {
+        +quantidadeAtual
+        +atualizadoEm
+        +ajustarQuantidade()
+    }
+    class Lote {
+        +codigo
+        +dataRecebimento
+        +validade
+        +quantidadeDisponivel
+        +status
+    }
+    class MovimentacaoEstoque {
+        +ocorridaEm
+        +tipo
+        +quantidadeAnterior
+        +quantidadeNova
+        +variacao
+        +origem
+        +motivo
+    }
+    class Usuario["Usuário"]
+
+    class StatusProduto {
+        <<enumeration>>
+        ATIVO
+        INATIVO
+    }
+    class StatusLote {
+        <<enumeration>>
+        VALIDO
+        VENCIDO
+        UTILIZADO
+    }
+    class TipoMovimentacaoEstoque {
+        <<enumeration>>
+        SALDO_INICIAL
+        AJUSTE_MANUAL
+        RECEBIMENTO_COMPRA
+        VENDA_BALCAO
+        VENDA_INTEGRADA
+        CANCELAMENTO
+        ESTORNO
+    }
+
+    Loja "1" *-- "1..*" Categoria : organiza
+    Loja "1" *-- "1..*" Produto : comercializa
+    Categoria "1" <-- "0..*" Produto : classifica
+    Produto "1" *-- "1" EstoqueProduto : mantém saldo
+    Produto "1" *-- "0..*" Lote : controla por lote quando perecível
+    Produto "1" <-- "0..*" MovimentacaoEstoque : histórico
+    Lote "0..1" <-- "0..*" MovimentacaoEstoque : lote relacionado
+    Usuario "1" <-- "0..*" MovimentacaoEstoque : responsável
+    Produto ..> StatusProduto
+    Lote ..> StatusLote
+    MovimentacaoEstoque ..> TipoMovimentacaoEstoque
+
+    note for EstoqueProduto "O saldo resume a quantidade disponível do produto; os lotes detalham a quantidade e validade dos perecíveis."

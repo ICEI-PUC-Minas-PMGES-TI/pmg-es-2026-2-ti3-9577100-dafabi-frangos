@@ -1,0 +1,53 @@
+---
+title: DaFabi Frangos — Caixa (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Loja
+    class Usuario["Usuário"]
+    class Caixa {
+        +abertoEm
+        +fechadoEm
+        +saldoInicial
+        +saldoEsperado
+        +valorContado
+        +diferenca
+        +justificativa
+        +status
+        +calcularSaldoEsperado()
+        +fechar()
+    }
+    class MovimentacaoCaixa {
+        +ocorridaEm
+        +direcao
+        +tipo
+        +valor
+        +descricao
+    }
+    class StatusCaixa {
+        <<enumeration>>
+        ABERTO
+        FECHADO
+    }
+    class DirecaoMovimentacao {
+        <<enumeration>>
+        ENTRADA
+        SAIDA
+    }
+    class TipoMovimentacaoCaixa {
+        <<enumeration>>
+        VENDA
+        COMPRA
+        DESPESA
+        ESTORNO
+    }
+
+    Loja "1" *-- "0..*" Caixa : mantém sessões
+    Usuario "1" <-- "0..*" Caixa : operador responsável
+    Caixa "1" *-- "0..*" MovimentacaoCaixa : registra
+    Caixa ..> StatusCaixa
+    MovimentacaoCaixa ..> DirecaoMovimentacao
+    MovimentacaoCaixa ..> TipoMovimentacaoCaixa
+
+    note for MovimentacaoCaixa "Registra o efeito no dinheiro físico. PIX, débito e crédito ficam associados às vendas, mas não aumentam o saldo contado em espécie."

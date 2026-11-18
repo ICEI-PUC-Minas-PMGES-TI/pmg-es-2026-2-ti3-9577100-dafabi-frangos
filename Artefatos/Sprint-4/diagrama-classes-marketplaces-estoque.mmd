@@ -1,0 +1,41 @@
+---
+title: DaFabi Frangos — Mapeamento e estoque de marketplaces (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class ImportacaoRelatorio
+    class VinculoMarketplace["Vínculo da loja com o marketplace"]
+    class ResumoItemMarketplace {
+        +dataReferencia
+        +receitaReportada
+        +quantidadeVendida
+    }
+    class ItemCatalogoMarketplace {
+        +nomeItemExterno
+    }
+    class MapeamentoProdutoMarketplace {
+        +quantidadePorItem
+    }
+    class AplicacaoEstoqueMarketplace {
+        +quantidadeReportada
+        +quantidadeAplicada
+        +status
+        +atualizadaEm
+    }
+    class MarcoEstoqueMarketplace {
+        +dataInicialDeControle
+    }
+    class Produto
+
+    VinculoMarketplace "1" <-- "0..*" ImportacaoRelatorio : canal de origem
+    VinculoMarketplace "1" <-- "0..*" ItemCatalogoMarketplace : identifica item externo
+    VinculoMarketplace "1" *-- "0..1" MarcoEstoqueMarketplace : marco de controle
+    ImportacaoRelatorio "1" --> "0..*" ResumoItemMarketplace : importa quantidades por período
+    ItemCatalogoMarketplace "1" <-- "0..*" ResumoItemMarketplace : identifica item externo
+    ItemCatalogoMarketplace "1" *-- "1..*" MapeamentoProdutoMarketplace : componentes locais
+    MapeamentoProdutoMarketplace "0..*" --> "1" Produto : associa produto ou insumo
+    ResumoItemMarketplace "1" *-- "0..*" AplicacaoEstoqueMarketplace : registra aplicação
+    Produto "1" <-- "0..*" AplicacaoEstoqueMarketplace : recebe baixa ou recomposição
+    note for ItemCatalogoMarketplace "Identifica o mesmo nome externo ao longo dos relatórios para reutilizar o mapeamento."
+    note for MarcoEstoqueMarketplace "Define desde quando as quantidades importadas podem alterar o estoque, evitando reaplicar o histórico anterior."

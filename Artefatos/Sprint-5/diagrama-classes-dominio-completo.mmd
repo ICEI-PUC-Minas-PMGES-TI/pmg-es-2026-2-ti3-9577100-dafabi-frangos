@@ -1,0 +1,458 @@
+---
+title: DaFabi Frangos — Modelo conceitual completo de classes de domínio
+---
+classDiagram
+    direction TB
+
+    class Loja {
+        +id: Identificador
+        +nome: String
+        +telefone: String
+        +endereco: String
+        +formaPagamentoPadrao: FormaPagamentoVenda
+        +modoCompacto: boolean
+        +atualizarDados()
+        +configurarPreferencias()
+    }
+    class Usuario {
+        +id: Identificador
+        +nome: String
+        +email: String
+        +senhaHash: String
+        +ativo: boolean
+        +ativar()
+        +inativar()
+        +alterarPerfil()
+    }
+    class Perfil {
+        <<enumeration>>
+        ADMINISTRADORA
+        OPERADOR_CAIXA
+    }
+    class Categoria {
+        +id: Identificador
+        +nome: String
+        +ativa: boolean
+        +ativar()
+        +inativar()
+    }
+    class Produto {
+        +id: Identificador
+        +nome: String
+        +precoVenda: Decimal
+        +custoAtual: Decimal
+        +unidade: String
+        +codigoBarras: String
+        +perecivel: boolean
+        +frequenteNoPDV: boolean
+        +status: StatusProduto
+        +alterarPreco()
+        +ativar()
+        +inativar()
+    }
+    class StatusProduto {
+        <<enumeration>>
+        ATIVO
+        INATIVO
+    }
+    class EstoqueProduto {
+        +quantidadeAtual: Decimal
+        +atualizadoEm: DataHora
+        +adicionarQuantidade()
+        +baixarQuantidade()
+        +ajustarQuantidade()
+    }
+    class Lote {
+        +id: Identificador
+        +codigo: String
+        +dataRecebimento: Data
+        +validade: Data
+        +quantidadeDisponivel: Decimal
+        +status: StatusLote
+        +receber()
+        +consumir()
+        +estaVencido(): boolean
+    }
+    class StatusLote {
+        <<enumeration>>
+        VALIDO
+        VENCIDO
+        UTILIZADO
+    }
+    class MovimentacaoEstoque {
+        +id: Identificador
+        +ocorridaEm: DataHora
+        +tipo: TipoMovimentacaoEstoque
+        +quantidadeAnterior: Decimal
+        +quantidadeNova: Decimal
+        +variacao: Decimal
+        +origem: String
+        +motivo: String
+        +registrar()
+    }
+    class TipoMovimentacaoEstoque {
+        <<enumeration>>
+        SALDO_INICIAL
+        AJUSTE_MANUAL
+        RECEBIMENTO_COMPRA
+        VENDA_BALCAO
+        VENDA_INTEGRADA
+        CANCELAMENTO
+        ESTORNO
+    }
+    class Caixa {
+        +id: Identificador
+        +abertoEm: DataHora
+        +fechadoEm: DataHora
+        +saldoInicial: Decimal
+        +saldoEsperado: Decimal
+        +valorContado: Decimal
+        +diferenca: Decimal
+        +justificativa: String
+        +status: StatusCaixa
+        +abrir()
+        +registrarMovimentacao()
+        +calcularSaldoEsperado(): Decimal
+        +fechar()
+    }
+    class StatusCaixa {
+        <<enumeration>>
+        ABERTO
+        FECHADO
+    }
+    class MovimentacaoCaixa {
+        +id: Identificador
+        +ocorridaEm: DataHora
+        +direcao: DirecaoMovimentacao
+        +tipo: TipoMovimentacaoCaixa
+        +valor: Decimal
+        +descricao: String
+        +registrar()
+    }
+    class DirecaoMovimentacao {
+        <<enumeration>>
+        ENTRADA
+        SAIDA
+    }
+    class TipoMovimentacaoCaixa {
+        <<enumeration>>
+        VENDA
+        COMPRA
+        DESPESA
+        ESTORNO
+    }
+    class Venda {
+        +id: Identificador
+        +numero: Inteiro
+        +dataHora: DataHora
+        +origem: OrigemVenda
+        +formaPagamento: FormaPagamentoVenda
+        +subtotal: Decimal
+        +descontos: Decimal
+        +taxasDoCanal: Decimal
+        +totalLiquido: Decimal
+        +valorRecebido: Decimal
+        +troco: Decimal
+        +status: StatusVenda
+        +adicionarItem()
+        +removerItem()
+        +calcularSubtotal(): Decimal
+        +calcularTotalLiquido(): Decimal
+        +cancelar()
+    }
+    class OrigemVenda {
+        <<enumeration>>
+        BALCAO
+        IFOOD
+        FOOD_99
+    }
+    class FormaPagamentoVenda {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+    }
+    class FormaPagamentoSaida {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+        BOLETO_TRANSFERENCIA
+    }
+    class StatusVenda {
+        <<enumeration>>
+        CONCLUIDA
+        CANCELADA
+        ESTORNADA
+    }
+    class ItemVenda {
+        +id: Identificador
+        +quantidade: Decimal
+        +precoUnitario: Decimal
+        +custoUnitarioNaVenda: Decimal
+        +subtotal: Decimal
+        +calcularSubtotal(): Decimal
+    }
+    class Estorno {
+        +id: Identificador
+        +dataHora: DataHora
+        +valor: Decimal
+        +valorDevolvidoEmDinheiro: Decimal
+        +motivo: String
+        +validarElegibilidade()
+        +estornar()
+    }
+    class Fornecedor {
+        +id: Identificador
+        +nome: String
+        +telefone: String
+        +email: String
+        +observacoes: String
+        +ativo: boolean
+        +ativar()
+        +inativar()
+    }
+    class Compra {
+        +id: Identificador
+        +data: Data
+        +valorTotal: Decimal
+        +status: StatusCompra
+        +situacaoPagamento: SituacaoPagamento
+        +formaPagamento: FormaPagamentoSaida
+        +dataPagamento: DataHora
+        +adicionarItem()
+        +removerItem()
+        +recalcularTotal(): Decimal
+        +registrarPagamento()
+        +cancelar()
+    }
+    class StatusCompra {
+        <<enumeration>>
+        REGISTRADA
+        CANCELADA
+    }
+    class SituacaoPagamento {
+        <<enumeration>>
+        PENDENTE
+        PAGA
+    }
+    class ItemCompra {
+        +id: Identificador
+        +quantidade: Decimal
+        +custoUnitario: Decimal
+        +custoTotal: Decimal
+        +calcularCustoTotal(): Decimal
+    }
+    class Despesa {
+        +id: Identificador
+        +descricao: String
+        +categoria: String
+        +valor: Decimal
+        +data: Data
+        +formaPagamento: FormaPagamentoSaida
+        +observacao: String
+        +status: StatusDespesa
+        +dataPagamento: DataHora
+        +consolidarPagamento()
+        +cancelar()
+    }
+    class StatusDespesa {
+        <<enumeration>>
+        PENDENTE
+        CONSOLIDADA
+        CANCELADA
+    }
+    class ImportacaoRelatorio {
+        +id: Identificador
+        +tipoRelatorio: TipoRelatorio
+        +nomeArquivo: String
+        +identificadorArquivo: String
+        +periodoInicial: Data
+        +periodoFinal: Data
+        +status: StatusImportacao
+        +totalLinhas: Inteiro
+        +linhasValidas: Inteiro
+        +linhasInvalidas: Inteiro
+        +duplicidades: Inteiro
+        +iniciadaEm: DataHora
+        +concluidaEm: DataHora
+        +validarArquivo()
+        +previsualizar()
+        +confirmarImportacao()
+        +detectarDuplicidade()
+    }
+    class TipoRelatorio {
+        <<enumeration>>
+        PEDIDOS
+        ITENS
+    }
+    class StatusImportacao {
+        <<enumeration>>
+        PRONTA_PARA_IMPORTAR
+        IMPORTADA
+        IMPORTADA_COM_ERROS
+    }
+    class LinhaImportada {
+        +numero: Inteiro
+        +chaveExterna: String
+        +valida: boolean
+        +duplicadaNoArquivo: boolean
+        +jaExistenteNoSistema: boolean
+        +problemasEncontrados: Lista
+        +dadosOriginais: Documento
+        +validar()
+    }
+    class VinculoMarketplace {
+        +id: Identificador
+        +provedor: ProvedorMarketplace
+        +identificadorLojaExterno: String
+        +nomeLojaExterna: String
+        +ativo: boolean
+        +atualizarVinculo()
+    }
+    class ProvedorMarketplace {
+        <<enumeration>>
+        IFOOD
+        FOOD_99
+    }
+    class PedidoMarketplace {
+        +identificadorExterno: String
+        +dataHora: DataHora
+        +statusOriginal: String
+        +statusNormalizado: String
+        +valorItens: Decimal
+        +valorPagoPeloCliente: Decimal
+        +descontos: Decimal
+        +taxasEComissoes: Decimal
+        +valorLiquidoReportado: Decimal
+        +formaPagamentoOriginal: String
+        +dataCancelamento: DataHora
+        +motivoCancelamento: String
+        +normalizarStatus()
+        +gerarVendaConsolidada(): Venda
+    }
+    class ResumoItemMarketplace {
+        +dataReferencia: Data
+        +receitaReportada: Decimal
+        +quantidadeVendida: Decimal
+        +reconciliarQuantidade()
+    }
+    class ItemCatalogoMarketplace {
+        +nomeItemExterno: String
+        +normalizarNome(): String
+    }
+    class MapeamentoProdutoMarketplace {
+        +quantidadePorItem: Decimal
+        +calcularConsumo(): Decimal
+    }
+    class RepasseMarketplace {
+        +identificadorExterno: String
+        +periodoInicial: Data
+        +periodoFinal: Data
+        +valorBruto: Decimal
+        +taxas: Decimal
+        +ajustes: Decimal
+        +valorRetido: Decimal
+        +valorRecebido: Decimal
+        +dataPagamento: Data
+        +status: String
+        +calcularLiquido(): Decimal
+        +conciliar()
+    }
+    class MarcoEstoqueMarketplace {
+        +dataInicialDeControle: Data
+        +definirDataInicial()
+    }
+    class AplicacaoEstoqueMarketplace {
+        +quantidadeReportada: Decimal
+        +quantidadeAplicada: Decimal
+        +status: StatusAplicacaoEstoque
+        +atualizadaEm: DataHora
+        +aplicar()
+        +reverter()
+    }
+    class StatusAplicacaoEstoque {
+        <<enumeration>>
+        PENDENTE
+        APLICADA
+        ESTOQUE_INSUFICIENTE
+        REVISAR_DEVOLUCAO
+        ANTERIOR_AO_MARCO
+    }
+
+    Loja "1" o-- "1..*" Usuario : equipe
+    Usuario "0..*" --> "1" Perfil : perfil
+    Loja "1" *-- "1..*" Categoria : catálogo
+    Loja "1" *-- "1..*" Produto : comercializa
+    Categoria "1" <-- "0..*" Produto : classifica
+    Produto "1" *-- "1" EstoqueProduto : saldo atual
+    Produto "1" *-- "0..*" Lote : lotes perecíveis
+    Produto "1" <-- "0..*" MovimentacaoEstoque : histórico
+    Lote "0..1" <-- "0..*" MovimentacaoEstoque : lote relacionado
+    Usuario "1" <-- "0..*" MovimentacaoEstoque : responsável
+
+    Loja "1" *-- "0..*" Caixa : mantém sessões
+    Usuario "1" <-- "0..*" Caixa : operador
+    Caixa "1" *-- "0..*" MovimentacaoCaixa : registra
+    Caixa "0..1" <-- "0..*" Venda : caixa presencial
+    Usuario "0..1" <-- "0..*" Venda : operador presencial
+    Venda "1" *-- "1..*" ItemVenda : contém
+    Produto "1" <-- "0..*" ItemVenda : vendido
+    Venda "1" -- "0..1" Estorno : pode receber
+    Usuario "1" <-- "0..*" Estorno : autoriza
+    Venda "0..1" --> "0..1" MovimentacaoCaixa : recebimento em dinheiro
+    Estorno "0..1" --> "0..1" MovimentacaoCaixa : devolução em dinheiro
+
+    Loja "1" *-- "0..*" Fornecedor : cadastra
+    Loja "1" *-- "0..*" Compra : registra
+    Usuario "1" <-- "0..*" Compra : responsável
+    Fornecedor "1" <-- "0..*" Compra : fornece
+    Compra "1" *-- "1..*" ItemCompra : contém
+    Produto "1" <-- "0..*" ItemCompra : reposto
+    ItemCompra "1" --> "0..1" Lote : cria lote perecível
+    ItemCompra "1" --> "1..*" MovimentacaoEstoque : entrada ou reversão
+    Compra "0..1" --> "0..1" MovimentacaoCaixa : pagamento em dinheiro
+    Loja "1" *-- "0..*" Despesa : registra
+    Usuario "1" <-- "0..*" Despesa : responsável
+    Despesa "0..1" --> "0..1" MovimentacaoCaixa : pagamento em dinheiro
+
+    Loja "1" *-- "0..*" VinculoMarketplace : canais configurados
+    VinculoMarketplace "1" <-- "0..*" ImportacaoRelatorio : origem
+    Usuario "1" <-- "0..*" ImportacaoRelatorio : enviou
+    ImportacaoRelatorio "1" *-- "1..*" LinhaImportada : valida
+    ImportacaoRelatorio "1" --> "0..*" PedidoMarketplace : importa pedidos
+    ImportacaoRelatorio "1" --> "0..*" ResumoItemMarketplace : importa itens
+    ImportacaoRelatorio "0..1" --> "0..*" RepasseMarketplace : importa repasses
+    PedidoMarketplace "0..1" --> "0..1" Venda : normaliza em venda
+    VinculoMarketplace "1" <-- "0..*" PedidoMarketplace : canal
+    VinculoMarketplace "1" <-- "0..*" RepasseMarketplace : canal
+    VinculoMarketplace "1" <-- "0..*" ItemCatalogoMarketplace : catálogo externo
+    ItemCatalogoMarketplace "1" <-- "0..*" ResumoItemMarketplace : item externo
+    ItemCatalogoMarketplace "1" *-- "0..*" MapeamentoProdutoMarketplace : componentes opcionais
+    MapeamentoProdutoMarketplace "0..*" --> "1" Produto : produto ou insumo
+    ResumoItemMarketplace "1" *-- "0..*" AplicacaoEstoqueMarketplace : aplicações
+    Produto "1" <-- "0..*" AplicacaoEstoqueMarketplace : recebe movimento
+    VinculoMarketplace "1" *-- "0..1" MarcoEstoqueMarketplace : marco inicial
+
+    Produto ..> StatusProduto
+    Loja ..> FormaPagamentoVenda
+    Lote ..> StatusLote
+    MovimentacaoEstoque ..> TipoMovimentacaoEstoque
+    Usuario ..> Perfil
+    Caixa ..> StatusCaixa
+    MovimentacaoCaixa ..> DirecaoMovimentacao
+    MovimentacaoCaixa ..> TipoMovimentacaoCaixa
+    Venda ..> OrigemVenda
+    Venda ..> FormaPagamentoVenda
+    Venda ..> StatusVenda
+    Compra ..> StatusCompra
+    Compra ..> SituacaoPagamento
+    Compra ..> FormaPagamentoSaida
+    Despesa ..> FormaPagamentoSaida
+    Despesa ..> StatusDespesa
+    ImportacaoRelatorio ..> TipoRelatorio
+    ImportacaoRelatorio ..> StatusImportacao
+    VinculoMarketplace ..> ProvedorMarketplace
+    AplicacaoEstoqueMarketplace ..> StatusAplicacaoEstoque

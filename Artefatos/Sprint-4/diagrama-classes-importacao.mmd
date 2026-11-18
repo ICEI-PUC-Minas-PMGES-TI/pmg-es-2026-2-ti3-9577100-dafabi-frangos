@@ -1,0 +1,63 @@
+---
+title: DaFabi Frangos — Importação de relatórios (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class ImportacaoRelatorio {
+        +tipoRelatorio
+        +nomeArquivo
+        +identificadorArquivo
+        +periodoInicial
+        +periodoFinal
+        +status
+        +totalLinhas
+        +linhasValidas
+        +linhasInvalidas
+        +duplicidades
+        +iniciadaEm
+        +concluidaEm
+    }
+    class LinhaImportada {
+        +numero
+        +chaveExterna
+        +valida
+        +duplicadaNoArquivo
+        +jaExistenteNoSistema
+        +problemasEncontrados
+        +dadosOriginais
+    }
+    class VinculoMarketplace["Vínculo da loja com o marketplace"] {
+        +provedor
+        +identificadorLojaExterno
+        +nomeLojaExterna
+        +ativo
+    }
+    class Loja
+    class Usuario["Usuário"]
+    class TipoRelatorio {
+        <<enumeration>>
+        PEDIDOS
+        ITENS
+    }
+    class StatusImportacao {
+        <<enumeration>>
+        PRONTA_PARA_IMPORTAR
+        IMPORTADA
+        IMPORTADA_COM_ERROS
+    }
+    class ProvedorMarketplace {
+        <<enumeration>>
+        IFOOD
+        FOOD_99
+    }
+
+    Loja "1" *-- "0..*" VinculoMarketplace : integra canais externos
+    VinculoMarketplace "1" <-- "0..*" ImportacaoRelatorio : canal e loja de origem
+    ImportacaoRelatorio "1" *-- "1..*" LinhaImportada : valida e mantém histórico
+    Usuario "1" <-- "0..*" ImportacaoRelatorio : responsável pelo envio
+    ImportacaoRelatorio ..> TipoRelatorio
+    ImportacaoRelatorio ..> StatusImportacao
+    VinculoMarketplace ..> ProvedorMarketplace
+
+    note for LinhaImportada "A prévia conserva cada linha, os erros e a informação de duplicidade antes de confirmar a importação."

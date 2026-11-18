@@ -1,0 +1,41 @@
+---
+title: DaFabi Frangos — Despesas operacionais (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Loja
+    class Usuario["Usuário"]
+    class Despesa {
+        +descricao
+        +categoria
+        +valor
+        +data
+        +formaPagamento
+        +observacao
+        +status
+        +dataPagamento
+    }
+    class MovimentacaoCaixa
+    class FormaPagamento {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+        BOLETO_TRANSFERENCIA
+    }
+    class StatusDespesa {
+        <<enumeration>>
+        PENDENTE
+        CONSOLIDADA
+        CANCELADA
+    }
+
+    Loja "1" *-- "0..*" Despesa : registra
+    Usuario "1" <-- "0..*" Despesa : responsável
+    Despesa "0..1" --> "0..1" MovimentacaoCaixa : saída se paga em dinheiro
+    Despesa ..> FormaPagamento
+    Despesa ..> StatusDespesa
+
+    note for Despesa "Gasto operacional que não repõe produtos. O pagamento de uma compra não deve ser lançado novamente como despesa."

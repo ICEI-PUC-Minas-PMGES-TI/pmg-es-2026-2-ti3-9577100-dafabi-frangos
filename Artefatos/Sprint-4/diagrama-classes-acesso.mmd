@@ -1,0 +1,31 @@
+---
+title: DaFabi Frangos — Loja, usuários e perfis (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Loja {
+        +nome
+        +telefone
+        +endereco
+        +formaPagamentoPadrao
+        +modoCompacto
+    }
+    class Usuario["Usuário"] {
+        +nome
+        +email
+        +senhaHash
+        +ativo
+    }
+    class Perfil {
+        <<enumeration>>
+        ADMINISTRADORA
+        OPERADOR_CAIXA
+    }
+
+    Loja "1" o-- "1..*" Usuario : equipe autorizada
+    Usuario "0..*" --> "1" Perfil : perfil
+
+    note for Loja "A loja é uma entidade do domínio; telefone, endereço e preferências pertencem a ela."
+    note for Usuario "Credenciais ficam protegidas; o modelo não expõe nem armazena senha em texto puro."
+    note for Perfil "Os perfis definem o conjunto de ações permitido a cada usuário no sistema."

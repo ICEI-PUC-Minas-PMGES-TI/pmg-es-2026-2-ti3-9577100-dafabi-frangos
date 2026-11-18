@@ -1,0 +1,44 @@
+---
+title: DaFabi Frangos — Vendas e repasses de marketplaces (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class ImportacaoRelatorio
+    class VinculoMarketplace["Vínculo da loja com o marketplace"]
+    class PedidoMarketplace {
+        +identificadorExterno
+        +dataHora
+        +statusOriginal
+        +statusNormalizado
+        +valorItens
+        +valorPagoPeloCliente
+        +descontos
+        +taxasEComissoes
+        +valorLiquidoReportado
+        +formaPagamentoOriginal
+        +dataCancelamento
+        +motivoCancelamento
+    }
+    class Venda
+    class RepasseMarketplace {
+        +identificadorExterno
+        +periodoInicial
+        +periodoFinal
+        +valorBruto
+        +taxas
+        +ajustes
+        +valorRetido
+        +valorRecebido
+        +dataPagamento
+        +status
+    }
+    VinculoMarketplace "1" <-- "0..*" ImportacaoRelatorio : canal de origem
+    VinculoMarketplace "1" <-- "0..*" PedidoMarketplace : identifica loja externa
+    VinculoMarketplace "1" <-- "0..*" RepasseMarketplace : identifica canal
+    ImportacaoRelatorio "1" --> "0..*" PedidoMarketplace : contém pedidos
+    ImportacaoRelatorio "0..1" --> "0..*" RepasseMarketplace : origem do consolidado
+    PedidoMarketplace "0..1" --> "0..1" Venda : normaliza em venda
+
+    note for PedidoMarketplace "Preserva os valores e status do pedido na plataforma. A Venda associada é a representação consolidada usada pelo sistema."
+    note for RepasseMarketplace "Concilia os valores recebidos do canal com vendas e taxas sem duplicar receita ou despesa."

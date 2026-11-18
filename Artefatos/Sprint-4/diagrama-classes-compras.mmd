@@ -1,0 +1,68 @@
+---
+title: DaFabi Frangos — Compras e fornecedores (modelo conceitual)
+---
+classDiagram
+    direction TB
+
+    class Loja
+    class Usuario["Usuário"]
+    class Fornecedor {
+        +nome
+        +telefone
+        +email
+        +observacoes
+        +ativo
+    }
+    class Compra {
+        +data
+        +valorTotal
+        +status
+        +situacaoPagamento
+        +formaPagamento
+        +dataPagamento
+    }
+    class ItemCompra {
+        +quantidade
+        +custoUnitario
+        +custoTotal
+        +lote [opcional]
+        +validade [opcional]
+    }
+    class Produto
+    class Lote
+    class MovimentacaoEstoque
+    class MovimentacaoCaixa
+
+    class StatusCompra {
+        <<enumeration>>
+        REGISTRADA
+        CANCELADA
+    }
+    class SituacaoPagamento {
+        <<enumeration>>
+        PENDENTE
+        PAGA
+    }
+    class FormaPagamento {
+        <<enumeration>>
+        DINHEIRO
+        PIX
+        DEBITO
+        CREDITO
+        BOLETO_TRANSFERENCIA
+    }
+
+    Loja "1" *-- "0..*" Fornecedor : cadastra
+    Loja "1" *-- "0..*" Compra : registra
+    Usuario "1" <-- "0..*" Compra : responsável
+    Fornecedor "1" <-- "0..*" Compra : fornece
+    Compra "1" *-- "1..*" ItemCompra : contém
+    Produto "1" <-- "0..*" ItemCompra : reposto
+    ItemCompra "1" --> "0..1" Lote : cria para perecível
+    ItemCompra "1" --> "1..*" MovimentacaoEstoque : entrada ou reversão
+    Compra "0..1" --> "0..1" MovimentacaoCaixa : saída se paga em dinheiro
+    Compra ..> StatusCompra
+    Compra ..> SituacaoPagamento
+    Compra ..> FormaPagamento
+
+    note for Compra "Aquisição de produtos para revenda: registra fornecedor e custos, cria entrada de estoque e acompanha o pagamento."
