@@ -1,3 +1,4 @@
+import { paymentLabel } from '../../../../shared/utils/labels';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -50,5 +51,5 @@ export class SaleDetailsComponent {
   }
 
   originLabel(value: string) { return { COUNTER: 'Balcão', IFOOD: 'iFood', '99FOOD': '99Food' }[value] ?? value; }
-  paymentLabel(value: string) { return { CASH: 'Dinheiro', PIX: 'Pix', DEBIT: 'Débito', CREDIT: 'Crédito' }[value] ?? value; }
+  readonly paymentLabel = paymentLabel;
 }

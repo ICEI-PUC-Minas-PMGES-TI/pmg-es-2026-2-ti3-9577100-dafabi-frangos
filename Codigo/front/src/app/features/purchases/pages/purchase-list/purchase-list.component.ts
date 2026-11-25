@@ -1,3 +1,4 @@
+import { paymentLabel } from '../../../../shared/utils/labels';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -45,9 +46,7 @@ export class PurchaseListComponent {
     this.paymentMethods.update(methods => ({ ...methods, [id]: method }));
   }
 
-  paymentLabel(method: PaymentMethod): string {
-    return ({ CASH: 'Dinheiro', PIX: 'Pix', DEBIT: 'Débito', CREDIT: 'Crédito', BOLETO_TRANSFER: 'Boleto/transferência' })[method];
-  }
+  readonly paymentLabel = paymentLabel;
 
   pay(purchase: Purchase): void {
     const method = this.paymentMethods()[purchase.id] ?? 'CASH';

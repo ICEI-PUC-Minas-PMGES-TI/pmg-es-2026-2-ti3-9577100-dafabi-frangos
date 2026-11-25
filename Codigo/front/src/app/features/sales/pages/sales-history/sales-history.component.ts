@@ -1,3 +1,4 @@
+import { paymentLabel } from '../../../../shared/utils/labels';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -37,5 +38,5 @@ export class SalesHistoryComponent {
   marketplacePayment(value:string|null){const text=(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(text.includes('dinheiro'))return 'CASH';if(text.includes('pix'))return 'PIX';if(text.includes('debito'))return 'DEBIT';if(text.includes('credito'))return 'CREDIT';return null;}
   marketplaceStatus(value:string){return({COMPLETED:'Concluído',CANCELLED:'Cancelado',PARTIALLY_CANCELLED:'Parcialmente cancelado',UNKNOWN:'Requer conferência'} as Record<string,string>)[value]??value;}
   goNew(){void this.router.navigate(['/app/vendas/nova']);}
-  originLabel(value:string){return{COUNTER:'Balcão',IFOOD:'iFood','99FOOD':'99Food'}[value]??value;}paymentLabel(value:string){return{CASH:'Dinheiro',PIX:'Pix',DEBIT:'Débito',CREDIT:'Crédito'}[value]??value;}
+  originLabel(value:string){return{COUNTER:'Balcão',IFOOD:'iFood','99FOOD':'99Food'}[value]??value;}readonly paymentLabel=paymentLabel;
 }

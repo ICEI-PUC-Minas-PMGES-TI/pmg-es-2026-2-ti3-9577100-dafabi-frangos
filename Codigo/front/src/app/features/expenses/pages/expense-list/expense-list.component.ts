@@ -1,3 +1,4 @@
+import { paymentLabel } from '../../../../shared/utils/labels';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -43,9 +44,7 @@ export class ExpenseListComponent {
     await this.service.load({ startDate: this.start(), endDate: this.end(), status: this.status() as 'ALL' | 'PENDING' | 'CONSOLIDATED' | 'CANCELLED' });
   }
 
-  paymentLabel(value: string): string {
-    return ({ CASH: 'Dinheiro', PIX: 'Pix', DEBIT: 'Débito', CREDIT: 'Crédito', BOLETO_TRANSFER: 'Boleto/transferência' }[value] ?? value);
-  }
+  readonly paymentLabel = paymentLabel;
 
   consolidateExpense(expense: Expense): void {
     this.dialog.open(ConfirmationDialogComponent, { data: {
