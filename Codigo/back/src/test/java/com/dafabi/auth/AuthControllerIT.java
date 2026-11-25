@@ -3,6 +3,7 @@ package com.dafabi.auth;
 import com.dafabi.auth.repository.RefreshTokenRepository;
 import com.dafabi.auth.security.JwtService;
 import com.dafabi.inventory.repository.StockMovementRepository;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.repository.CategoryRepository;
 import com.dafabi.products.repository.ProductRepository;
@@ -54,6 +55,7 @@ class AuthControllerIT {
     @Autowired private RoleRepository roleRepository;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
     @Autowired private StockMovementRepository stockMovementRepository;
+    @Autowired private InventoryLotRepository inventoryLotRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -329,6 +331,7 @@ class AuthControllerIT {
         userRepository.deleteAll();
         roleRepository.deleteAll();
         stockMovementRepository.deleteAll();
+        inventoryLotRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
     }
