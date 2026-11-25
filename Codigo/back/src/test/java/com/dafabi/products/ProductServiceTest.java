@@ -1,5 +1,7 @@
 package com.dafabi.products;
 
+import com.dafabi.inventory.repository.StockMovementRepository;
+import com.dafabi.inventory.repository.InventoryLotRepository;
 import com.dafabi.inventory.application.StockAvailabilityService;
 import com.dafabi.products.application.ProductService;
 import com.dafabi.products.domain.Category;
@@ -42,6 +44,12 @@ class ProductServiceTest {
     @Mock
     private StockAvailabilityService stockAvailabilityService;
 
+    @Mock
+    private InventoryLotRepository inventoryLotRepository;
+
+    @Mock
+    private StockMovementRepository stockMovementRepository;
+
     @Spy
     private ProductMapper productMapper = new ProductMapper();
 
@@ -70,7 +78,9 @@ class ProductServiceTest {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                new BigDecimal("50")
+                new BigDecimal("50"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         when(productRepository.existsByBarcode("7891234567890")).thenReturn(false);

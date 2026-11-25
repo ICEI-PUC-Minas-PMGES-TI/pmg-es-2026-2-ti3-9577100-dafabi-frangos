@@ -77,7 +77,9 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                new BigDecimal("100")
+                new BigDecimal("100"),
+                "L-INICIAL",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -95,6 +97,8 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.frequent", is(true)))
                 .andExpect(jsonPath("$.status", is("ACTIVE")))
                 .andExpect(jsonPath("$.stockQuantity", is(100)))
+                .andExpect(jsonPath("$.sellableQuantity", is(100)))
+                .andExpect(jsonPath("$.untrackedQuantity", is(0)))
                 .andExpect(jsonPath("$.category.id", is(savedCategory.getId().toString())))
                 .andExpect(jsonPath("$.category.name", is("Cortes de Frango")));
     }
@@ -138,7 +142,9 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                new BigDecimal("20")
+                new BigDecimal("20"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -180,7 +186,9 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                new BigDecimal("15")
+                new BigDecimal("15"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         String responseContent = mockMvc.perform(post("/products")
@@ -210,7 +218,9 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                new BigDecimal("18")
+                new BigDecimal("18"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -227,5 +237,19 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.content[0].perishable", is(true)))
                 .andExpect(jsonPath("$.content[0].frequent", is(true)))
                 .andExpect(jsonPath("$.content[0].stockQuantity", is(18)));
+    }
+
+    @Test
+    @DisplayName("POST /products - Perecível com estoque inicial sem lote deve ser recusado")
+    void shouldRequireLotForPerishableInitialStock() throws Exception {
+        CreateProductRequest request = new CreateProductRequest(
+                "Frango sem lote", savedCategory.getId(), new BigDecimal("39.90"), new BigDecimal("20"),
+                "un", null, true, true, ProductStatus.ACTIVE, new BigDecimal("3"));
+
+        mockMvc.perform(post("/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INITIAL_LOT_REQUIRED")));
     }
 }

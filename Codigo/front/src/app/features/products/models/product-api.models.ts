@@ -61,6 +61,8 @@ export interface ApiCreateProductRequest {
   frequent: boolean;
   status: ProductStatus;
   initialStock: number;
+  initialBatch?: string;
+  initialExpiry?: string;
 }
 
 export interface ApiUpdateProductRequest {

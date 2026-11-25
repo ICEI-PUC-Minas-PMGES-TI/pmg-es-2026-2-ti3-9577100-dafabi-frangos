@@ -1,5 +1,6 @@
 package com.dafabi.products.dto;
 
+import java.time.LocalDate;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -39,6 +40,16 @@ public record CreateProductRequest(
 
         @PositiveOrZero(message = "O estoque inicial não pode ser negativo")
         @Digits(integer = 11, fraction = 3, message = "Use no máximo 3 casas decimais.")
-        BigDecimal initialStock
+        BigDecimal initialStock,
+        @Size(max = 100, message = "O lote deve ter no máximo 100 caracteres")
+        String initialBatch,
+        LocalDate initialExpiry
 ) {
+    /** Cadastro sem lote inicial (produtos não perecíveis ou sem estoque inicial). */
+    public CreateProductRequest(String name, UUID categoryId, BigDecimal salePrice, BigDecimal currentCost,
+                                String unit, String barcode, Boolean perishable, Boolean frequent,
+                                ProductStatus status, BigDecimal initialStock) {
+        this(name, categoryId, salePrice, currentCost, unit, barcode, perishable, frequent, status,
+                initialStock, null, null);
+    }
 }

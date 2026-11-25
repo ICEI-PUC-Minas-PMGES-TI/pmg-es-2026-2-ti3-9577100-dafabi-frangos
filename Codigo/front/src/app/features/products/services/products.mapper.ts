@@ -39,7 +39,9 @@ export function toCreateRequest(value: ProductFormValue): ApiCreateProductReques
     perishable: value.perishable,
     frequent: value.frequent,
     status: value.status,
-    initialStock: value.stock
+    initialStock: value.stock,
+    initialBatch: value.perishable && value.stock > 0 ? value.initialBatch?.trim() || undefined : undefined,
+    initialExpiry: value.perishable && value.stock > 0 ? value.initialExpiry || undefined : undefined
   };
 }
 

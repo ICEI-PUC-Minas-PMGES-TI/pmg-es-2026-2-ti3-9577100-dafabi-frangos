@@ -23,12 +23,15 @@ import { ProductFormValue } from '../../models/product.models';
       @if(!editing()){<mat-form-field appearance="outline"><mat-label>Quantidade inicial em estoque</mat-label><input matInput type="number" min="0" step="0.001" formControlName="stock"><span matTextSuffix>&nbsp;{{form.controls.unit.value}}</span></mat-form-field>}
       <mat-form-field appearance="outline"><mat-label>Código de barras (opcional)</mat-label><input matInput formControlName="barcode"><mat-icon matSuffix>barcode_scanner</mat-icon></mat-form-field>
       <div class="check-group full"><mat-checkbox formControlName="perishable">Produto perecível</mat-checkbox><mat-checkbox formControlName="frequent">Exibir nos produtos frequentes do PDV</mat-checkbox></div>
+      @if(needsInitialLot()){<div class="initial-lot full"><p><mat-icon>event_available</mat-icon>Produto perecível com estoque inicial: informe o lote e a validade dessas unidades. Sem lote, o saldo não pode ser vendido.</p>
+        <mat-form-field appearance="outline"><mat-label>Lote do estoque inicial</mat-label><input matInput formControlName="initialBatch">@if(form.controls.initialBatch.touched&&!form.controls.initialBatch.value.trim()){<mat-error>Informe o lote.</mat-error>}</mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Validade</mat-label><input matInput type="date" [min]="today" formControlName="initialExpiry">@if(form.controls.initialExpiry.touched&&!form.controls.initialExpiry.value){<mat-error>Informe a validade.</mat-error>}</mat-form-field></div>}
       <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select formControlName="status"><mat-option value="ACTIVE">Ativo</mat-option><mat-option value="INACTIVE">Inativo</mat-option></mat-select></mat-form-field>
       @if(editing()){<div class="form-note"><mat-icon>inventory</mat-icon>O estoque é atualizado pelo módulo de ajustes para preservar o histórico das movimentações.</div>}
       <div class="form-note"><mat-icon>info</mat-icon>Produtos sem código de barras podem ser adicionados à venda pela pesquisa ou pelos botões visuais.</div>
       <div class="form-actions"><button mat-button type="button" (click)="cancel.emit()">Cancelar</button><button mat-flat-button class="primary-button" type="submit" [disabled]="saving()">@if(saving()){<span>Salvando…</span>} @else {<span>{{submitLabel()}}</span>} @if(!saving()){<mat-icon>save</mat-icon>}</button></div>
     </form>`,
-  styles: [`.check-group{display:flex;gap:24px;padding:0 4px 18px;flex-wrap:wrap}`],
+  styles: [`.initial-lot{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:12px 14px 0;margin-bottom:12px;border:1px solid #f1d58a;border-radius:10px;background:var(--yellow-light)}.initial-lot p{grid-column:1/-1;display:flex;gap:6px;align-items:flex-start;margin:0 0 12px;font-size:.78rem;line-height:1.4}.initial-lot mat-icon{font-size:18px;width:18px;height:18px}@media(max-width:700px){.initial-lot{grid-template-columns:1fr}}.check-group{display:flex;gap:24px;padding:0 4px 18px;flex-wrap:wrap}`],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductFormComponent {
@@ -50,8 +53,12 @@ export class ProductFormComponent {
     barcode: new FormControl('', { nonNullable: true }),
     perishable: new FormControl(false, { nonNullable: true }),
     status: new FormControl<'ACTIVE' | 'INACTIVE'>('ACTIVE', { nonNullable: true }),
-    frequent: new FormControl(false, { nonNullable: true })
+    frequent: new FormControl(false, { nonNullable: true }),
+    initialBatch: new FormControl('', { nonNullable: true }),
+    initialExpiry: new FormControl('', { nonNullable: true })
   });
+  readonly today = new Date().toLocaleDateString('en-CA');
+  needsInitialLot(): boolean { return !this.editing() && this.form.controls.perishable.value && Number(this.form.controls.stock.value) > 0; }
 
   constructor() {
     effect(() => {
@@ -73,7 +80,9 @@ export class ProductFormComponent {
   }
 
   submit(): void {
-    if (this.form.invalid) {
+    const missingLot = this.needsInitialLot()
+      && (!this.form.controls.initialBatch.value.trim() || !this.form.controls.initialExpiry.value);
+    if (this.form.invalid || missingLot) {
       this.form.markAllAsTouched();
       return;
     }
