@@ -27,6 +27,13 @@ export class CashService {
   readonly cashRefunds = computed(() => Number(this.summary()?.cashRefunds ?? 0));
   readonly expected = computed(() => Number(this.summary()?.expectedBalance ?? this.register()?.expectedBalance ?? 0));
   readonly cashOpen = computed(() => this.register()?.status === 'OPEN');
+  /** Caixa aberto em um dia anterior: a operação de hoje está somando dias diferentes. */
+  readonly staleSince = computed(() => {
+    const register = this.register();
+    if (register?.status !== 'OPEN' || !register.openedAt) return null;
+    const opened = new Date(register.openedAt);
+    return opened.toDateString() === new Date().toDateString() ? null : opened;
+  });
 
   constructor() { void this.refresh(); }
 
