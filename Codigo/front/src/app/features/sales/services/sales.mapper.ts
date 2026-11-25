@@ -4,7 +4,8 @@ import { ApiSale, ApiSaleItem } from '../models/sales-api.models';
 function operatorLabel(operatorId: string, origin: ApiSale['origin']): string {
   if (origin === 'IFOOD') return 'Integração iFood';
   if (origin === 'FOOD_99') return 'Integração 99Food';
-  return operatorId ? `Operador ${operatorId}` : 'Operador não identificado';
+  // Nunca exibe o identificador técnico: vendas antigas podem apontar para um usuário que não existe mais.
+  return 'Usuário não encontrado';
 }
 
 function toItem(api: ApiSaleItem): SaleItem {
