@@ -9,6 +9,7 @@ import com.dafabi.cash.dto.OpenCashRequest;
 import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,12 @@ class CashRegisterControllerIT {
         var principal = new com.dafabi.shared.security.RequestUser(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Fabiana Nogueira", com.dafabi.shared.security.UserRole.ADMIN);
         var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
         org.springframework.security.test.context.TestSecurityContextHolder.setAuthentication(authentication);
+        cashMovementRepository.deleteAll();
+        cashRegisterRepository.deleteAll();
+    }
+
+    @AfterEach
+    void tearDown() {
         cashMovementRepository.deleteAll();
         cashRegisterRepository.deleteAll();
     }
