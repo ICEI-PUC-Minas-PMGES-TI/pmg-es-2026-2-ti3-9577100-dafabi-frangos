@@ -130,6 +130,21 @@ import { IntegrationsService } from '../../services/integrations.service';
         </div>
 
         @if (confirming()) { <div class="loading-line" role="status" aria-live="polite"><mat-progress-bar mode="indeterminate"/><span>Gravando os dados com segurança…</span></div> }
+        @if (current.status === 'READY' && current.reportType === 'ITEMS' && current.duplicateRowCount > 0 && !(current.omittedItems?.length)) {
+          <div class="notice warning"><mat-icon>info</mat-icon>Itens que não aparecem neste arquivo permanecem registrados. Para conferir ausências, use um relatório completo de um único dia e uma loja, sem linhas inválidas.</div>
+        }
+        @if (current.status === 'READY' && (current.omittedItems?.length || 0) > 0) {
+          <div class="notice warning" role="status">
+            <mat-icon>warning</mat-icon>
+            <div>
+              <strong>Itens registrados antes e ausentes neste arquivo:</strong> {{ omittedNames(current) }}.
+              <p>Se o relatório estiver filtrado ou incompleto, deixe a opção abaixo desmarcada. A devolução física ao estoque será conferida separadamente.</p>
+              <label><input type="checkbox" [checked]="zeroOmitted()" (change)="zeroOmitted.set($any($event.target).checked)">
+                Confirmei que este relatório contém todos os itens vendidos pela loja neste dia; registrar zero para os itens ausentes.
+              </label>
+            </div>
+          </div>
+        }
         @if (current.status === 'IMPORTED' || current.status === 'IMPORTED_WITH_ERRORS') {
           <div class="notice success" role="status"><mat-icon>check_circle</mat-icon>{{ current.status === 'IMPORTED_WITH_ERRORS' ? 'Importação concluída; as linhas inválidas foram mantidas fora do lote.' : 'Importação concluída. O histórico foi atualizado.' }}</div>
         }
@@ -205,6 +220,7 @@ export class ImportWorkflowComponent implements OnInit {
   readonly history = signal<ImportBatch[]>([]);
   readonly uploading = signal(false);
   readonly confirming = signal(false);
+  readonly zeroOmitted = signal(false);
   readonly historyLoading = signal(false);
   readonly fileError = signal('');
   readonly errorMessage = signal('');
@@ -231,7 +247,7 @@ export class ImportWorkflowComponent implements OnInit {
   }
 
   private async analyzeFile(file: File): Promise<void> {
-    this.uploading.set(true); this.errorMessage.set('');
+    this.uploading.set(true); this.errorMessage.set(''); this.zeroOmitted.set(false);
     try {
       this.batch.set(await firstValueFrom(this.service.upload(this.provider(), file)));
       await this.loadHistory();
@@ -246,7 +262,8 @@ export class ImportWorkflowComponent implements OnInit {
     let completed = false;
     this.confirming.set(true); this.errorMessage.set('');
     try {
-      this.batch.set(await firstValueFrom(this.service.confirm(current.id)));
+      const omittedIds=this.zeroOmitted() ? (current.omittedItems ?? []).map(item=>item.snapshotId) : [];
+      this.batch.set(await firstValueFrom(this.service.confirm(current.id,omittedIds)));
       await this.loadHistory();
       completed = true;
     } catch (error) {
@@ -256,6 +273,7 @@ export class ImportWorkflowComponent implements OnInit {
   }
 
   selectedFileNames(): string { return this.selectedFiles().map(file => file.name).join(', '); }
+  omittedNames(batch: ImportBatch): string { return (batch.omittedItems ?? []).map(item=>item.itemName).join(', '); }
   hasNextFile(): boolean { return this.fileIndex() + 1 < this.selectedFiles().length; }
 
   async advanceQueue(): Promise<void> {

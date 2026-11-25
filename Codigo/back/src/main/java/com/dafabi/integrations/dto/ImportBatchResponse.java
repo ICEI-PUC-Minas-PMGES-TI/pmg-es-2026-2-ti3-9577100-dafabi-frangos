@@ -22,6 +22,7 @@ public record ImportBatchResponse(
         int duplicateRowCount,
         ImportSummary summary,
         List<ImportRowPreview> rows,
+        List<ImportOmittedItem> omittedItems,
         OffsetDateTime createdAt,
         OffsetDateTime importedAt,
         boolean alreadyImported) {

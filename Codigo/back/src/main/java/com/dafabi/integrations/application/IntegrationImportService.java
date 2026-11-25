@@ -74,10 +74,26 @@ public class IntegrationImportService {
 
     @Transactional
     public ImportBatchResponse confirm(UUID id) {
+        return confirm(id,null);
+    }
+
+    @Transactional
+    public ImportBatchResponse confirm(UUID id,List<UUID> omittedItemIdsToZero) {
         IntegrationImportBatch batch=batchRepository.findByIdForUpdate(id).orElseThrow(()->new BusinessException("IMPORT_NOT_FOUND","Lote de importação não encontrado.",HttpStatus.NOT_FOUND));
         if(batch.getStatus()!=ImportBatchStatus.READY)return toResponse(batch,true);
         List<IntegrationImportRow> rows=rowRepository.findByBatchIdOrderByRowNumber(id);
         OffsetDateTime now=OffsetDateTime.now();
+        if(omittedItemIdsToZero!=null && !omittedItemIdsToZero.isEmpty()) {
+            List<MarketplaceItemSnapshot> omitted=findOmittedItems(batch,rows,true);
+            Set<UUID> currentIds=omitted.stream().map(MarketplaceItemSnapshot::getId).collect(java.util.stream.Collectors.toSet());
+            Set<UUID> confirmedIds=new HashSet<>(omittedItemIdsToZero);
+            if(confirmedIds.size()!=omittedItemIdsToZero.size() || !currentIds.equals(confirmedIds))
+                throw bad("OMITTED_ITEMS_CHANGED","Os itens ausentes mudaram. Recarregue a prévia antes de confirmar.");
+            for(MarketplaceItemSnapshot item:omitted) {
+                item.markAbsentFromCompleteReport(batch.getId(),now);
+                itemRepository.save(item);
+            }
+        }
         for(IntegrationImportRow row:rows){
             if(!row.isValid()||row.isDuplicateInFile())continue;
             try {
@@ -164,7 +180,7 @@ public class IntegrationImportService {
     private void persistItem(IntegrationImportBatch batch,IntegrationImportRow row,OffsetDateTime now)throws JsonProcessingException{
         ParsedItemRow p=objectMapper.readValue(row.getPayloadJson(),ParsedItemRow.class);
         MarketplaceItemSnapshot next=new MarketplaceItemSnapshot(UUID.randomUUID(),batch.getProvider(),p.externalStoreId(),p.storeName(),p.businessDate(),p.externalItemName(),p.normalizedItemName(),p.itemRevenue(),p.soldQuantity(),batch.getId(),json(p.sourceValues()),now);
-        Optional<MarketplaceItemSnapshot> existing=itemRepository.findByProviderAndExternalStoreIdAndBusinessDateAndExternalItemName(batch.getProvider(),p.externalStoreId(),p.businessDate(),p.externalItemName());
+        Optional<MarketplaceItemSnapshot> existing=itemRepository.findItemForUpdate(batch.getProvider(),p.externalStoreId(),p.businessDate(),p.externalItemName());
         if(existing.isPresent()){existing.get().replaceFrom(next);itemRepository.save(existing.get());}else itemRepository.save(next);
     }
     private ImportBatchResponse toResponse(IntegrationImportBatch batch,boolean alreadyImported){
@@ -176,8 +192,33 @@ public class IntegrationImportService {
                     return new ImportRowPreview(r.getRowNumber(),text(p,"externalOrderId"),date==null?null:java.time.LocalDate.parse(date),text(p,"rawStatus"),text(p,"externalItemName"),decimal(p,"soldQuantity"),decimal(p,"itemsValue")!=null?decimal(p,"itemsValue"):decimal(p,"itemRevenue"),decimal(p,"netReported"),r.isValid(),r.isDuplicateInFile(),r.isDuplicateInSystem(),issues);
                 }catch(Exception ex){return new ImportRowPreview(r.getRowNumber(),r.getRowKey(),null,null,null,null,null,null,false,r.isDuplicateInFile(),r.isDuplicateInSystem(),List.of("Não foi possível ler a prévia desta linha."));}
             }).toList();
-            return new ImportBatchResponse(batch.getId(),batch.getProvider(),batch.getReportType(),batch.getFileName(),batch.getPeriodStart(),batch.getPeriodEnd(),batch.getStatus(),batch.getRowCount(),batch.getValidRowCount(),batch.getInvalidRowCount(),batch.getDuplicateRowCount(),summary,rows,batch.getCreatedAt(),batch.getImportedAt(),alreadyImported);
+            List<ImportOmittedItem> omitted=batch.getStatus()==ImportBatchStatus.READY
+                    ? findOmittedItems(batch,rowRepository.findByBatchIdOrderByRowNumber(batch.getId()),false).stream()
+                        .map(item->new ImportOmittedItem(item.getId(),item.getExternalItemName())).toList() : List.of();
+            return new ImportBatchResponse(batch.getId(),batch.getProvider(),batch.getReportType(),batch.getFileName(),batch.getPeriodStart(),batch.getPeriodEnd(),batch.getStatus(),batch.getRowCount(),batch.getValidRowCount(),batch.getInvalidRowCount(),batch.getDuplicateRowCount(),summary,rows,omitted,batch.getCreatedAt(),batch.getImportedAt(),alreadyImported);
         }catch(Exception ex){throw new BusinessException("IMPORT_PREVIEW_ERROR","Não foi possível carregar a prévia do lote.",HttpStatus.INTERNAL_SERVER_ERROR);}
+    }
+
+    private List<MarketplaceItemSnapshot> findOmittedItems(IntegrationImportBatch batch,List<IntegrationImportRow> rows,boolean lock) {
+        if(batch.getReportType()!=IntegrationReportType.ITEMS || batch.getInvalidRowCount()>0
+                || batch.getPeriodStart()==null || !batch.getPeriodStart().equals(batch.getPeriodEnd())) return List.of();
+        List<ParsedItemRow> items=new ArrayList<>();
+        try {
+            for(IntegrationImportRow row:rows)
+                if(row.isValid()&&!row.isDuplicateInFile()) items.add(objectMapper.readValue(row.getPayloadJson(),ParsedItemRow.class));
+        } catch(JsonProcessingException ex) {
+            throw bad("IMPORT_ROW_INVALID","Uma linha do lote não pôde ser lida.");
+        }
+        Set<String> stores=items.stream().map(ParsedItemRow::externalStoreId).collect(java.util.stream.Collectors.toSet());
+        if(stores.size()!=1) return List.of();
+        String store=stores.iterator().next();
+        Set<String> names=items.stream().map(ParsedItemRow::externalItemName).collect(java.util.stream.Collectors.toSet());
+        List<MarketplaceItemSnapshot> existing=lock
+                ? itemRepository.findRangeForUpdate(batch.getProvider(),store,batch.getPeriodStart(),batch.getPeriodEnd())
+                : itemRepository.findByProviderAndExternalStoreIdAndBusinessDateBetweenOrderByBusinessDateAscExternalItemNameAsc(
+                        batch.getProvider(),store,batch.getPeriodStart(),batch.getPeriodEnd());
+        return existing.stream()
+                .filter(item->item.getSoldQuantity().signum()!=0 && !names.contains(item.getExternalItemName())).toList();
     }
     private String text(JsonNode node,String name){JsonNode v=node.get(name);return v==null||v.isNull()?null:v.asText();}
     private BigDecimal decimal(JsonNode node,String name){JsonNode v=node.get(name);return v==null||v.isNull()?null:v.decimalValue();}

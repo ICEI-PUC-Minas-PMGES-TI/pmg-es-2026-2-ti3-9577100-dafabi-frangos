@@ -9,6 +9,7 @@ import com.dafabi.cash.dto.OpenCashRequest;
 import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,12 @@ class CashRegisterControllerIT {
         var principal = new com.dafabi.shared.security.RequestUser(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Fabiana Nogueira", com.dafabi.shared.security.UserRole.ADMIN);
         var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
         org.springframework.security.test.context.TestSecurityContextHolder.setAuthentication(authentication);
+        cashMovementRepository.deleteAll();
+        cashRegisterRepository.deleteAll();
+    }
+
+    @AfterEach
+    void tearDown() {
         cashMovementRepository.deleteAll();
         cashRegisterRepository.deleteAll();
     }
@@ -204,8 +211,8 @@ class CashRegisterControllerIT {
 
         // Registra entrada por venda
         CreateCashMovementRequest sale = new CreateCashMovementRequest(
-                CashMovementDirection.IN, "SALE", new BigDecimal("50.00"), "Venda balcão em dinheiro",
-                "PDV", "SALE", UUID.randomUUID());
+                CashMovementDirection.IN, "MANUAL_ENTRY", new BigDecimal("50.00"), "Suprimento",
+                "Manual", null, null);
 
         mockMvc.perform(post("/cash-registers/{id}/movements", id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -213,12 +220,13 @@ class CashRegisterControllerIT {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.direction", is("IN")))
                 .andExpect(jsonPath("$.type", is("IN")))
+                .andExpect(jsonPath("$.performedById", is("11111111-1111-1111-1111-111111111111")))
                 .andExpect(jsonPath("$.amount", is(50.00)));
 
         // Registra saída por despesa
         CreateCashMovementRequest expense = new CreateCashMovementRequest(
-                CashMovementDirection.OUT, "EXPENSE", new BigDecimal("20.00"), "Compra de gelo",
-                "Despesa", "EXPENSE", UUID.randomUUID());
+                CashMovementDirection.OUT, "MANUAL_WITHDRAWAL", new BigDecimal("20.00"), "Sangria",
+                "Manual", null, null);
 
         mockMvc.perform(post("/cash-registers/{id}/movements", id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -231,14 +239,29 @@ class CashRegisterControllerIT {
         mockMvc.perform(get("/cash-registers/{id}/summary", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.initialBalance", is(100.00)))
-                .andExpect(jsonPath("$.cashSales", is(50.00)))
-                .andExpect(jsonPath("$.cashExpenses", is(20.00)))
+                .andExpect(jsonPath("$.cashSales", is(0.00)))
+                .andExpect(jsonPath("$.cashExpenses", is(0.00)))
                 .andExpect(jsonPath("$.expectedBalance", is(130.00)));
 
         // Lista movimentações
         mockMvc.perform(get("/cash-registers/{id}/movements", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    void shouldRejectReservedTypesAndReferencesWithoutMovement() throws Exception {
+        CashRegister register = cashRegisterRepository.save(new CashRegister(
+                null, CashRegister.DEFAULT_STORE_ID, null, "Operador", new BigDecimal("100.00"), java.time.OffsetDateTime.now()));
+        for (CreateCashMovementRequest request : java.util.List.of(
+                new CreateCashMovementRequest(CashMovementDirection.IN, "SALE", BigDecimal.TEN, "Venda", null, null, null),
+                new CreateCashMovementRequest(CashMovementDirection.OUT, "MANUAL_ENTRY", BigDecimal.TEN, "Entrada", null, null, null),
+                new CreateCashMovementRequest(CashMovementDirection.IN, "MANUAL_ENTRY", BigDecimal.TEN, "Entrada", null, "SALE", UUID.randomUUID()))) {
+            mockMvc.perform(post("/cash-registers/{id}/movements", register.getId())
+                    .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(0, cashMovementRepository.count());
     }
 
     @Test
@@ -257,7 +280,7 @@ class CashRegisterControllerIT {
         register = cashRegisterRepository.save(register);
 
         CreateCashMovementRequest move = new CreateCashMovementRequest(
-                CashMovementDirection.IN, "SALE", new BigDecimal("10.00"), "Tentativa de venda",
+                CashMovementDirection.IN, "MANUAL_ENTRY", new BigDecimal("10.00"), "Tentativa de entrada",
                 null, null, null);
 
         mockMvc.perform(post("/cash-registers/{id}/movements", register.getId())

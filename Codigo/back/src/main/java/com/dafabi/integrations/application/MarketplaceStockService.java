@@ -129,46 +129,27 @@ public class MarketplaceStockService {
     @Transactional
     public List<MarketplaceStockEffectView> apply(IntegrationProvider provider,MarketplaceStockApplyRequest request) {
         validateRange(request.externalStoreId(),request.startDate(),request.endDate());
-        List<MarketplaceStockEffectView> preview=effectViews(provider,request.externalStoreId(),request.startDate(),request.endDate());
-        if(preview.stream().anyMatch(effect->Set.of("UNMAPPED","BASELINE_REQUIRED","UNIT_REVIEW","INSUFFICIENT_STOCK","HISTORICAL_REVIEW").contains(effect.status())))
-            throw bad("STOCK_REVIEW_REQUIRED","Resolva as divergências de associação, período, unidades ou saldo antes de aplicar o relatório.");
-        if(!request.confirmReturnedProducts()&&preview.stream().anyMatch(effect->effect.quantityToApply().signum()<0))
-            throw bad("RETURN_CONFIRMATION_REQUIRED","Confirme a devolução física dos produtos antes de recompor o estoque.");
-        List<MarketplaceItemSnapshot> items=snapshots.findByProviderAndExternalStoreIdAndBusinessDateBetweenOrderByBusinessDateAscExternalItemNameAsc(
+        List<MarketplaceItemSnapshot> items=snapshots.findRangeForUpdate(
                 provider,request.externalStoreId(),request.startDate(),request.endDate());
         MarketplaceStockBaseline baseline=baselines.findByProviderAndExternalStoreId(provider,request.externalStoreId()).orElse(null);
         if(baseline==null)throw bad("STOCK_BASELINE_REQUIRED","Defina a data inicial do estoque antes de aplicar vendas integradas.");
-        Map<UUID,BigDecimal> requiredByProduct=new TreeMap<>();
+        // Lock every affected product in a stable order before calculating the preview.
+        Set<UUID> productIds=new TreeSet<>();
         for(MarketplaceItemSnapshot item:items) {
-            List<MarketplaceProductMapping> rules=mappings.findByProviderAndExternalStoreIdAndExternalItemNameOrderByProductId(
-                    provider,request.externalStoreId(),item.getExternalItemName());
-            if(rules.isEmpty()||rules.stream().anyMatch(rule->rule.getProductId()==null)) continue;
             if(item.getBusinessDate().isBefore(baseline.getStartDate())) continue;
-            Map<UUID,BigDecimal> quantities=new LinkedHashMap<>();
-            for(MarketplaceProductMapping rule:rules) quantities.merge(rule.getProductId(),
-                    item.getSoldQuantity().multiply(rule.getQuantityPerItem()),BigDecimal::add);
-            for(Map.Entry<UUID,BigDecimal> mapped:quantities.entrySet()) {
-                MarketplaceStockApplication existing=applications.findBySnapshotIdAndProductId(item.getId(),mapped.getKey()).orElse(null);
-                BigDecimal applied=existing==null?BigDecimal.ZERO:existing.getAppliedQuantity();
-                BigDecimal delta=mapped.getValue().subtract(applied);
-                if(delta.stripTrailingZeros().scale()>0)throw bad("UNIT_REVIEW_REQUIRED","A quantidade calculada é fracionada e precisa ser revisada antes de aplicar.");
-                if(delta.signum()>0)requiredByProduct.merge(mapped.getKey(),delta,BigDecimal::add);
-            }
+            mappings.findByProviderAndExternalStoreIdAndExternalItemNameOrderByProductId(provider,request.externalStoreId(),item.getExternalItemName())
+                    .stream().map(MarketplaceProductMapping::getProductId).filter(Objects::nonNull).forEach(productIds::add);
         }
-        for(Map.Entry<UUID,BigDecimal> required:requiredByProduct.entrySet()) {
-            ProductStock stock=stocks.findByProductIdForUpdate(required.getKey()).orElseThrow(
-                    ()->new BusinessException("PRODUCT_STOCK_NOT_FOUND","O produto associado não tem saldo de estoque configurado.",HttpStatus.CONFLICT));
-            if(BigDecimal.valueOf(stock.getQuantity()).compareTo(required.getValue())<0)
-                throw new BusinessException("INSUFFICIENT_STOCK","O estoque disponível não cobre as baixas deste período. Ajuste o saldo e confira novamente.",HttpStatus.CONFLICT);
-        }
+        productIds.forEach(stocks::findByProductIdForUpdate);
+        boolean confirmHistorical=request.confirmHistoricalLots() && request.startDate().equals(request.endDate());
+        List<MarketplaceStockEffectView> preview=effectViews(provider,request.externalStoreId(),request.startDate(),request.endDate(),request.confirmReturnedProducts(),confirmHistorical);
+        Map<UUID,List<MarketplaceStockEffectView>> effectsByItem=preview.stream().collect(Collectors.groupingBy(MarketplaceStockEffectView::snapshotId));
         for(MarketplaceItemSnapshot item:items) {
-            if(item.getBusinessDate().isBefore(baseline.getStartDate()))continue;
-            List<MarketplaceProductMapping> rules=mappings.findByProviderAndExternalStoreIdAndExternalItemNameOrderByProductId(
-                    provider,request.externalStoreId(),item.getExternalItemName());
-            if(rules.isEmpty()||rules.stream().anyMatch(rule->rule.getProductId()==null))continue;
-            Map<UUID,BigDecimal> quantities=new LinkedHashMap<>();
-            for(MarketplaceProductMapping rule:rules)quantities.merge(rule.getProductId(),item.getSoldQuantity().multiply(rule.getQuantityPerItem()),BigDecimal::add);
-            for(Map.Entry<UUID,BigDecimal> mapped:quantities.entrySet())applyOne(item,mapped.getKey(),mapped.getValue(),request.confirmReturnedProducts());
+            List<MarketplaceStockEffectView> effects=effectsByItem.getOrDefault(item.getId(),List.of());
+            if(effects.isEmpty()||effects.stream().anyMatch(effect->!Set.of("PENDING","APPLIED").contains(effect.status()))) continue;
+            for(MarketplaceStockEffectView effect:effects)
+                if("PENDING".equals(effect.status()))
+                    applyOne(item,effect.productId(),effect.reportedQuantity(),request.confirmReturnedProducts());
         }
         return effectViews(provider,request.externalStoreId(),request.startDate(),request.endDate());
     }
@@ -264,12 +245,22 @@ public class MarketplaceStockService {
     }
 
     private List<MarketplaceStockEffectView> effectViews(IntegrationProvider provider,String storeId,LocalDate start,LocalDate end) {
+        return effectViews(provider,storeId,start,end,false,false);
+    }
+
+    private List<MarketplaceStockEffectView> effectViews(IntegrationProvider provider,String storeId,LocalDate start,LocalDate end,boolean confirmReturns,boolean confirmHistorical) {
         MarketplaceStockBaseline baseline=baselines.findByProviderAndExternalStoreId(provider,storeId).orElse(null);
         List<MarketplaceItemSnapshot> items=snapshots.findByProviderAndExternalStoreIdAndBusinessDateBetweenOrderByBusinessDateAscExternalItemNameAsc(provider,storeId,start,end);
         List<MarketplaceStockEffectView> result=new ArrayList<>();
         Map<UUID,Product> productById=new HashMap<>();
         Map<UUID,Integer> stockByProduct=new HashMap<>();
+        Set<UUID> missingStock=new HashSet<>();
         for(MarketplaceItemSnapshot item:items) {
+            if (baseline != null && item.getBusinessDate().isBefore(baseline.getStartDate())) {
+                result.add(new MarketplaceStockEffectView(item.getId(),provider,storeId,item.getBusinessDate(),item.getExternalItemName(),null,null,
+                        item.getSoldQuantity(),BigDecimal.ZERO,BigDecimal.ZERO,"BEFORE_BASELINE","Este registro é anterior ao início do controle de estoque."));
+                continue;
+            }
             List<MarketplaceProductMapping> rules=mappings.findByProviderAndExternalStoreIdAndExternalItemNameOrderByProductId(provider,storeId,item.getExternalItemName());
             if(rules.isEmpty()) {
                 result.add(new MarketplaceStockEffectView(item.getId(),provider,storeId,item.getBusinessDate(),item.getExternalItemName(),null,null,
@@ -287,34 +278,76 @@ public class MarketplaceStockService {
                 MarketplaceStockApplication app=applications.findBySnapshotIdAndProductId(item.getId(),rule.getProductId()).orElse(null);
                 BigDecimal applied=app==null?BigDecimal.ZERO:app.getAppliedQuantity();
                 BigDecimal delta=reported.subtract(applied);
-                Integer currentStock=stockByProduct.computeIfAbsent(rule.getProductId(),id->stocks.findById(id).map(ProductStock::getQuantity).orElse(0));
+                Integer currentStock=stockByProduct.computeIfAbsent(rule.getProductId(),id->{
+                    Optional<ProductStock> stock=stocks.findById(id);
+                    if(stock.isEmpty()) missingStock.add(id);
+                    return stock.map(ProductStock::getQuantity).orElse(0);
+                });
                 String status; String explanation;
                 if(baseline==null){status="BASELINE_REQUIRED";explanation="Defina a data inicial e faça a contagem física antes de aplicar.";}
                 else if(item.getBusinessDate().isBefore(baseline.getStartDate())){status="BEFORE_BASELINE";explanation="Este registro é anterior ao início do controle de estoque.";}
                 else if(reported.stripTrailingZeros().scale()>0){status="UNIT_REVIEW";explanation="A quantidade calculada é fracionada e o estoque atual aceita apenas unidades inteiras.";}
                 else if(reported.compareTo(applied)==0){status="APPLIED";explanation="O saldo do estoque já corresponde a este relatório.";}
-                else if(product!=null && product.isPerishable() && !item.getBusinessDate().equals(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="HISTORICAL_REVIEW";explanation="Relatório de outra data: a atribuição aos lotes precisa de conferência; o saldo atual não comprova o estoque daquele dia.";}
+                else if(product==null || missingStock.contains(rule.getProductId())){status="PRODUCT_REVIEW";explanation="O produto associado ou seu saldo de estoque não está disponível.";}
+                else if(delta.signum()>0 && product!=null && product.isPerishable() && item.getBusinessDate().isAfter(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="FUTURE_REVIEW";explanation="A data da venda está no futuro. Confira o relatório.";}
+                else if(delta.signum()>0 && product!=null && product.isPerishable() && !confirmHistorical && item.getBusinessDate().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="HISTORICAL_REVIEW";explanation="Relatório de outra data: a atribuição aos lotes precisa de conferência; o saldo atual não comprova o estoque daquele dia.";}
                 else if(app!=null&&"INSUFFICIENT_STOCK".equals(app.getStatus())&&delta.signum()>0&&BigDecimal.valueOf(currentStock).compareTo(delta)<0){status=app.getStatus();explanation="O saldo atual é insuficiente; ajuste o estoque e aplique novamente.";}
-                else if(app!=null&&"RETURN_REVIEW".equals(app.getStatus())){status=app.getStatus();explanation="A quantidade do relatório diminuiu; confirme se os produtos foram devolvidos ao estoque.";}
+                else if(delta.signum()<0 && !confirmReturns){status="RETURN_REVIEW";explanation="A quantidade do relatório diminuiu; confirme se os produtos foram devolvidos ao estoque.";}
                 else {status="PENDING";explanation=reported.compareTo(applied)<0?"Confirme a devolução física antes de recompor o estoque.":"A baixa será aplicada após confirmar a revisão.";}
                 result.add(new MarketplaceStockEffectView(item.getId(),provider,storeId,item.getBusinessDate(),item.getExternalItemName(),rule.getProductId(),
                         product==null?"Produto removido":product.getName(),reported,applied,reported.subtract(applied),status,explanation));
             }
         }
-        Map<UUID,BigDecimal> requiredByProduct=new HashMap<>();
-        result.stream().filter(effect->"PENDING".equals(effect.status())&&effect.quantityToApply().signum()>0)
-                .forEach(effect->requiredByProduct.merge(effect.productId(),effect.quantityToApply(),BigDecimal::add));
-        requiredByProduct.forEach((productId,required)->{
-            if(BigDecimal.valueOf(stockByProduct.getOrDefault(productId,0)).compareTo(required)>=0)return;
-            for(int i=0;i<result.size();i++){
-                MarketplaceStockEffectView effect=result.get(i);
-                if(productId.equals(effect.productId())&&"PENDING".equals(effect.status()))
-                    result.set(i,new MarketplaceStockEffectView(effect.snapshotId(),effect.provider(),effect.externalStoreId(),effect.businessDate(),
-                            effect.externalItemName(),effect.productId(),effect.productName(),effect.reportedQuantity(),effect.appliedQuantity(),
-                            effect.quantityToApply(),"INSUFFICIENT_STOCK","O saldo atual não cobre as baixas pendentes deste produto no período."));
+        Map<UUID,Integer> lotBalance=new HashMap<>();
+        Map<UUID,List<Integer>> indicesByItem=new LinkedHashMap<>();
+        for(int i=0;i<result.size();i++)
+            indicesByItem.computeIfAbsent(result.get(i).snapshotId(),ignored->new ArrayList<>()).add(i);
+        for(List<Integer> indices:indicesByItem.values()) {
+            boolean blocked=indices.stream().map(result::get).anyMatch(effect->!Set.of("PENDING","APPLIED").contains(effect.status()));
+            for(int index:indices) {
+                MarketplaceStockEffectView effect=result.get(index);
+                if(!"PENDING".equals(effect.status())||effect.quantityToApply().signum()<=0) continue;
+                int quantity=effect.quantityToApply().intValueExact();
+                String reason=null;
+                if(stockByProduct.getOrDefault(effect.productId(),0)<quantity) reason="INSUFFICIENT_STOCK";
+                Product product=productById.get(effect.productId());
+                if(reason==null && product!=null && product.isPerishable()) {
+                    int available=lotBalance.computeIfAbsent(effect.productId(),id->lots.findAvailableByProduct(id).stream()
+                            .filter(lot->!lot.getReceivedAt().isAfter(effect.businessDate())&&!lot.getExpiry().isBefore(effect.businessDate()))
+                            .mapToInt(InventoryLot::getQuantity).sum());
+                    if(available<quantity) reason="LOT_REVIEW";
+                }
+                if(reason!=null) {
+                    blocked=true;
+                    result.set(index,withStatus(effect,reason,reason.equals("LOT_REVIEW")
+                            ? "Os lotes válidos não cobrem esta baixa; confira o estoque."
+                            : "O saldo disponível não cobre esta baixa."));
+                }
             }
-        });
+            if(blocked) {
+                for(int index:indices) {
+                    MarketplaceStockEffectView effect=result.get(index);
+                    if("PENDING".equals(effect.status()))
+                        result.set(index,withStatus(effect,"ITEM_REVIEW","Outro componente deste item precisa de conferência."));
+                }
+                continue;
+            }
+            for(int index:indices) {
+                MarketplaceStockEffectView effect=result.get(index);
+                if(!"PENDING".equals(effect.status())||effect.quantityToApply().signum()<=0) continue;
+                int quantity=effect.quantityToApply().intValueExact();
+                stockByProduct.compute(effect.productId(),(id,value)->value-quantity);
+                if(lotBalance.containsKey(effect.productId()))
+                    lotBalance.compute(effect.productId(),(id,value)->value-quantity);
+            }
+        }
         return result;
+    }
+
+    private MarketplaceStockEffectView withStatus(MarketplaceStockEffectView effect,String status,String explanation) {
+        return new MarketplaceStockEffectView(effect.snapshotId(),effect.provider(),effect.externalStoreId(),effect.businessDate(),
+                effect.externalItemName(),effect.productId(),effect.productName(),effect.reportedQuantity(),effect.appliedQuantity(),
+                effect.quantityToApply(),status,explanation);
     }
 
     private void validateRange(String storeId,LocalDate start,LocalDate end){requireStore(storeId);if(start==null||end==null||start.isAfter(end))throw bad("INVALID_PERIOD","Informe um período válido para consultar o estoque integrado.");}

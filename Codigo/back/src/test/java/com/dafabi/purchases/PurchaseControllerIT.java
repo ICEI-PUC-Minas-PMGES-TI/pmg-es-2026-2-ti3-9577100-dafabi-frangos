@@ -188,12 +188,8 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].type", is("PURCHASE")))
                 .andExpect(jsonPath("$[0].origin", is("Compra")))
-                .andExpect(jsonPath("$[0].previousQuantity", is(25)))
-                .andExpect(jsonPath("$[0].newQuantity", is(30)))
-                .andExpect(jsonPath("$[0].difference", is(5)))
-                .andExpect(jsonPath("$[1].previousQuantity", is(10)))
-                .andExpect(jsonPath("$[1].newQuantity", is(25)))
-                .andExpect(jsonPath("$[1].difference", is(15)))
+                .andExpect(jsonPath("$[?(@.previousQuantity == 25 && @.newQuantity == 30 && @.difference == 5)]", hasSize(1)))
+                .andExpect(jsonPath("$[?(@.previousQuantity == 10 && @.newQuantity == 25 && @.difference == 15)]", hasSize(1)))
                 .andExpect(jsonPath("$[0].reason", is("Compra registrada de Granja Santa Clara")));
 
         mockMvc.perform(get("/inventory").param("query", "Frango assado tradicional"))

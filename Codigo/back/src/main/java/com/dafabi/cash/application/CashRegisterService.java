@@ -182,6 +182,12 @@ public class CashRegisterService {
 
     @Transactional
     public CashMovementResponse createMovement(UUID id, CreateCashMovementRequest request) {
+        String type = request.movementType().trim().toUpperCase(java.util.Locale.ROOT);
+        boolean validTypeAndDirection = ("MANUAL_ENTRY".equals(type) && request.direction() == CashMovementDirection.IN)
+                || ("MANUAL_WITHDRAWAL".equals(type) && request.direction() == CashMovementDirection.OUT);
+        if (!validTypeAndDirection || request.referenceType() != null || request.referenceId() != null) {
+            throw new BusinessException("INVALID_MANUAL_MOVEMENT", "Tipo, direção ou referência inválidos para lançamento manual.", HttpStatus.BAD_REQUEST);
+        }
         CashRegister register = cashRegisterRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caixa", id));
 
@@ -193,7 +199,7 @@ public class CashRegisterService {
         CashMovement movement = new CashMovement(
                 register,
                 request.direction(),
-                request.movementType().trim().toUpperCase(),
+                type,
                 amount,
                 request.origin() != null ? request.origin().trim() : null,
                 request.description().trim(),

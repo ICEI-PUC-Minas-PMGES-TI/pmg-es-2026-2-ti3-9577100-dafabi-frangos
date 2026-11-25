@@ -202,7 +202,7 @@ class CashRegisterServiceTest {
                 openRegister.setStatus(CashRegisterStatus.CLOSED);
 
                 CreateCashMovementRequest request = new CreateCashMovementRequest(
-                                CashMovementDirection.IN, "SALE", new BigDecimal("50.00"), "Venda", null, null, null);
+                                CashMovementDirection.IN, "MANUAL_ENTRY", new BigDecimal("50.00"), "Venda", null, null, null);
 
                 when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
 

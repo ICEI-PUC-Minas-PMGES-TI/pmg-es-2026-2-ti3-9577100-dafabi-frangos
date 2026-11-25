@@ -34,8 +34,8 @@ export class IntegrationsService {
     return this.http.get<ImportBatch>(`${this.baseUrl}/imports/${encodeURIComponent(id)}`);
   }
 
-  confirm(id: string): Observable<ImportBatch> {
-    return this.http.post<ImportBatch>(`${this.baseUrl}/imports/${encodeURIComponent(id)}/confirm`, {});
+  confirm(id: string, omittedItemIdsToZero: string[] = []): Observable<ImportBatch> {
+    return this.http.post<ImportBatch>(`${this.baseUrl}/imports/${encodeURIComponent(id)}/confirm`, { omittedItemIdsToZero });
   }
 
   history(provider: IntegrationProvider): Observable<ImportBatch[]> {
@@ -77,9 +77,9 @@ export class IntegrationsService {
   }
 
   applyStock(provider: IntegrationProvider, externalStoreId: string, startDate: string, endDate: string,
-    confirmReturnedProducts: boolean): Observable<MarketplaceStockEffect[]> {
+    confirmReturnedProducts: boolean, confirmHistoricalLots: boolean): Observable<MarketplaceStockEffect[]> {
     return this.http.post<MarketplaceStockEffect[]>(`${this.baseUrl}/${provider}/stock-effects/apply`,
-      { externalStoreId, startDate, endDate, confirmReturnedProducts });
+      { externalStoreId, startDate, endDate, confirmReturnedProducts, confirmHistoricalLots });
   }
 
   settlements(provider: IntegrationProvider, externalStoreId: string): Observable<MarketplaceSettlement[]> {

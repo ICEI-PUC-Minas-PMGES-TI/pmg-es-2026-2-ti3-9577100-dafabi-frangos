@@ -178,7 +178,7 @@ public class MarketplaceReportParser {
             Row row = sheet.getRow(i);
             if (row == null || isBlank(row, h)) continue;
             List<String> issues = new ArrayList<>();
-            String storeId = value(row, h, "ID DO LOJA");
+            String storeId = value(row, h, h.has("ID DO LOJA") ? "ID DO LOJA" : "ID DA LOJA");
             String orderId = value(row, h, "ID DO PEDIDO");
             OffsetDateTime date = parseDateTime(cell(row, h, "HORÁRIO DO PEDIDO"));
             if (storeId.isBlank()) issues.add("ID da loja ausente.");
@@ -213,7 +213,7 @@ public class MarketplaceReportParser {
         for(int i=h.rowIndex()+1;i<=sheet.getLastRowNum();i++){
             Row row=sheet.getRow(i); if(row==null||isBlank(row,h))continue;
             Map<String,String> source=readSourceValues(row,h); List<String> issues=new ArrayList<>();
-            String storeId=value(row,h,"ID DO LOJA"), storeName=value(row,h,"NOME DO ESTABELECIMENTO");
+            String storeId=value(row,h,h.has("ID DO LOJA") ? "ID DO LOJA" : "ID DA LOJA"), storeName=value(row,h,"NOME DO ESTABELECIMENTO");
             String item=value(row,h,"NOME DO ITEM"); LocalDate date=parseDate(cell(row,h,"DATA"));
             BigDecimal itemRevenue=money(row,h,"RECEITA DO ITEM");
             BigDecimal sold=money(row,h,"VOLUME DE VENDAS DO ITEM");

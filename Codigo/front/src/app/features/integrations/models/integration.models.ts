@@ -49,6 +49,7 @@ export interface ImportBatch {
   duplicateRowCount: number;
   summary: ImportSummary;
   rows: ImportRowPreview[];
+  omittedItems?: Array<{ snapshotId: string; itemName: string }>;
   createdAt: string;
   importedAt: string | null;
   alreadyImported: boolean;
