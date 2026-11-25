@@ -12,8 +12,10 @@ export class SettingsService {
   private readonly storeEndpoint = `${environment.apiBaseUrl}/settings/store`;
   readonly store = signal<StoreSettings>({ name: 'DaFabi Frangos', phone: '', address: '', defaultPayment: 'PIX', compactMode: false });
   readonly permissions: PermissionRow[] = [
-    { area: 'Dashboard financeiro', admin: true, cashier: false }, { area: 'PDV e vendas', admin: true, cashier: true },
-    { area: 'Produtos e estoque', admin: true, cashier: true }, { area: 'Caixa', admin: true, cashier: true },
+    { area: 'Dashboard financeiro', admin: true, cashier: false }, { area: 'PDV e histórico de vendas', admin: true, cashier: true },
+    { area: 'Consultar produtos e estoque', admin: true, cashier: true },
+    { area: 'Cadastrar produtos, ajustar estoque e registrar lotes', admin: true, cashier: false },
+    { area: 'Caixa (abrir, consultar e fechar)', admin: true, cashier: true },
     { area: 'Compras e fornecedores', admin: true, cashier: false }, { area: 'Despesas', admin: true, cashier: false },
     { area: 'Integrações', admin: true, cashier: false }, { area: 'Estornos', admin: true, cashier: false },
     { area: 'Usuários e configurações', admin: true, cashier: false }
