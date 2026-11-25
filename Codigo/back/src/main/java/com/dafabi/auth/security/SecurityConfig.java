@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh").permitAll()
-                        .requestMatchers("/auth/logout", "/auth/me").authenticated()
+                        .requestMatchers("/auth/logout", "/auth/me", "/auth/me/password").authenticated()
 
                         // Produtos e categorias
                         .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").hasAnyRole("ADMIN", "CASHIER")

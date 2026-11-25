@@ -73,4 +73,36 @@ class UserServiceTest {
 
         assertThat(deactivated.isActive()).isFalse();
     }
+
+    @Test
+    void shouldKeepAtLeastOneActiveAdminWhenChangingRoles() {
+        Role adminRole = new Role(UUID.randomUUID(), "ROLE_ADMIN");
+        User onlyAdmin = new User(UUID.randomUUID(), "fabiana@dafabi.com", "x", "Fabiana", new java.util.HashSet<>(java.util.Set.of(adminRole)));
+        when(userRepository.findById(onlyAdmin.getId())).thenReturn(Optional.of(onlyAdmin));
+        when(userRepository.findAll()).thenReturn(java.util.List.of(onlyAdmin));
+
+        assertThatThrownBy(() -> service.update(onlyAdmin.getId(), "Fabiana", UserRole.CASHIER, UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("pelo menos uma Administradora");
+        assertThatThrownBy(() -> service.update(onlyAdmin.getId(), "Fabiana", UserRole.CASHIER, onlyAdmin.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("próprio perfil");
+    }
+
+    @Test
+    void shouldResetPasswordAndRequireCurrentPasswordToChangeOwn() {
+        Role cashierRole = new Role(UUID.randomUUID(), "ROLE_CASHIER");
+        User cashier = new User(UUID.randomUUID(), "caixa@dafabi.com", "$2a$old", "Carlos", new java.util.HashSet<>(java.util.Set.of(cashierRole)));
+        when(userRepository.findById(cashier.getId())).thenReturn(Optional.of(cashier));
+        when(passwordEncoder.encode("nova-senha-123")).thenReturn("$2a$new");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.resetPassword(cashier.getId(), "nova-senha-123");
+        assertThat(cashier.getPassword()).isEqualTo("$2a$new");
+
+        when(passwordEncoder.matches("errada", "$2a$new")).thenReturn(false);
+        assertThatThrownBy(() -> service.changeOwnPassword(cashier.getId(), "errada", "outra-senha-123"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("senha atual");
+    }
 }

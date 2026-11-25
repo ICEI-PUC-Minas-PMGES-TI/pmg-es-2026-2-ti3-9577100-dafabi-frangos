@@ -43,6 +43,15 @@ export class SettingsService {
   createUser(user: { name: string; email: string; password: string; role: User['role'] }) {
     return firstValueFrom(this.http.post<User>(this.usersEndpoint, user));
   }
+  updateUser(id: string, value: { name: string; role: User['role'] }) {
+    return firstValueFrom(this.http.put<User>(`${this.usersEndpoint}/${id}`, value));
+  }
+  resetPassword(id: string, newPassword: string) {
+    return firstValueFrom(this.http.patch<void>(`${this.usersEndpoint}/${id}/password`, { newPassword }));
+  }
+  changeOwnPassword(currentPassword: string, newPassword: string) {
+    return firstValueFrom(this.http.patch<void>(`${environment.apiBaseUrl}/auth/me/password`, { currentPassword, newPassword }));
+  }
   setUserActive(id: string, active: boolean) {
     return firstValueFrom(this.http.patch<User>(`${this.usersEndpoint}/${id}/status`, { active }));
   }
