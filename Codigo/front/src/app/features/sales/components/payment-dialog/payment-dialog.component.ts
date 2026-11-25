@@ -24,11 +24,11 @@ export interface PaymentDialogResult { request: PaymentRequest; result?: unknown
       <div class="payment-total"><span>Total a receber</span><strong>{{ data.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>{{ data.items.length }} produto(s) no carrinho</small></div>
       <section>
         <h3>Forma de pagamento</h3>
-        <div class="payment-methods">@for (method of methods; track method.value) { <button type="button" [disabled]="processing()" [class.active]="selected() === method.value" (click)="selected.set(method.value)"><mat-icon>{{ method.icon }}</mat-icon><span>{{ method.label }}</span></button> }</div>
+        <div class="payment-methods" role="radiogroup" aria-label="Forma de pagamento">@for (method of methods; track method.value) { <button type="button" role="radio" [attr.aria-checked]="selected() === method.value" [attr.aria-label]="'Pagar com ' + method.label" [disabled]="processing()" [class.active]="selected() === method.value" (click)="selected.set(method.value)"><mat-icon aria-hidden="true">{{ method.icon }}</mat-icon><span>{{ method.label }}</span></button> }</div>
         @if (selected() === 'CASH') {
           <div class="cash-fields">
-            <mat-form-field appearance="outline" floatLabel="always"><mat-label>Valor recebido</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0" step="0.01" placeholder="0,00" [formControl]="received"></mat-form-field>
-            <div class="change" [class.invalid]="change() < 0"><span>Troco</span><strong>{{ change() > 0 ? (change() | currency:'BRL':'symbol':'1.2-2':'pt-BR') : 'R$ 0,00' }}</strong></div>
+            <mat-form-field appearance="outline" floatLabel="always"><mat-label>Valor recebido</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" aria-label="Valor recebido em dinheiro" [attr.aria-describedby]="'troco-atual'" [formControl]="received"></mat-form-field>
+            <div class="change" id="troco-atual" aria-live="polite" [class.invalid]="change() < 0"><span>Troco</span><strong>{{ change() > 0 ? (change() | currency:'BRL':'symbol':'1.2-2':'pt-BR') : 'R$ 0,00' }}</strong></div>
             <div class="quick-amounts" role="group" aria-label="Atalhos de valor recebido"><button type="button" (click)="setReceived(data.total)">Valor exato</button>@for (note of quickNotes(); track note) { <button type="button" (click)="setReceived(note)">{{ note | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</button> }</div>
             @if (received.touched && change() < 0) { <p class="field-error"><mat-icon>error</mat-icon>O valor recebido é insuficiente.</p> }
           </div>
