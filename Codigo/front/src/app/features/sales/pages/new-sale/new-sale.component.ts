@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CashService } from '../../../cash/services/cash.service';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { HostListener, ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -26,6 +26,8 @@ export class NewSaleComponent {
   readonly visibleProducts=computed(()=>{const items=this.sales.findProducts(this.query());return this.query()?items:items.filter(product=>product.frequent).slice(0,6);});
   add(product:Product){try{this.sales.addProduct(product);this.setMessage(`${product.name} adicionado à venda.`,'success');}catch(error){this.handleError(error);}}
   constructor(){void this.sales.loadProducts();}
+  /** F2 abre o pagamento sem tirar a mão do teclado. */
+  @HostListener('document:keydown.F2',['$event']) payShortcut(event:Event){event.preventDefault();if(!this.dialog.openDialogs.length&&this.sales.cart().length)this.pay();}
   search(query:string){this.query.set(query);void this.sales.loadProducts(query);}
   async addBarcode(code:string){if(!code.trim()){this.setMessage('Digite ou leia um código de barras.','error');return;}try{await this.sales.addByBarcode(code.trim());this.setMessage('Produto adicionado pelo código de barras.','success');}catch(error){this.handleError(error);}}
   quantity(id:string,delta:number){try{this.sales.changeQuantity(id,delta);}catch(error){this.handleError(error);}}
