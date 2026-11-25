@@ -270,4 +270,21 @@ class ProductControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.currentCost").doesNotExist());
     }
+
+    @Test
+    @DisplayName("PUT /products/{id} - Custo não pode ser alterado à mão quando há estoque")
+    void shouldRejectManualCostChangeWhenProductHasStock() throws Exception {
+        var product = new com.dafabi.products.domain.Product(UUID.randomUUID(), savedCategory, "Guaraná 2L",
+                new BigDecimal("13.00"), new BigDecimal("8.00"), "un", null, false, true, ProductStatus.ACTIVE, null, null);
+        product.setStock(new com.dafabi.products.domain.ProductStock(product, 10));
+        productRepository.save(product);
+        var request = new com.dafabi.products.dto.UpdateProductRequest("Guaraná 2L", savedCategory.getId(),
+                new BigDecimal("13.00"), new BigDecimal("5.00"), "un", null, false, true);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/products/{id}", product.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("COST_MANAGED_BY_PURCHASES")));
+    }
 }

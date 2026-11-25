@@ -6,23 +6,25 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { CurrencyPipe } from '@angular/common';
 import { Category, Product } from '../../../../core/models/domain.models';
 import { ProductFormValue } from '../../models/product.models';
 
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule],
+  imports: [CurrencyPipe, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule],
   template: `
     <form class="surface form-card surface-body form-grid" [formGroup]="form" (ngSubmit)="submit()">
       <mat-form-field appearance="outline" class="full"><mat-label>Nome do produto</mat-label><input matInput formControlName="name" placeholder="Ex.: Frango assado tradicional">@if(form.controls.name.touched&&form.controls.name.invalid){<mat-error>Informe um nome com pelo menos 3 caracteres.</mat-error>}</mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Categoria</mat-label><mat-select formControlName="categoryId">@for(category of categories();track category.id){<mat-option [value]="category.id">{{category.name}}</mat-option>}</mat-select>@if(form.controls.categoryId.touched&&form.controls.categoryId.invalid){<mat-error>Selecione uma categoria.</mat-error>}</mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Unidade de venda</mat-label><mat-select formControlName="unit">@for(unit of units;track unit.value){<mat-option [value]="unit.value">{{unit.label}}</mat-option>}</mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Preço de venda</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0.01" step="0.01" formControlName="price"></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Custo</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="cost"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Custo</mat-label><span matTextPrefix>R$&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="cost">@if(costLocked()){<mat-hint>Custo médio calculado pelas compras</mat-hint>}</mat-form-field>@if(negativeMargin()){<div class="form-warning full" role="alert"><mat-icon>warning</mat-icon>Preço de venda abaixo do custo: cada unidade vendida dá prejuízo de {{(form.controls.cost.value - form.controls.price.value)|currency:'BRL':'symbol':'1.2-2':'pt-BR'}}.</div>}
       @if(!editing()){<mat-form-field appearance="outline"><mat-label>Quantidade inicial em estoque</mat-label><input matInput type="number" min="0" step="0.001" formControlName="stock"><span matTextSuffix>&nbsp;{{form.controls.unit.value}}</span></mat-form-field>}
       <mat-form-field appearance="outline"><mat-label>Código de barras (opcional)</mat-label><input matInput formControlName="barcode"><mat-icon matSuffix>barcode_scanner</mat-icon></mat-form-field>
       <div class="check-group full"><mat-checkbox formControlName="perishable">Produto perecível</mat-checkbox><mat-checkbox formControlName="frequent">Exibir nos produtos frequentes do PDV</mat-checkbox></div>
+      @if(becomesPerishableWithStock()){<div class="form-warning full" role="alert"><mat-icon>event_busy</mat-icon>As {{product()!.stock}} unidades atuais ficarão sem lote e não poderão ser vendidas até serem vinculadas a um lote em Estoque &gt; Perecíveis (Vincular saldo existente).</div>}
       @if(needsInitialLot()){<div class="initial-lot full"><p><mat-icon>event_available</mat-icon>Produto perecível com estoque inicial: informe o lote e a validade dessas unidades. Sem lote, o saldo não pode ser vendido.</p>
         <mat-form-field appearance="outline"><mat-label>Lote do estoque inicial</mat-label><input matInput formControlName="initialBatch">@if(form.controls.initialBatch.touched&&!form.controls.initialBatch.value.trim()){<mat-error>Informe o lote.</mat-error>}</mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Validade</mat-label><input matInput type="date" [min]="today" formControlName="initialExpiry">@if(form.controls.initialExpiry.touched&&!form.controls.initialExpiry.value){<mat-error>Informe a validade.</mat-error>}</mat-form-field></div>}
@@ -31,7 +33,7 @@ import { ProductFormValue } from '../../models/product.models';
       <div class="form-note"><mat-icon>info</mat-icon>Produtos sem código de barras podem ser adicionados à venda pela pesquisa ou pelos botões visuais.</div>
       <div class="form-actions"><button mat-button type="button" (click)="cancel.emit()">Cancelar</button><button mat-flat-button class="primary-button" type="submit" [disabled]="saving()">@if(saving()){<span>Salvando…</span>} @else {<span>{{submitLabel()}}</span>} @if(!saving()){<mat-icon>save</mat-icon>}</button></div>
     </form>`,
-  styles: [`.initial-lot{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:12px 14px 0;margin-bottom:12px;border:1px solid #f1d58a;border-radius:10px;background:var(--yellow-light)}.initial-lot p{grid-column:1/-1;display:flex;gap:6px;align-items:flex-start;margin:0 0 12px;font-size:.78rem;line-height:1.4}.initial-lot mat-icon{font-size:18px;width:18px;height:18px}@media(max-width:700px){.initial-lot{grid-template-columns:1fr}}.check-group{display:flex;gap:24px;padding:0 4px 18px;flex-wrap:wrap}`],
+  styles: [`.form-warning{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;margin:-6px 0 14px;border-radius:9px;background:#fff0ee;color:var(--red-dark);font-size:.78rem;font-weight:600;line-height:1.4}.form-warning mat-icon{font-size:18px;width:18px;height:18px;flex:none}.initial-lot{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:12px 14px 0;margin-bottom:12px;border:1px solid #f1d58a;border-radius:10px;background:var(--yellow-light)}.initial-lot p{grid-column:1/-1;display:flex;gap:6px;align-items:flex-start;margin:0 0 12px;font-size:.78rem;line-height:1.4}.initial-lot mat-icon{font-size:18px;width:18px;height:18px}@media(max-width:700px){.initial-lot{grid-template-columns:1fr}}.check-group{display:flex;gap:24px;padding:0 4px 18px;flex-wrap:wrap}`],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductFormComponent {
@@ -58,12 +60,17 @@ export class ProductFormComponent {
     initialExpiry: new FormControl('', { nonNullable: true })
   });
   readonly today = new Date().toLocaleDateString('en-CA');
+  negativeMargin(): boolean { return Number(this.form.controls.price.value) > 0 && Number(this.form.controls.price.value) < Number(this.form.controls.cost.value); }
+  /** Com estoque, o custo é o custo médio das compras e fica somente leitura. */
+  costLocked(): boolean { return this.editing() && (this.product()?.stock ?? 0) > 0; }
+  becomesPerishableWithStock(): boolean { const p = this.product(); return !!p && !p.perishable && p.stock > 0 && this.form.controls.perishable.value; }
   needsInitialLot(): boolean { return !this.editing() && this.form.controls.perishable.value && Number(this.form.controls.stock.value) > 0; }
 
   constructor() {
     effect(() => {
       const product = this.product();
       if (!product) return;
+      if (product.stock > 0) this.form.controls.cost.disable({ emitEvent: false }); else this.form.controls.cost.enable({ emitEvent: false });
       this.form.patchValue({
         name: product.name,
         categoryId: product.categoryId ?? '',

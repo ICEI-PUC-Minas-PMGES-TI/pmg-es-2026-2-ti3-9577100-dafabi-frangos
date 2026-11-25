@@ -216,6 +216,13 @@ public class ProductService {
                     .orElseThrow(() -> new ResourceNotFoundException("Categoria", request.categoryId()));
         }
 
+        BigDecimal currentStock = product.getStock() == null ? Quantities.ZERO : product.getStock().getQuantity();
+        if (currentStock.signum() > 0 && request.currentCost() != null && product.getCurrentCost() != null
+                && request.currentCost().compareTo(product.getCurrentCost()) != 0) {
+            throw new BusinessException("COST_MANAGED_BY_PURCHASES",
+                    "Com estoque disponível, o custo é o custo médio calculado pelas compras e não pode ser alterado à mão.");
+        }
+
         productMapper.updateEntity(product, request, category);
 
         Product saved = productRepository.save(product);
