@@ -1,5 +1,6 @@
 package com.dafabi.products.mapper;
 
+import com.dafabi.inventory.application.StockAvailability;
 import com.dafabi.shared.Quantities;
 import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
@@ -61,6 +62,10 @@ public class ProductMapper {
     }
 
     public ProductResponse toResponse(Product product) {
+        return toResponse(product, null);
+    }
+
+    public ProductResponse toResponse(Product product, StockAvailability availability) {
         if (product == null) {
             return null;
         }
@@ -85,10 +90,17 @@ public class ProductMapper {
                 Quantities.forJson(stockQuantity),
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                product.getVersion());
+                product.getVersion(),
+                Quantities.forJson(resolve(availability, stockQuantity).sellable()),
+                Quantities.forJson(resolve(availability, stockQuantity).expired()),
+                Quantities.forJson(resolve(availability, stockQuantity).untracked()));
     }
 
     public ProductListResponse toListResponse(Product product) {
+        return toListResponse(product, null);
+    }
+
+    public ProductListResponse toListResponse(Product product, StockAvailability availability) {
         if (product == null) {
             return null;
         }
@@ -108,7 +120,14 @@ public class ProductMapper {
                 product.getBarcode(),
                 product.isPerishable(),
                 product.isFrequent(),
-                product.getStatus());
+                product.getStatus(),
+                Quantities.forJson(resolve(availability, stockQuantity).sellable()),
+                Quantities.forJson(resolve(availability, stockQuantity).expired()),
+                Quantities.forJson(resolve(availability, stockQuantity).untracked()));
+    }
+
+    private static StockAvailability resolve(StockAvailability availability, BigDecimal stock) {
+        return availability != null ? availability : StockAvailability.simple(stock);
     }
 
     private CategoryResponse toCategoryResponse(Category category) {

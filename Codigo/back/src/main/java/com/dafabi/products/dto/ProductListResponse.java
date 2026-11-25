@@ -16,5 +16,8 @@ public record ProductListResponse(
     String barcode,
     boolean perishable,
     boolean frequent,
-    ProductStatus status) {
+    ProductStatus status,
+    BigDecimal sellableQuantity,
+    BigDecimal expiredQuantity,
+    BigDecimal untrackedQuantity) {
 }

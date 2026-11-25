@@ -1,5 +1,6 @@
 package com.dafabi.inventory.mapper;
 
+import com.dafabi.inventory.application.StockAvailability;
 import com.dafabi.shared.Quantities;
 import java.math.BigDecimal;
 import com.dafabi.inventory.domain.InventoryLot;
@@ -33,7 +34,8 @@ public class InventoryMapper {
                 movement.getReason());
     }
 
-    public InventoryPositionResponse toPositionResponse(Product product, StockMovement lastMovement) {
+    public InventoryPositionResponse toPositionResponse(Product product, StockMovement lastMovement,
+                                                        StockAvailability availability) {
         BigDecimal stockQuantity = product.getStock() == null ? Quantities.ZERO : product.getStock().getQuantity();
         String categoryName = product.getCategory() == null ? "Sem categoria" : product.getCategory().getName();
         return new InventoryPositionResponse(
@@ -45,7 +47,10 @@ public class InventoryMapper {
                 product.getCurrentCost(),
                 product.isPerishable(),
                 product.getStatus(),
-                toMovementResponse(lastMovement));
+                toMovementResponse(lastMovement),
+                Quantities.forJson(availability.sellable()),
+                Quantities.forJson(availability.expired()),
+                Quantities.forJson(availability.untracked()));
     }
 
     public InventoryLotResponse toLotResponse(InventoryLot lot) {

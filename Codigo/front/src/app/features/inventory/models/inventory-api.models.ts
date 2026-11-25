@@ -24,6 +24,9 @@ export interface ApiInventoryPosition {
   perishable: boolean;
   productStatus: ProductStatus;
   lastMovement: ApiStockMovement | null;
+  sellableQuantity?: number;
+  expiredQuantity?: number;
+  untrackedQuantity?: number;
 }
 
 export interface ApiInventoryLot {

@@ -1,5 +1,6 @@
 package com.dafabi.products;
 
+import com.dafabi.inventory.application.StockAvailabilityService;
 import com.dafabi.products.application.ProductService;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
@@ -37,6 +38,9 @@ class ProductServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private StockAvailabilityService stockAvailabilityService;
 
     @Spy
     private ProductMapper productMapper = new ProductMapper();

@@ -102,6 +102,8 @@ class InventoryControllerIT {
         mockMvc.perform(get("/inventory"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].stockQuantity", is(17)))
+                .andExpect(jsonPath("$[0].sellableQuantity", is(12)))
+                .andExpect(jsonPath("$[0].untrackedQuantity", is(5)))
                 .andExpect(jsonPath("$[0].lastMovement.origin", is("Registro de lote")));
     }
 

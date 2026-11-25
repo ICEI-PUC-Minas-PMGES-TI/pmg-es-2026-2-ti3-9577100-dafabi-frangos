@@ -7,7 +7,7 @@ export type PurchaseStatus = 'REGISTERED' | 'CANCELED';
 
 export interface User { id: string; name: string; email: string; role: Role; active: boolean; passwordHash?: string; }
 export interface Category { id: string; name: string; }
-export interface Product { id: string; name: string; category: string; categoryId?: string; price: number; cost: number; stock: number; unit: string; barcode?: string; perishable: boolean; batch?: string; expiry?: string; status: ProductStatus; frequent?: boolean; version?: number; }
+export interface Product { id: string; name: string; category: string; categoryId?: string; price: number; cost: number; stock: number; sellable?: number; expiredStock?: number; untrackedStock?: number; unit: string; barcode?: string; perishable: boolean; batch?: string; expiry?: string; status: ProductStatus; frequent?: boolean; version?: number; }
 export interface SaleItem { productId: string; productName: string; unitPrice: number; quantity: number; subtotal: number; }
 export interface Payment { method: PaymentMethod; amount: number; received?: number; change?: number; }
 export interface Sale { id: string; externalId?: string; number: string; createdAt: string; operator: string; origin: SaleOrigin; payment: Payment; items: SaleItem[]; gross: number; discount: number; fees: number; net: number; status: SaleStatus; history: string[]; }

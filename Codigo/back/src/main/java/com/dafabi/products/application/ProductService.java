@@ -1,5 +1,8 @@
 package com.dafabi.products.application;
 
+import java.util.Map;
+import com.dafabi.inventory.application.StockAvailabilityService;
+import com.dafabi.inventory.application.StockAvailability;
 import com.dafabi.shared.Quantities;
 import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
@@ -32,13 +35,16 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final StockAvailabilityService stockAvailabilityService;
 
     public ProductService(ProductRepository productRepository,
             CategoryRepository categoryRepository,
-            ProductMapper productMapper) {
+            ProductMapper productMapper,
+            StockAvailabilityService stockAvailabilityService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productMapper = productMapper;
+        this.stockAvailabilityService = stockAvailabilityService;
     }
 
     @Transactional
@@ -69,7 +75,7 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +83,7 @@ public class ProductService {
         Product product = productRepository.findWithCategoryAndStockById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", id));
 
-        return productMapper.toResponse(product);
+        return toResponse(product);
     }
 
     @Transactional(readOnly = true)
@@ -137,8 +143,9 @@ public class ProductService {
                                     search)));
         }
 
-        return productRepository.findAll(specification, pageable)
-                .map(productMapper::toListResponse);
+        Page<Product> products = productRepository.findAll(specification, pageable);
+        Map<UUID, StockAvailability> availability = stockAvailabilityService.forProducts(products.getContent());
+        return products.map(product -> productMapper.toListResponse(product, availability.get(product.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -151,7 +158,7 @@ public class ProductService {
         Product product = productRepository.findByBarcode(normalizedBarcode)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", normalizedBarcode));
 
-        return productMapper.toResponse(product);
+        return toResponse(product);
     }
 
     @Transactional
@@ -180,7 +187,7 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -192,7 +199,11 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        return toResponse(saved);
+    }
+
+    private ProductResponse toResponse(Product product) {
+        return productMapper.toResponse(product, stockAvailabilityService.forProduct(product));
     }
 
     private String normalizeBarcode(String barcode) {

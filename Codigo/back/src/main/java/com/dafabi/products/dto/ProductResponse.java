@@ -20,6 +20,9 @@ public record ProductResponse(
         BigDecimal stockQuantity,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        Long version
+        Long version,
+        BigDecimal sellableQuantity,
+        BigDecimal expiredQuantity,
+        BigDecimal untrackedQuantity
 ) {
 }

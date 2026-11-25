@@ -14,6 +14,9 @@ public record InventoryPositionResponse(
         BigDecimal currentCost,
         boolean perishable,
         ProductStatus productStatus,
-        StockMovementResponse lastMovement
+        StockMovementResponse lastMovement,
+        BigDecimal sellableQuantity,
+        BigDecimal expiredQuantity,
+        BigDecimal untrackedQuantity
 ) {
 }

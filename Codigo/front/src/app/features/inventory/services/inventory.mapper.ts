@@ -23,7 +23,10 @@ export function toInventoryProduct(api: ApiInventoryPosition): Product {
     category: api.categoryName,
     price: 0,
     cost: Number(api.currentCost),
-    stock: api.stockQuantity,
+    stock: Number(api.stockQuantity),
+    sellable: Number(api.sellableQuantity ?? api.stockQuantity),
+    expiredStock: Number(api.expiredQuantity ?? 0),
+    untrackedStock: Number(api.untrackedQuantity ?? 0),
     unit: api.unit,
     perishable: api.perishable,
     status: api.productStatus

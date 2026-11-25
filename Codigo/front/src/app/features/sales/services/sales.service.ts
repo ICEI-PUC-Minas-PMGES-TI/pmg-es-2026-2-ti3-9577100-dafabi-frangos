@@ -15,6 +15,11 @@ export type CartError = 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_QU
 
 const STORE_ID = '00000000-0000-0000-0000-000000000001';
 
+/** Perecíveis só podem ser vendidos a partir de lotes dentro da validade. */
+function sellableOf(product: Product): number {
+  return product.sellable ?? product.stock;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SalesService {
   private readonly api = inject(SalesApiService);
@@ -69,10 +74,11 @@ export class SalesService {
   }
 
   addProduct(product: Product): void {
-    if (product.stock < 1) throw new Error('INSUFFICIENT_STOCK');
+    const available = sellableOf(product);
+    if (available < 1) throw new Error(product.stock > 0 ? 'NO_SELLABLE_STOCK' : 'INSUFFICIENT_STOCK');
     const existing = this.cartState().find(item => item.productId === product.id);
     const quantity = (existing?.quantity ?? 0) + 1;
-    if (quantity > product.stock) throw new Error('INSUFFICIENT_STOCK');
+    if (quantity > available) throw new Error('INSUFFICIENT_STOCK');
     const updated: SaleItem = {
       productId: product.id, productName: product.name, unitPrice: product.price,
       quantity, subtotal: product.price * quantity
@@ -88,7 +94,7 @@ export class SalesService {
     if (!product || !cartItem) return;
     const quantity = cartItem.quantity + delta;
     if (quantity < 1) throw new Error('INVALID_QUANTITY');
-    if (quantity > product.stock) throw new Error('INSUFFICIENT_STOCK');
+    if (quantity > sellableOf(product)) throw new Error('INSUFFICIENT_STOCK');
     this.cartState.update(items => items.map(item => item.productId === productId
       ? { ...item, quantity, subtotal: item.unitPrice * quantity } : item));
   }

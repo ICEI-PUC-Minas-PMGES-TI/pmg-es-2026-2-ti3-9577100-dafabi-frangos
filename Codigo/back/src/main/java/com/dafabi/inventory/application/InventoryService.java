@@ -43,17 +43,20 @@ public class InventoryService {
     private final StockMovementRepository stockMovementRepository;
     private final InventoryLotRepository inventoryLotRepository;
     private final InventoryMapper inventoryMapper;
+    private final StockAvailabilityService stockAvailabilityService;
 
     public InventoryService(ProductRepository productRepository,
             ProductStockRepository productStockRepository,
             StockMovementRepository stockMovementRepository,
             InventoryLotRepository inventoryLotRepository,
-            InventoryMapper inventoryMapper) {
+            InventoryMapper inventoryMapper,
+            StockAvailabilityService stockAvailabilityService) {
         this.productRepository = productRepository;
         this.productStockRepository = productStockRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.inventoryLotRepository = inventoryLotRepository;
         this.inventoryMapper = inventoryMapper;
+        this.stockAvailabilityService = stockAvailabilityService;
     }
 
     @Transactional(readOnly = true)
@@ -69,8 +72,10 @@ public class InventoryService {
         Map<UUID, StockMovement> lastMovements = lastMovementByProductId(
                 products.stream().map(Product::getId).toList());
 
+        Map<UUID, StockAvailability> availability = stockAvailabilityService.forProducts(products);
         return products.stream()
-                .map(product -> inventoryMapper.toPositionResponse(product, lastMovements.get(product.getId())))
+                .map(product -> inventoryMapper.toPositionResponse(product, lastMovements.get(product.getId()),
+                        availability.get(product.getId())))
                 .toList();
     }
 
