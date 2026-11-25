@@ -1,5 +1,6 @@
 package com.dafabi.inventory.controller;
 
+import com.dafabi.shared.security.CostVisibility;
 import com.dafabi.inventory.application.InventoryService;
 import com.dafabi.inventory.dto.CreateInventoryLotRequest;
 import com.dafabi.inventory.dto.InventoryLotResponse;
@@ -35,7 +36,8 @@ public class InventoryController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public List<InventoryPositionResponse> findPositions(@RequestParam(required = false) String query) {
-        return inventoryService.findPositions(query);
+        List<InventoryPositionResponse> positions = inventoryService.findPositions(query);
+        return CostVisibility.canSeeCost() ? positions : positions.stream().map(InventoryPositionResponse::withoutCost).toList();
     }
 
     @GetMapping("/movements")

@@ -20,4 +20,9 @@ public record ProductListResponse(
     BigDecimal sellableQuantity,
     BigDecimal expiredQuantity,
     BigDecimal untrackedQuantity) {
+
+    public ProductListResponse withoutCost() {
+        return new ProductListResponse(id, name, category, salePrice, null, stockQuantity, unit, barcode,
+                perishable, frequent, status, sellableQuantity, expiredQuantity, untrackedQuantity);
+    }
 }

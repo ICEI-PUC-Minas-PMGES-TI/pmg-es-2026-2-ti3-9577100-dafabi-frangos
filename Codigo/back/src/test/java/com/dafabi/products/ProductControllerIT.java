@@ -252,4 +252,22 @@ class ProductControllerIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is("INITIAL_LOT_REQUIRED")));
     }
+
+    @Test
+    @WithMockUser(roles = "CASHIER")
+    @DisplayName("GET /products - Operador de caixa não recebe o custo dos produtos")
+    void cashierDoesNotReceiveProductCost() throws Exception {
+        var product = new com.dafabi.products.domain.Product(UUID.randomUUID(), savedCategory, "Farofa",
+                new BigDecimal("8.50"), new BigDecimal("3.20"), "un", null, false, true, ProductStatus.ACTIVE, null, null);
+        product.setStock(new com.dafabi.products.domain.ProductStock(product, 4));
+        productRepository.save(product);
+
+        mockMvc.perform(get("/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].salePrice", is(8.50)))
+                .andExpect(jsonPath("$.content[0].currentCost").doesNotExist());
+        mockMvc.perform(get("/products/{id}", product.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentCost").doesNotExist());
+    }
 }

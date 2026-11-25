@@ -19,4 +19,8 @@ public record InventoryPositionResponse(
         BigDecimal expiredQuantity,
         BigDecimal untrackedQuantity
 ) {
+    public InventoryPositionResponse withoutCost() {
+        return new InventoryPositionResponse(productId, productName, categoryName, stockQuantity, unit, null,
+                perishable, productStatus, lastMovement, sellableQuantity, expiredQuantity, untrackedQuantity);
+    }
 }
