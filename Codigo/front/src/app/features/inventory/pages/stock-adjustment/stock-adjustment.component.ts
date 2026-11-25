@@ -1,3 +1,4 @@
+import { QuantityPipe } from '../../../../shared/pipes/quantity.pipe';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,7 +19,7 @@ import { InventoryService } from '../../services/inventory.service';
 @Component({
   selector: 'app-stock-adjustment',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent],
+  imports:[QuantityPipe,DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent],
   template: `
     <app-page-header eyebrow="Estoque / Ajuste" title="Ajustar estoque" subtitle="Informe a quantidade real e registre o motivo."/>
     @if(loading()) { <app-loading-state/> }
@@ -27,9 +28,9 @@ import { InventoryService } from '../../services/inventory.service';
       <section class="surface surface-body form-card">
         <form [formGroup]="form" class="form-grid" (ngSubmit)="save()">
           <mat-form-field appearance="outline" class="full"><mat-label>Produto</mat-label><mat-select formControlName="productId">@for(p of service.products();track p.id){<mat-option [value]="p.id">{{p.name}}</mat-option>}</mat-select></mat-form-field>
-          <div class="quantity-current"><small>Quantidade atual</small><strong>{{current()?.stock ?? 0}} {{current()?.unit}}</strong></div>
-          <mat-form-field appearance="outline"><mat-label>Nova quantidade</mat-label><input matInput type="number" min="0" formControlName="newQuantity"><span matTextSuffix>&nbsp;{{current()?.unit}}</span></mat-form-field>
-          <div class="difference full" [class.negative]="difference()<0"><mat-icon>{{difference()>=0?'add_circle':'remove_circle'}}</mat-icon><div><small>Diferença calculada</small><strong>{{difference()>0?'+':''}}{{difference()}} {{current()?.unit}}</strong></div></div>
+          <div class="quantity-current"><small>Quantidade atual</small><strong>{{(current()?.stock ?? 0)|qty}} {{current()?.unit}}</strong></div>
+          <mat-form-field appearance="outline"><mat-label>Nova quantidade</mat-label><input matInput type="number" min="0" step="0.001" formControlName="newQuantity"><span matTextSuffix>&nbsp;{{current()?.unit}}</span></mat-form-field>
+          <div class="difference full" [class.negative]="difference()<0"><mat-icon>{{difference()>=0?'add_circle':'remove_circle'}}</mat-icon><div><small>Diferença calculada</small><strong>{{difference()>0?'+':''}}{{difference()|qty}} {{current()?.unit}}</strong></div></div>
           <mat-form-field appearance="outline" class="full"><mat-label>Motivo do ajuste</mat-label><textarea matInput rows="3" formControlName="reason" placeholder="Ex.: contagem física do estoque"></textarea><mat-hint>Mínimo de 5 caracteres</mat-hint></mat-form-field>
           <div class="audit full"><span><small>Usuário</small><strong>{{auth.currentUser()?.name}}</strong></span><span><small>Data</small><strong>{{now|date:'dd/MM/yyyy HH:mm'}}</strong></span></div>
           <div class="form-actions"><button mat-button type="button" (click)="router.navigate(['/app/estoque'])">Cancelar</button><button mat-flat-button class="primary-button" type="submit" [disabled]="saving()"><mat-icon>check</mat-icon>{{saving()?'Salvando…':'Confirmar ajuste'}}</button></div>
@@ -62,7 +63,7 @@ export class StockAdjustmentComponent {
   }
 
   current() { return this.service.products().find(product => product.id === this.form.controls.productId.value); }
-  difference() { return this.form.controls.newQuantity.value - (this.current()?.stock ?? 0); }
+  difference() { return Math.round((this.form.controls.newQuantity.value - (this.current()?.stock ?? 0)) * 1000) / 1000; }
 
   async load(): Promise<void> {
     try {

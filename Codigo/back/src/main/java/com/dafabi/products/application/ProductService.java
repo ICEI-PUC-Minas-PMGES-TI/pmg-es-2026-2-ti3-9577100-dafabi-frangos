@@ -1,5 +1,7 @@
 package com.dafabi.products.application;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -60,9 +62,7 @@ public class ProductService {
 
         Product product = productMapper.toEntity(request, category);
 
-        int initialQuantity = request.initialStock() != null
-                ? request.initialStock()
-                : 0;
+        BigDecimal initialQuantity = Quantities.of(request.initialStock());
 
         ProductStock stock = new ProductStock(product, initialQuantity);
         product.setStock(stock);

@@ -1,5 +1,7 @@
 package com.dafabi.inventory.application;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.inventory.domain.InventoryLot;
 import com.dafabi.inventory.domain.StockMovement;
 import com.dafabi.inventory.domain.StockMovementType;
@@ -89,31 +91,31 @@ public class InventoryService {
     public StockMovementResponse adjust(StockAdjustmentRequest request) {
         ProductStock stock = productStockRepository.findByProductIdForUpdate(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", request.productId()));
-        int previousQuantity = stock.getQuantity();
-        int newQuantity = request.newQuantity();
-        if (previousQuantity == newQuantity) {
+        BigDecimal previousQuantity = stock.getQuantity();
+        BigDecimal newQuantity = Quantities.of(request.newQuantity());
+        if (previousQuantity.compareTo(newQuantity) == 0) {
             throw new BusinessException("UNCHANGED_STOCK", "A nova quantidade deve ser diferente da quantidade atual.");
         }
 
         stock.setQuantity(newQuantity);
         List<StockMovement> adjustments = new java.util.ArrayList<>();
-        int aggregateBalance = previousQuantity;
-        int reduction = previousQuantity - newQuantity;
-        if (reduction > 0 && stock.getProduct().isPerishable()) {
+        BigDecimal aggregateBalance = previousQuantity;
+        BigDecimal reduction = previousQuantity.subtract(newQuantity);
+        if (reduction.signum() > 0 && stock.getProduct().isPerishable()) {
             for (InventoryLot lot : inventoryLotRepository.findAvailableByProductForUpdate(stock.getProduct().getId())) {
-                if (reduction == 0) break;
-                int amount = Math.min(reduction, lot.getQuantity());
-                lot.setQuantity(lot.getQuantity() - amount);
-                int next = aggregateBalance - amount;
+                if (reduction.signum() == 0) break;
+                BigDecimal amount = Quantities.min(reduction, lot.getQuantity());
+                lot.setQuantity(lot.getQuantity().subtract(amount));
+                BigDecimal next = aggregateBalance.subtract(amount);
                 adjustments.add(stockMovementRepository.save(new StockMovement(
                         stock.getProduct(), lot, StockMovementType.MANUAL_ADJUSTMENT,
                         aggregateBalance, next, "Ajuste manual", request.reason().trim(),
                         actor(request.performedBy()), "STOCK_ADJUSTMENT", null)));
                 aggregateBalance = next;
-                reduction -= amount;
+                reduction = reduction.subtract(amount);
             }
         }
-        if (aggregateBalance != newQuantity || adjustments.isEmpty()) {
+        if (aggregateBalance.compareTo(newQuantity) != 0 || adjustments.isEmpty()) {
             adjustments.add(stockMovementRepository.save(new StockMovement(
                     stock.getProduct(), null, StockMovementType.MANUAL_ADJUSTMENT,
                     aggregateBalance, newQuantity, "Ajuste manual", request.reason().trim(),
@@ -143,18 +145,18 @@ public class InventoryService {
         if (inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(request.productId(), request.batch().trim())) {
             throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.", HttpStatus.CONFLICT);
         }
-        int assigned = inventoryLotRepository.findAvailableByProductForUpdate(request.productId()).stream()
-                .mapToInt(InventoryLot::getQuantity).sum();
-        int unassigned = stock.getQuantity() - assigned;
-        if (request.quantity() > unassigned) {
+        BigDecimal assigned = inventoryLotRepository.findAvailableByProductForUpdate(request.productId()).stream()
+                .map(InventoryLot::getQuantity).reduce(Quantities.ZERO, BigDecimal::add);
+        BigDecimal unassigned = stock.getQuantity().subtract(assigned);
+        if (request.quantity().compareTo(unassigned) > 0) {
             throw new BusinessException("INSUFFICIENT_UNASSIGNED_STOCK",
-                    "Quantidade superior ao saldo sem lote: " + Math.max(0, unassigned) + ".", HttpStatus.CONFLICT);
+                    "Quantidade superior ao saldo sem lote: " + Quantities.format(unassigned.max(BigDecimal.ZERO)) + ".", HttpStatus.CONFLICT);
         }
         InventoryLot lot = inventoryLotRepository.save(new InventoryLot(product, request.batch(),
                 request.receivedAt(), request.expiry(), request.quantity()));
         stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.LOT_ASSIGNMENT,
                 stock.getQuantity(), stock.getQuantity(), "Regularização de lote",
-                "Vinculadas " + request.quantity() + " unidades do saldo existente ao lote " + lot.getBatch(),
+                "Vinculadas " + Quantities.format(request.quantity()) + " unidades do saldo existente ao lote " + lot.getBatch(),
                 actor(user.name()), "INVENTORY_LOT", lot.getId()));
         return inventoryMapper.toLotResponse(lot);
     }
@@ -182,8 +184,8 @@ public class InventoryService {
 
         InventoryLot lot = inventoryLotRepository.save(new InventoryLot(
                 product, request.batch(), request.receivedAt(), request.expiry(), request.quantity()));
-        int previousQuantity = stock.getQuantity();
-        int newQuantity = previousQuantity + request.quantity();
+        BigDecimal previousQuantity = stock.getQuantity();
+        BigDecimal newQuantity = previousQuantity.add(Quantities.of(request.quantity()));
         stock.setQuantity(newQuantity);
         stockMovementRepository.save(new StockMovement(
                 product, lot, StockMovementType.LOT_RECEIPT,

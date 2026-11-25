@@ -1,5 +1,6 @@
 package com.dafabi.inventory.dto;
 
+import java.math.BigDecimal;
 import com.dafabi.inventory.domain.StockMovementType;
 
 import java.time.OffsetDateTime;
@@ -11,9 +12,9 @@ public record StockMovementResponse(
         String productName,
         OffsetDateTime date,
         StockMovementType type,
-        Integer previousQuantity,
-        Integer newQuantity,
-        Integer difference,
+        BigDecimal previousQuantity,
+        BigDecimal newQuantity,
+        BigDecimal difference,
         String origin,
         String user,
         String reason

@@ -9,7 +9,7 @@ public record InventoryPositionResponse(
         UUID productId,
         String productName,
         String categoryName,
-        Integer stockQuantity,
+        BigDecimal stockQuantity,
         String unit,
         BigDecimal currentCost,
         boolean perishable,

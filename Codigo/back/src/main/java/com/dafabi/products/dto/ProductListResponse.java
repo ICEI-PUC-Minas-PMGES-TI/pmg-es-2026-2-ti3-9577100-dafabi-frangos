@@ -11,7 +11,7 @@ public record ProductListResponse(
     CategoryResponse category,
     BigDecimal salePrice,
     BigDecimal currentCost,
-    Integer stockQuantity,
+    BigDecimal stockQuantity,
     String unit,
     String barcode,
     boolean perishable,

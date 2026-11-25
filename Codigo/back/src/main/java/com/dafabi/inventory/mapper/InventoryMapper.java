@@ -1,5 +1,7 @@
 package com.dafabi.inventory.mapper;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.inventory.domain.InventoryLot;
 import com.dafabi.inventory.domain.LotStatus;
 import com.dafabi.inventory.domain.StockMovement;
@@ -23,22 +25,22 @@ public class InventoryMapper {
                 movement.getProduct().getName(),
                 movement.getOccurredAt(),
                 movement.getMovementType(),
-                movement.getPreviousQuantity(),
-                movement.getNewQuantity(),
-                movement.getQuantityDelta(),
+                Quantities.forJson(movement.getPreviousQuantity()),
+                Quantities.forJson(movement.getNewQuantity()),
+                Quantities.forJson(movement.getQuantityDelta()),
                 movement.getOrigin(),
                 movement.getPerformedBy(),
                 movement.getReason());
     }
 
     public InventoryPositionResponse toPositionResponse(Product product, StockMovement lastMovement) {
-        int stockQuantity = product.getStock() == null ? 0 : product.getStock().getQuantity();
+        BigDecimal stockQuantity = product.getStock() == null ? Quantities.ZERO : product.getStock().getQuantity();
         String categoryName = product.getCategory() == null ? "Sem categoria" : product.getCategory().getName();
         return new InventoryPositionResponse(
                 product.getId(),
                 product.getName(),
                 categoryName,
-                stockQuantity,
+                Quantities.forJson(stockQuantity),
                 product.getUnit(),
                 product.getCurrentCost(),
                 product.isPerishable(),
@@ -54,12 +56,12 @@ public class InventoryMapper {
                 lot.getBatch(),
                 lot.getReceivedAt(),
                 lot.getExpiry(),
-                lot.getQuantity(),
+                Quantities.forJson(lot.getQuantity()),
                 resolveStatus(lot));
     }
 
     private LotStatus resolveStatus(InventoryLot lot) {
-        if (lot.getQuantity() == 0) return LotStatus.USED;
+        if (lot.getQuantity().signum() == 0) return LotStatus.USED;
         return lot.getExpiry().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo"))) ? LotStatus.EXPIRED : LotStatus.VALID;
     }
 }

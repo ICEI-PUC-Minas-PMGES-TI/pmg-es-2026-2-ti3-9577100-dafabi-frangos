@@ -1,5 +1,6 @@
 package com.dafabi.products.dto;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -37,6 +38,7 @@ public record CreateProductRequest(
         ProductStatus status,
 
         @PositiveOrZero(message = "O estoque inicial não pode ser negativo")
-        Integer initialStock
+        @Digits(integer = 11, fraction = 3, message = "Use no máximo 3 casas decimais.")
+        BigDecimal initialStock
 ) {
 }

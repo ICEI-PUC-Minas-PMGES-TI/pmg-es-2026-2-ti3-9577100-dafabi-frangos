@@ -66,7 +66,7 @@ class InventoryControllerIT {
     @DisplayName("POST /inventory/adjustments deve atualizar o saldo e registrar o histórico")
     void shouldAdjustStockAndCreateMovement() throws Exception {
         StockAdjustmentRequest request = new StockAdjustmentRequest(
-                product.getId(), 9, "Contagem física do estoque", "Fabiana Nogueira");
+                product.getId(), new BigDecimal("9"), "Contagem física do estoque", "Fabiana Nogueira");
 
         mockMvc.perform(post("/inventory/adjustments")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -88,7 +88,7 @@ class InventoryControllerIT {
     @DisplayName("POST /inventory/lots deve registrar lote perecível e somar a quantidade ao estoque")
     void shouldCreateLotAndIncreaseStock() throws Exception {
         CreateInventoryLotRequest request = new CreateInventoryLotRequest(
-                product.getId(), "L-2026-001", LocalDate.now(), LocalDate.now().plusDays(7), 12, "Fabiana Nogueira");
+                product.getId(), "L-2026-001", LocalDate.now(), LocalDate.now().plusDays(7), new BigDecimal("12"), "Fabiana Nogueira");
 
         mockMvc.perform(post("/inventory/lots")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -111,7 +111,7 @@ class InventoryControllerIT {
         var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(user, null,
                 java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
         CreateInventoryLotRequest request = new CreateInventoryLotRequest(product.getId(), "LOTE-REAL",
-                LocalDate.now().minusDays(3), LocalDate.now().minusDays(1), 3, "Não confiar");
+                LocalDate.now().minusDays(3), LocalDate.now().minusDays(1), new BigDecimal("3"), "Não confiar");
         mockMvc.perform(post("/inventory/lots/assign-existing")
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth))
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
@@ -123,7 +123,7 @@ class InventoryControllerIT {
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateInventoryLotRequest(product.getId(), "OUTRO",
-                                LocalDate.now(), LocalDate.now().plusDays(1), 3, null))))
+                                LocalDate.now(), LocalDate.now().plusDays(1), new BigDecimal("3"), null))))
                 .andExpect(status().isConflict());
     }
 }

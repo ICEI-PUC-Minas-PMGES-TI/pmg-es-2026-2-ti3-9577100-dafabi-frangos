@@ -1,6 +1,8 @@
 package com.dafabi.products.domain;
 
+import com.dafabi.shared.Quantities;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -17,8 +19,8 @@ public class ProductStock {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(nullable = false)
-    private Integer quantity = 0;
+    @Column(nullable = false, precision = 14, scale = 3)
+    private BigDecimal quantity = Quantities.ZERO;
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
@@ -31,11 +33,15 @@ public class ProductStock {
     }
 
     public ProductStock(Product product, Integer quantity) {
+        this(product, quantity == null ? null : Quantities.of(quantity));
+    }
+
+    public ProductStock(Product product, BigDecimal quantity) {
         this.product = product;
         if (product != null) {
             this.productId = product.getId();
         }
-        this.quantity = (quantity != null) ? quantity : 0;
+        this.quantity = Quantities.of(quantity);
         this.updatedAt = OffsetDateTime.now();
     }
 
@@ -45,7 +51,7 @@ public class ProductStock {
             this.updatedAt = OffsetDateTime.now();
         }
         if (this.quantity == null) {
-            this.quantity = 0;
+            this.quantity = Quantities.ZERO;
         }
     }
 
@@ -73,12 +79,16 @@ public class ProductStock {
         }
     }
 
-    public Integer getQuantity() {
+    public BigDecimal getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(Integer quantity) {
-        this.quantity = (quantity != null) ? quantity : 0;
+    public void setQuantity(BigDecimal quantity) {
+        this.quantity = Quantities.of(quantity);
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = Quantities.of(quantity);
     }
 
     public OffsetDateTime getUpdatedAt() {

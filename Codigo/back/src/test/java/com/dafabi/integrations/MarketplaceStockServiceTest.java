@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
 
 class MarketplaceStockServiceTest {
     @Test
@@ -41,7 +42,7 @@ class MarketplaceStockServiceTest {
                 "Frango","frango",BigDecimal.TEN,BigDecimal.valueOf(2),UUID.randomUUID(),"{}",OffsetDateTime.now());
         var rule=new MarketplaceProductMapping(provider,"loja","Frango",product.getId(),BigDecimal.ONE);
         var lot=mock(InventoryLot.class);
-        when(lot.getQuantity()).thenReturn(5);
+        when(lot.getQuantity()).thenReturn(new BigDecimal("5.000"));
         when(lot.getReceivedAt()).thenReturn(date.minusDays(1));
         when(lot.getExpiry()).thenReturn(date);
         when(baselines.findByProviderAndExternalStoreId(provider,"loja"))
@@ -57,10 +58,10 @@ class MarketplaceStockServiceTest {
         when(lots.findAvailableByProductForUpdate(product.getId())).thenReturn(List.of(lot));
 
         service.apply(provider,new MarketplaceStockApplyRequest("loja",date,date,false,false));
-        assertThat(stock.getQuantity()).isEqualTo(5);
+        assertThat(stock.getQuantity()).isEqualByComparingTo("5");
         service.apply(provider,new MarketplaceStockApplyRequest("loja",date,date,false,true));
-        assertThat(stock.getQuantity()).isEqualTo(3);
-        verify(lot).setQuantity(3);
+        assertThat(stock.getQuantity()).isEqualByComparingTo("3");
+        verify(lot).setQuantity(argThat((java.math.BigDecimal value) -> value.compareTo(new java.math.BigDecimal("3")) == 0));
     }
     @Test
     void historicalItemDoesNotRequireMapping() {

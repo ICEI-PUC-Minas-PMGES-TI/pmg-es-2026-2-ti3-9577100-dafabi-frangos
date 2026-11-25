@@ -96,7 +96,7 @@ class SaleRefundControllerIT {
     @DisplayName("POST /sales/{id}/refund deve estornar a venda revertendo caixa e estoque na mesma operação")
     void shouldRefundSaleReversingCashAndStock() throws Exception {
         String saleId = createSale(PaymentMethod.CASH);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
 
         mockMvc.perform(asAdmin(post("/sales/{id}/refund", saleId))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,8 +114,8 @@ class SaleRefundControllerIT {
 
         Sale sale = saleRepository.findById(UUID.fromString(saleId)).orElseThrow();
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.REFUNDED);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
         assertThat(stockMovementRepository.findAll())
                 .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
                 .hasSize(2);
@@ -159,8 +159,8 @@ class SaleRefundControllerIT {
                 .andExpect(jsonPath("$.code", is("SALE_ALREADY_REFUNDED")));
 
         assertThat(saleRefundRepository.count()).isEqualTo(1);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
         assertThat(stockMovementRepository.findAll())
                 .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
                 .hasSize(2);
@@ -184,7 +184,7 @@ class SaleRefundControllerIT {
                 .andExpect(jsonPath("$.code", is("SALE_CANCELLED")));
 
         assertThat(saleRefundRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test
@@ -212,7 +212,7 @@ class SaleRefundControllerIT {
         assertThat(saleRefundRepository.count()).isZero();
         assertThat(saleRepository.findById(UUID.fromString(saleId)).orElseThrow().getStatus())
                 .isEqualTo(SaleStatus.COMPLETED);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test

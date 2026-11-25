@@ -105,8 +105,8 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$.items[1].total", is(260.00)))
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(50);
-        assertThat(productStockRepository.findById(halfChicken.getId()).orElseThrow().getQuantity()).isEqualTo(25);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("50");
+        assertThat(productStockRepository.findById(halfChicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("25");
 
         String id = objectMapper.readTree(body).get("id").asText();
         mockMvc.perform(get("/purchases/{id}", id))
@@ -137,7 +137,7 @@ class PurchaseControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("CANCELED")));
 
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
         assertThat(productRepository.findById(chicken.getId()).orElseThrow().getCurrentCost())
                 .isEqualByComparingTo("24.50");
     }
@@ -229,7 +229,7 @@ class PurchaseControllerIT {
 
         assertThat(purchaseRepository.count()).isZero();
         assertThat(stockMovementRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
     }
 
     @Test
@@ -257,7 +257,7 @@ class PurchaseControllerIT {
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("date")));
 
         assertThat(purchaseRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
     }
 
     @Test
@@ -277,8 +277,8 @@ class PurchaseControllerIT {
 
         assertThat(purchaseRepository.count()).isZero();
         assertThat(stockMovementRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
-        assertThat(productStockRepository.findById(halfChicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
+        assertThat(productStockRepository.findById(halfChicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
     }
 
     @Test
@@ -298,8 +298,8 @@ class PurchaseControllerIT {
 
         assertThat(purchaseRepository.count()).isZero();
         assertThat(stockMovementRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(10);
-        assertThat(productStockRepository.findById(inactive.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
+        assertThat(productStockRepository.findById(inactive.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test

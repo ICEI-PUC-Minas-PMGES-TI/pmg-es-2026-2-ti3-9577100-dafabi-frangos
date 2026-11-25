@@ -17,7 +17,7 @@ public record ProductResponse(
         boolean perishable,
         boolean frequent,
         ProductStatus status,
-        Integer stockQuantity,
+        BigDecimal stockQuantity,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
         Long version

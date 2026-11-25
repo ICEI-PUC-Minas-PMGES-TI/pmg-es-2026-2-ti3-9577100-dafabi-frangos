@@ -1,3 +1,4 @@
+import { QuantityPipe } from '../../../../shared/pipes/quantity.pipe';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -20,7 +21,7 @@ const today = new Date().toISOString().slice(0, 10);
 @Component({
   selector: 'app-perishables',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatSidenavModule, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent, StatusChipComponent],
+  imports:[QuantityPipe,DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatSidenavModule, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent, StatusChipComponent],
   template: `
     <mat-drawer-container class="drawer-shell" [hasBackdrop]="true">
       <mat-drawer #drawer position="end" mode="over" class="form-drawer">
@@ -32,7 +33,7 @@ const today = new Date().toISOString().slice(0, 10);
           <mat-form-field appearance="outline"><mat-label>Lote</mat-label><input matInput formControlName="batch"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Data de entrada</mat-label><input matInput type="date" formControlName="receivedAt"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Validade</mat-label><input matInput type="date" formControlName="expiry"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Quantidade recebida</mat-label><input matInput type="number" min="1" formControlName="quantity"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Quantidade recebida</mat-label><input matInput type="number" min="0.001" step="0.001" formControlName="quantity"></mat-form-field>
           <button mat-flat-button class="primary-button" type="submit" [disabled]="saving()">{{saving()?'Registrando…':'Registrar lote'}}</button>
         </form>
       </mat-drawer>
@@ -41,7 +42,7 @@ const today = new Date().toISOString().slice(0, 10);
         <section class="surface">
           @if(loading()) { <app-loading-state/> }
           @else if(error()) { <app-error-state title="Não foi possível carregar os lotes" [message]="error()!"/> }
-          @else { <div class="table-wrap"><table class="data-table"><thead><tr><th>Produto</th><th>Lote</th><th>Data de entrada</th><th>Validade</th><th>Quantidade</th><th>Status</th></tr></thead><tbody>@for(item of service.perishables();track item.id){<tr><td class="cell-title">{{item.productName}}</td><td>{{item.batch}}</td><td>{{item.receivedAt|date:'dd/MM/yyyy'}}</td><td>{{item.expiry|date:'dd/MM/yyyy'}}</td><td>{{item.quantity}} un</td><td><app-status-chip [status]="item.status"/></td></tr>}@empty{<tr><td colspan="6" class="empty-row">Nenhum lote registrado.</td></tr>}</tbody></table></div><div class="perishable-note"><mat-icon>info</mat-icon>Registrar um lote também atualiza o saldo de estoque do produto.</div> }
+          @else { <div class="table-wrap"><table class="data-table"><thead><tr><th>Produto</th><th>Lote</th><th>Data de entrada</th><th>Validade</th><th>Quantidade</th><th>Status</th></tr></thead><tbody>@for(item of service.perishables();track item.id){<tr><td class="cell-title">{{item.productName}}</td><td>{{item.batch}}</td><td>{{item.receivedAt|date:'dd/MM/yyyy'}}</td><td>{{item.expiry|date:'dd/MM/yyyy'}}</td><td>{{item.quantity|qty}} un</td><td><app-status-chip [status]="item.status"/></td></tr>}@empty{<tr><td colspan="6" class="empty-row">Nenhum lote registrado.</td></tr>}</tbody></table></div><div class="perishable-note"><mat-icon>info</mat-icon>Registrar um lote também atualiza o saldo de estoque do produto.</div> }
         </section>
       </mat-drawer-content>
     </mat-drawer-container>
@@ -62,7 +63,7 @@ export class PerishablesComponent {
     batch: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     receivedAt: new FormControl(today, { nonNullable: true, validators: [Validators.required] }),
     expiry: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    quantity: new FormControl(1, { nonNullable: true, validators: [Validators.required, Validators.min(1)] })
+    quantity: new FormControl(1, { nonNullable: true, validators: [Validators.required, Validators.min(0.001)] })
   });
 
   constructor() { void this.load(); }

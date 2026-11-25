@@ -1,5 +1,7 @@
 package com.dafabi.products.mapper;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -65,9 +67,9 @@ public class ProductMapper {
 
         CategoryResponse categoryResponse = toCategoryResponse(product.getCategory());
 
-        Integer stockQuantity = product.getStock() != null
+        BigDecimal stockQuantity = product.getStock() != null
                 ? product.getStock().getQuantity()
-                : 0;
+                : Quantities.ZERO;
 
         return new ProductResponse(
                 product.getId(),
@@ -80,7 +82,7 @@ public class ProductMapper {
                 product.isPerishable(),
                 product.isFrequent(),
                 product.getStatus(),
-                stockQuantity,
+                Quantities.forJson(stockQuantity),
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
                 product.getVersion());
@@ -91,9 +93,9 @@ public class ProductMapper {
             return null;
         }
 
-        Integer stockQuantity = product.getStock() != null
+        BigDecimal stockQuantity = product.getStock() != null
                 ? product.getStock().getQuantity()
-                : 0;
+                : Quantities.ZERO;
 
         return new ProductListResponse(
                 product.getId(),
@@ -101,7 +103,7 @@ public class ProductMapper {
                 toCategoryResponse(product.getCategory()),
                 product.getSalePrice(),
                 product.getCurrentCost(),
-                stockQuantity,
+                Quantities.forJson(stockQuantity),
                 product.getUnit(),
                 product.getBarcode(),
                 product.isPerishable(),

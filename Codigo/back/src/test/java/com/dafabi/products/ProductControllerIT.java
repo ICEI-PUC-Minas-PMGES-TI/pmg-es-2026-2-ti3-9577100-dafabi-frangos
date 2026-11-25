@@ -77,7 +77,7 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                100
+                new BigDecimal("100")
         );
 
         mockMvc.perform(post("/products")
@@ -112,7 +112,7 @@ class ProductControllerIT {
                 false,
                 false,
                 ProductStatus.ACTIVE,
-                -1 // Estoque negativo
+                new BigDecimal("-1") // Estoque negativo
         );
 
         mockMvc.perform(post("/products")
@@ -138,7 +138,7 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                20
+                new BigDecimal("20")
         );
 
         mockMvc.perform(post("/products")
@@ -156,7 +156,7 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                10
+                new BigDecimal("10")
         );
 
         mockMvc.perform(post("/products")
@@ -180,7 +180,7 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                15
+                new BigDecimal("15")
         );
 
         String responseContent = mockMvc.perform(post("/products")
@@ -210,7 +210,7 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                18
+                new BigDecimal("18")
         );
 
         mockMvc.perform(post("/products")

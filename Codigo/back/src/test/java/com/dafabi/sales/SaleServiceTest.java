@@ -123,8 +123,8 @@ class SaleServiceTest {
         assertThat(response.total()).isEqualByComparingTo(new BigDecimal("111.30"));
         assertThat(response.items()).hasSize(2);
 
-        assertThat(chickenStock.getQuantity()).isEqualTo(3);
-        assertThat(farofaStock.getQuantity()).isEqualTo(7);
+        assertThat(chickenStock.getQuantity()).isEqualByComparingTo("3");
+        assertThat(farofaStock.getQuantity()).isEqualByComparingTo("7");
 
         ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
         verify(stockMovementRepository, times(2)).save(movementCaptor.capture());
@@ -154,8 +154,8 @@ class SaleServiceTest {
         ), PaymentMethod.PIX));
 
         assertThat(expiresSoon.getQuantity()).isZero();
-        assertThat(expiresLater.getQuantity()).isEqualTo(2);
-        assertThat(chickenStock.getQuantity()).isEqualTo(2);
+        assertThat(expiresLater.getQuantity()).isEqualByComparingTo("2");
+        assertThat(chickenStock.getQuantity()).isEqualByComparingTo("2");
         ArgumentCaptor<StockMovement> movements = ArgumentCaptor.forClass(StockMovement.class);
         verify(stockMovementRepository, times(2)).save(movements.capture());
         assertThat(movements.getAllValues()).extracting(movement -> movement.getLot().getBatch())
@@ -177,8 +177,8 @@ class SaleServiceTest {
                 new SaleItemRequest(chickenStock.getProductId(), 2)), PaymentMethod.CASH)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("vendável 1, saldo total 5");
-        assertThat(expired.getQuantity()).isEqualTo(3);
-        assertThat(valid.getQuantity()).isEqualTo(1);
+        assertThat(expired.getQuantity()).isEqualByComparingTo("3");
+        assertThat(valid.getQuantity()).isEqualByComparingTo("1");
         verify(stockMovementRepository, never()).save(any());
         verify(saleRepository, never()).save(any());
         verify(cashRegisterService, never()).recordMovement(any(), any(), anyString(), any(), anyString(), anyString(), anyString(), any());
@@ -214,7 +214,7 @@ class SaleServiceTest {
 
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().get(0).quantity()).isEqualByComparingTo(new BigDecimal("3"));
-        assertThat(farofaStock.getQuantity()).isEqualTo(7);
+        assertThat(farofaStock.getQuantity()).isEqualByComparingTo("7");
     }
 
     @Test
@@ -291,7 +291,7 @@ class SaleServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Estoque insuficiente");
 
-        assertThat(chickenStock.getQuantity()).isEqualTo(5);
+        assertThat(chickenStock.getQuantity()).isEqualByComparingTo("5");
         verify(stockMovementRepository, never()).save(any());
         verify(saleRepository, never()).save(any());
     }

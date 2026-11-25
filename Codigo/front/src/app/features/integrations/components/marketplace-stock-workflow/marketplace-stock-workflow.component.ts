@@ -1,3 +1,4 @@
+import { QuantityPipe } from '../../../../shared/pipes/quantity.pipe';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +15,7 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
 
 @Component({
   selector: 'app-marketplace-stock-workflow', standalone: true,
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports:[QuantityPipe,DatePipe, MatButtonModule, MatIconModule, MatProgressBarModule],
   template: `
     <section class="surface surface-body stock-workflow">
       <div class="heading"><div><span class="eyebrow">Vínculo com o estoque</span><h2>Associe os itens exportados aos produtos DaFabi</h2>
@@ -86,7 +87,7 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
           @if(effectError()){<div class="notice error" role="alert">{{ effectError() }}</div>}
           @if(effects().length){
             <div class="effect-list"><div class="effect-head"><span>Item do portal</span><span>Produto DaFabi</span><span>Vendido</span><span>Já aplicado</span><span>Variação</span><span>Situação</span></div>
-              @for(effect of effects();track effect.snapshotId+'-'+(effect.productId||'none')){<div class="effect-row"><span>{{effect.externalItemName}}</span><span>{{effect.productName||'—'}}</span><span>{{effect.reportedQuantity}}</span><span>{{effect.appliedQuantity}}</span><span>{{effect.quantityToApply}}</span><span class="effect-status" [class.pending]="effect.status!=='APPLIED'&&effect.status!=='IGNORED'&&effect.status!=='BEFORE_BASELINE'">{{statusLabel(effect.status)}}<small>{{effect.explanation}}</small></span></div>}
+              @for(effect of effects();track effect.snapshotId+'-'+(effect.productId||'none')){<div class="effect-row"><span>{{effect.externalItemName}}</span><span>{{effect.productName||'—'}}</span><span>{{effect.reportedQuantity}}</span><span>{{effect.appliedQuantity}}</span><span>{{effect.quantityToApply|qty}}</span><span class="effect-status" [class.pending]="effect.status!=='APPLIED'&&effect.status!=='IGNORED'&&effect.status!=='BEFORE_BASELINE'">{{statusLabel(effect.status)}}<small>{{effect.explanation}}</small></span></div>}
             </div>
             @if(hasReturnReview()){<label class="return-confirm"><input type="checkbox" [checked]="confirmReturns()" (change)="confirmReturns.set($any($event.target).checked)"> Confirmei no portal e na operação que os itens cancelados/retificados voltaram fisicamente ao estoque.</label>}
             @if(hasHistoricalReview() && startDate()===endDate()){<label class="return-confirm"><input type="checkbox" [checked]="confirmHistorical()" (change)="confirmHistorical.set($any($event.target).checked)"> Conferi a contagem inicial e os lotes deste dia; estas vendas ainda não foram descontadas do saldo atual.</label>}

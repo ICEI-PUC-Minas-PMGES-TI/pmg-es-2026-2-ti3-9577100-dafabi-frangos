@@ -1,5 +1,6 @@
 package com.dafabi.inventory.dto;
 
+import java.math.BigDecimal;
 import com.dafabi.inventory.domain.LotStatus;
 
 import java.time.LocalDate;
@@ -12,7 +13,7 @@ public record InventoryLotResponse(
         String batch,
         LocalDate receivedAt,
         LocalDate expiry,
-        Integer quantity,
+        BigDecimal quantity,
         LotStatus status
 ) {
 }
