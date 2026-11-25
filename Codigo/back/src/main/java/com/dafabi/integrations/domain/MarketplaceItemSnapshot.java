@@ -31,6 +31,10 @@ public class MarketplaceItemSnapshot {
         this.sourcePayloadJson=sourcePayloadJson;this.updatedAt=updatedAt;
     }
     public void replaceFrom(MarketplaceItemSnapshot o){itemRevenue=o.itemRevenue;soldQuantity=o.soldQuantity;storeName=o.storeName;sourceBatchId=o.sourceBatchId;sourcePayloadJson=o.sourcePayloadJson;updatedAt=o.updatedAt;}
+    public void markAbsentFromCompleteReport(UUID batchId,OffsetDateTime now) {
+        itemRevenue=BigDecimal.ZERO; soldQuantity=BigDecimal.ZERO; sourceBatchId=batchId;
+        sourcePayloadJson="{\"ausenteEmRelatorioDiarioCompleto\":true}"; updatedAt=now;
+    }
     public UUID getId(){return id;} public IntegrationProvider getProvider(){return provider;} public String getExternalStoreId(){return externalStoreId;}
     public LocalDate getBusinessDate(){return businessDate;} public String getExternalItemName(){return externalItemName;}
     public BigDecimal getItemRevenue(){return itemRevenue;} public BigDecimal getSoldQuantity(){return soldQuantity;}

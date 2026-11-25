@@ -18,6 +18,10 @@ public interface InventoryLotRepository extends JpaRepository<InventoryLot, UUID
     @EntityGraph(attributePaths = "product")
     List<InventoryLot> findAllByOrderByExpiryAsc();
 
+    @Query("select lot from InventoryLot lot where lot.product.id = :productId and lot.quantity > 0 " +
+            "order by lot.expiry asc, lot.receivedAt asc, lot.createdAt asc")
+    List<InventoryLot> findAvailableByProduct(@Param("productId") UUID productId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select lot from InventoryLot lot where lot.product.id = :productId and lot.quantity > 0 " +
             "order by lot.expiry asc, lot.receivedAt asc, lot.createdAt asc")

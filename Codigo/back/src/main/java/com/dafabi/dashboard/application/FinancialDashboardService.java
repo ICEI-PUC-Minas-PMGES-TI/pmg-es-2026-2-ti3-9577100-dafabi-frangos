@@ -62,11 +62,19 @@ public class FinancialDashboardService {
         List<Expense> expenses = expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(start, endExclusive).stream()
                 .filter(expense -> expense.getStatus() == ExpenseStatus.CONSOLIDATED)
                 .toList();
-        List<MarketplaceOrder> marketplaceOrders = java.util.Arrays.stream(IntegrationProvider.values())
+        List<MarketplaceOrder> allMarketplaceOrders = java.util.Arrays.stream(IntegrationProvider.values())
                 .flatMap(provider -> marketplaceOrderRepository
                         .findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(provider, start, endExclusive).stream())
-                .filter(order -> "COMPLETED".equals(order.getNormalizedStatus()))
                 .toList();
+        List<MarketplaceOrder> marketplaceOrders = allMarketplaceOrders.stream()
+                .filter(order -> "COMPLETED".equals(order.getNormalizedStatus()) || "PARTIALLY_CANCELLED".equals(order.getNormalizedStatus()))
+                .toList();
+        List<MarketplaceOrder> financiallyClassified = allMarketplaceOrders.stream()
+                .filter(order -> java.util.Set.of("COMPLETED", "PARTIALLY_CANCELLED", "CANCELLED").contains(order.getNormalizedStatus()))
+                .toList();
+        long ordersForReview=allMarketplaceOrders.size()-financiallyClassified.size();
+        long ordersWithoutNet=financiallyClassified.stream().filter(order->order.getNetReported()==null).count();
+        BigDecimal marketplaceNetReported=sum(financiallyClassified.stream().map(MarketplaceOrder::getNetReported).toList());
         List<CashMovement> movements = cashMovementRepository
                 .findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(start, endExclusive);
 
@@ -93,8 +101,10 @@ public class FinancialDashboardService {
                     : o.getMarketingCost() != null && o.getFreeDeliveryCost() != null
                         && o.getLogisticsCost() != null && o.getRefundAmount() != null));
         BigDecimal fees = ifoodFees.add(food99Fees);
-        BigDecimal estimatedResult = revenue.subtract(expenseTotal).subtract(costOfGoodsSold)
-                .subtract(fees).subtract(otherMarketplaceCosts)
+        // The platform's reported net can already include several overlapping fee columns.
+        // Do not subtract those columns a second time.
+        BigDecimal estimatedResult = sum(sales.stream().map(Sale::getTotal).toList()).add(marketplaceNetReported)
+                .subtract(expenseTotal).subtract(costOfGoodsSold)
                 .setScale(2, RoundingMode.HALF_UP);
 
         Map<String, Long> salesByOrigin = new LinkedHashMap<>();
@@ -117,6 +127,14 @@ public class FinancialDashboardService {
                         otherMarketplaceCosts,
                         marketplaceFeesComplete,
                         marketplaceOrders.isEmpty(),
+                        sum(sales.stream().map(Sale::getTotal).toList()),
+                        marketplaceNetReported,
+                        ordersWithoutNet,
+                        ordersForReview,
+                        sales.stream().anyMatch(sale -> sale.getOrigin()!=SaleOrigin.COUNTER
+                                && marketplaceOrders.stream().anyMatch(order ->
+                                    (sale.getOrigin()==SaleOrigin.IFOOD && order.getProvider()==IntegrationProvider.IFOOD)
+                                    || (sale.getOrigin()==SaleOrigin.FOOD_99 && order.getProvider()==IntegrationProvider.FOOD_99))),
                         estimatedResult,
                         sales.size() + marketplaceOrders.size(),
                         originCounts.get(SaleOrigin.COUNTER),

@@ -22,6 +22,11 @@ export interface DashboardView {
   otherMarketplaceCosts: number;
   marketplaceFeesComplete: boolean;
   marketplaceCostComplete: boolean;
+  localSalesRevenue: number | null;
+  marketplaceNetReported: number | null;
+  marketplaceOrdersWithoutNet: number;
+  marketplaceOrdersForReview: number;
+  possibleMarketplaceDuplicates: boolean;
   chartGranularity: 'dia' | 'semana' | 'mês';
   daily: DailyRevenue[];
   recentSales: DashboardRecentSale[];
@@ -40,6 +45,11 @@ export interface ApiFinancialDashboardResponse {
     otherMarketplaceCosts?: number;
     marketplaceFeesComplete?: boolean;
     marketplaceCostComplete?: boolean;
+    localSalesRevenue?: number;
+    marketplaceNetReported?: number;
+    marketplaceOrdersWithoutNet?: number;
+    marketplaceOrdersForReview?: number;
+    possibleMarketplaceDuplicates?: boolean;
     estimatedResult: number;
     salesCount: number;
     counterSales: number;

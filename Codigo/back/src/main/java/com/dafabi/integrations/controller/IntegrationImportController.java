@@ -34,7 +34,9 @@ public class IntegrationImportController {
     public ResponseEntity<ImportBatchResponse> get(@PathVariable UUID id){return ResponseEntity.ok(service.get(id));}
 
     @PostMapping("/imports/{id}/confirm")
-    public ResponseEntity<ImportBatchResponse> confirm(@PathVariable UUID id){return ResponseEntity.ok(service.confirm(id));}
+    public ResponseEntity<ImportBatchResponse> confirm(@PathVariable UUID id,@RequestBody(required=false) ImportConfirmRequest request){
+        return ResponseEntity.ok(service.confirm(id,request==null?null:request.omittedItemIdsToZero()));
+    }
 
     @GetMapping("/{provider}/imports")
     public ResponseEntity<List<ImportBatchResponse>> history(@PathVariable IntegrationProvider provider){return ResponseEntity.ok(service.history(provider));}

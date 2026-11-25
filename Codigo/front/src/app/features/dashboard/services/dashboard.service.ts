@@ -44,6 +44,11 @@ export class DashboardService {
       otherMarketplaceCosts: Number(dashboard.summary.otherMarketplaceCosts ?? 0),
       marketplaceFeesComplete: dashboard.summary.marketplaceFeesComplete !== false,
       marketplaceCostComplete: dashboard.summary.marketplaceCostComplete === true,
+      localSalesRevenue: dashboard.summary.localSalesRevenue == null ? null : Number(dashboard.summary.localSalesRevenue),
+      marketplaceNetReported: dashboard.summary.marketplaceNetReported == null ? null : Number(dashboard.summary.marketplaceNetReported),
+      marketplaceOrdersWithoutNet: Number(dashboard.summary.marketplaceOrdersWithoutNet ?? 0),
+      marketplaceOrdersForReview: Number(dashboard.summary.marketplaceOrdersForReview ?? 0),
+      possibleMarketplaceDuplicates: dashboard.summary.possibleMarketplaceDuplicates === true,
       chartGranularity,
       daily: aggregateRevenue(rawDaily, chartGranularity),
       recentSales: (dashboard.recentSales ?? []).map(sale => ({

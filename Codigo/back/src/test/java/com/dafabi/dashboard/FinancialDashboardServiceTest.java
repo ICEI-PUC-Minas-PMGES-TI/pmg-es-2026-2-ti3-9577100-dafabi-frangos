@@ -187,10 +187,72 @@ class FinancialDashboardServiceTest {
         when(order.getOrderAt()).thenReturn(OffsetDateTime.parse("2026-10-02T12:00:00-03:00"));
         when(order.getItemsValue()).thenReturn(new BigDecimal("100.00"));
         when(order.getFeesAndCommissions()).thenReturn(new BigDecimal(commission));
+        BigDecimal deductions = new BigDecimal(commission).abs().add(serviceFee == null ? BigDecimal.ZERO : new BigDecimal(serviceFee).abs());
+        when(order.getNetReported()).thenReturn(new BigDecimal("100.00").subtract(deductions));
         if (serviceFee != null) {
             when(order.getServiceFee()).thenReturn(new BigDecimal(serviceFee));
         }
         return order;
+    }
+
+    @Test
+    void usesReportedNetOnceAndKeepsCancelledAdjustmentsSeparateFromSales() {
+        MarketplaceOrder completed = marketplaceOrder(IntegrationProvider.FOOD_99, "7.00", null);
+        when(completed.getNetReported()).thenReturn(new BigDecimal("80.00"));
+        when(completed.getMarketingCost()).thenReturn(new BigDecimal("10.00"));
+        when(completed.getFreeDeliveryCost()).thenReturn(new BigDecimal("10.00"));
+        MarketplaceOrder cancelled = mock(MarketplaceOrder.class);
+        when(cancelled.getNormalizedStatus()).thenReturn("CANCELLED");
+        when(cancelled.getNetReported()).thenReturn(new BigDecimal("-8.00"));
+        MarketplaceOrder uncertain = mock(MarketplaceOrder.class);
+        when(uncertain.getNormalizedStatus()).thenReturn("UNKNOWN");
+        when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
+        when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any())).thenReturn(List.of());
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.FOOD_99), any(), any())).thenReturn(List.of(completed,cancelled,uncertain));
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.IFOOD), any(), any())).thenReturn(List.of());
+
+        FinancialDashboardResponse response=service.getSummary("custom",LocalDate.of(2026,10,2),LocalDate.of(2026,10,2));
+        assertThat(response.summary().salesCount()).isEqualTo(1);
+        assertThat(response.summary().revenue()).isEqualByComparingTo("100.00");
+        assertThat(response.summary().marketplaceNetReported()).isEqualByComparingTo("72.00");
+        assertThat(response.summary().estimatedResult()).isEqualByComparingTo("72.00");
+        assertThat(response.summary().marketplaceOrdersForReview()).isEqualTo(1);
+    }
+
+    @Test
+    void missingReportedNetIsNotPretendedToBeZeroWithoutAWarning() {
+        MarketplaceOrder completed=marketplaceOrder(IntegrationProvider.FOOD_99,"7.00",null);
+        when(completed.getNetReported()).thenReturn(null);
+        when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
+        when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any())).thenReturn(List.of());
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.FOOD_99),any(),any())).thenReturn(List.of(completed));
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.IFOOD),any(),any())).thenReturn(List.of());
+
+        FinancialDashboardResponse response=service.getSummary("custom",LocalDate.of(2026,10,2),LocalDate.of(2026,10,2));
+        assertThat(response.summary().marketplaceOrdersWithoutNet()).isEqualTo(1);
+        assertThat(response.summary().estimatedResult()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void warnsWhenSameMarketplaceHasManualAndImportedSales() {
+        Sale manual=new Sale(UUID.randomUUID(),null,null,1L,OffsetDateTime.parse("2026-10-02T12:00:00-03:00"),
+                SaleOrigin.FOOD_99,PaymentMethod.PIX,new BigDecimal("10.00"),new BigDecimal("10.00"),SaleStatus.COMPLETED);
+        when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(),any())).thenReturn(List.of(manual));
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(),any())).thenReturn(List.of());
+        when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(),any())).thenReturn(List.of());
+        MarketplaceOrder imported=marketplaceOrder(IntegrationProvider.FOOD_99,"7.00",null);
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.FOOD_99),any(),any())).thenReturn(List.of(imported));
+        when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(
+                eq(IntegrationProvider.IFOOD),any(),any())).thenReturn(List.of());
+        assertThat(service.getSummary("custom",LocalDate.of(2026,10,2),LocalDate.of(2026,10,2))
+                .summary().possibleMarketplaceDuplicates()).isTrue();
     }
 
     @Test
