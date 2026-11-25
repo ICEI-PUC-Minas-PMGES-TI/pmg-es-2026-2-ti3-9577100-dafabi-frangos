@@ -21,11 +21,20 @@ export class SettingsService {
   async loadStore() {
     const value = await firstValueFrom(this.http.get<StoreSettings>(this.storeEndpoint));
     this.store.set(value);
+    this.applyPreferences(value);
     return value;
+  }
+  /** Carrega as preferências ao entrar no sistema; falhas mantêm os valores padrão. */
+  async loadPreferences(): Promise<void> {
+    try { await this.loadStore(); } catch { /* mantém padrões */ }
+  }
+  private applyPreferences(value: StoreSettings): void {
+    document.body.classList.toggle('compact-tables', !!value.compactMode);
   }
   async saveStore(value: StoreSettings) {
     const saved = await firstValueFrom(this.http.put<StoreSettings>(this.storeEndpoint, value));
     this.store.set(saved);
+    this.applyPreferences(saved);
     return saved;
   }
   listUsers() { return firstValueFrom(this.http.get<User[]>(this.usersEndpoint)); }

@@ -75,6 +75,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/sales").hasAnyRole("ADMIN", "CASHIER")
                         .requestMatchers(HttpMethod.GET, "/sales", "/sales/*").hasAnyRole("ADMIN", "CASHIER")
 
+                        // Preferências da loja: leitura para todos os perfis (PDV e modo compacto)
+                        .requestMatchers(HttpMethod.GET, "/settings/store").hasAnyRole("ADMIN", "CASHIER")
+
                         // Áreas exclusivas da Administradora
                         .requestMatchers(
                                 "/dashboard", "/dashboard/**",

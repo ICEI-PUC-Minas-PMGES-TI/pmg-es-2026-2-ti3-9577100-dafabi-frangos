@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ApiError } from '../../../../core/http/api-error';
 import { PaymentMethod, SaleItem } from '../../../../core/models/domain.models';
 import { PaymentRequest } from '../../models/sales.models';
+import { SettingsService } from '../../../settings/services/settings.service';
 
 export interface PaymentDialogData { total: number; items: SaleItem[]; onConfirm?: (request: PaymentRequest) => Promise<unknown>; }
 export interface PaymentDialogResult { request: PaymentRequest; result?: unknown; }
@@ -44,7 +45,8 @@ export interface PaymentDialogResult { request: PaymentRequest; result?: unknown
 export class PaymentDialogComponent {
   readonly data = inject<PaymentDialogData>(MAT_DIALOG_DATA);
   readonly ref = inject(MatDialogRef<PaymentDialogComponent>);
-  readonly selected = signal<PaymentMethod>('PIX'); readonly processing = signal(false); readonly error = signal<string | null>(null);
+  private readonly settings = inject(SettingsService);
+  readonly selected = signal<PaymentMethod>(this.settings.store().defaultPayment as PaymentMethod || 'PIX'); readonly processing = signal(false); readonly error = signal<string | null>(null);
   readonly received = new FormControl<number | null>(null, [Validators.min(0)]);
   readonly methods = [{ value: 'CASH' as const, label: 'Dinheiro', icon: 'payments' }, { value: 'PIX' as const, label: 'Pix', icon: 'qr_code_2' }, { value: 'DEBIT' as const, label: 'Débito', icon: 'credit_card' }, { value: 'CREDIT' as const, label: 'Crédito', icon: 'credit_score' }];
   change(): number { return (this.received.value ?? 0) - this.data.total; }
