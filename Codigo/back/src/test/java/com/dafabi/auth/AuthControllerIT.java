@@ -241,7 +241,7 @@ class AuthControllerIT {
                 "salePrice", 45.00,
                 "currentCost", 25.00,
                 "unit", "UN",
-                "perishable", true,
+                "perishable", false,
                 "frequent", true,
                 "status", "ACTIVE",
                 "initialStock", 10

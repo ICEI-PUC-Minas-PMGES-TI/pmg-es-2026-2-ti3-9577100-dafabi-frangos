@@ -13,7 +13,7 @@ import { IntegrationsService } from '../../services/integrations.service';
   selector: 'app-integrations-home', standalone: true,
   imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, PageHeaderComponent],
   template: `
-    <app-page-header eyebrow="Administração" title="Integrações" subtitle="Importe e acompanhe os relatórios do iFood e da 99Food." />
+    <app-page-header eyebrow="Integrações" title="Integrações" subtitle="Importe e acompanhe os relatórios do iFood e da 99Food." />
     <div class="notice warning"><mat-icon>info</mat-icon>As importações de pedidos e itens são independentes. Relatórios agregados de itens não criam produtos dentro de pedidos nem movimentam o caixa.</div>
     @if (loading()) { <section class="surface surface-body state"><mat-progress-bar mode="indeterminate"/><span>Carregando integrações…</span></section> }
     @else if (error()) { <div class="notice error" role="alert"><mat-icon>error</mat-icon>{{ error() }} <button mat-button (click)="load()">Tentar novamente</button></div> }

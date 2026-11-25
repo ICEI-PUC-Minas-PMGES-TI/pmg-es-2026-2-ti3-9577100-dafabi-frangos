@@ -11,10 +11,18 @@ public record ProductListResponse(
     CategoryResponse category,
     BigDecimal salePrice,
     BigDecimal currentCost,
-    Integer stockQuantity,
+    BigDecimal stockQuantity,
     String unit,
     String barcode,
     boolean perishable,
     boolean frequent,
-    ProductStatus status) {
+    ProductStatus status,
+    BigDecimal sellableQuantity,
+    BigDecimal expiredQuantity,
+    BigDecimal untrackedQuantity) {
+
+    public ProductListResponse withoutCost() {
+        return new ProductListResponse(id, name, category, salePrice, null, stockQuantity, unit, barcode,
+                perishable, frequent, status, sellableQuantity, expiredQuantity, untrackedQuantity);
+    }
 }

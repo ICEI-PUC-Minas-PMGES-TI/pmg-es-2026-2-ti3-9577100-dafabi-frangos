@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh").permitAll()
-                        .requestMatchers("/auth/logout", "/auth/me").authenticated()
+                        .requestMatchers("/auth/logout", "/auth/me", "/auth/me/password").authenticated()
 
                         // Produtos e categorias
                         .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").hasAnyRole("ADMIN", "CASHIER")
@@ -74,6 +74,9 @@ public class SecurityConfig {
                         .requestMatchers("/refunds", "/refunds/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/sales").hasAnyRole("ADMIN", "CASHIER")
                         .requestMatchers(HttpMethod.GET, "/sales", "/sales/*").hasAnyRole("ADMIN", "CASHIER")
+
+                        // Preferências da loja: leitura para todos os perfis (PDV e modo compacto)
+                        .requestMatchers(HttpMethod.GET, "/settings/store").hasAnyRole("ADMIN", "CASHIER")
 
                         // Áreas exclusivas da Administradora
                         .requestMatchers(

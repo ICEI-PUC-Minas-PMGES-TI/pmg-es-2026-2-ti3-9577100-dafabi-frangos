@@ -1,5 +1,8 @@
 package com.dafabi.products;
 
+import com.dafabi.inventory.repository.StockMovementRepository;
+import com.dafabi.inventory.repository.InventoryLotRepository;
+import com.dafabi.inventory.application.StockAvailabilityService;
 import com.dafabi.products.application.ProductService;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
@@ -38,6 +41,15 @@ class ProductServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private StockAvailabilityService stockAvailabilityService;
+
+    @Mock
+    private InventoryLotRepository inventoryLotRepository;
+
+    @Mock
+    private StockMovementRepository stockMovementRepository;
+
     @Spy
     private ProductMapper productMapper = new ProductMapper();
 
@@ -66,7 +78,9 @@ class ProductServiceTest {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                50
+                new BigDecimal("50"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         when(productRepository.existsByBarcode("7891234567890")).thenReturn(false);
@@ -85,7 +99,7 @@ class ProductServiceTest {
         assertThat(response.perishable()).isTrue();
         assertThat(response.frequent()).isTrue();
         assertThat(response.status()).isEqualTo(ProductStatus.ACTIVE);
-        assertThat(response.stockQuantity()).isEqualTo(50);
+        assertThat(response.stockQuantity()).isEqualByComparingTo("50");
         assertThat(response.category()).isNotNull();
         assertThat(response.category().id()).isEqualTo(categoryId);
         assertThat(response.category().name()).isEqualTo("Frango Congelado");
@@ -106,7 +120,7 @@ class ProductServiceTest {
                 false,
                 false,
                 ProductStatus.ACTIVE,
-                10
+                new BigDecimal("10")
         );
 
         when(productRepository.existsByBarcode("7890000000000")).thenReturn(true);
@@ -132,7 +146,7 @@ class ProductServiceTest {
                 false,
                 false,
                 ProductStatus.ACTIVE,
-                0
+                new BigDecimal("0")
         );
 
         when(categoryRepository.findById(nonExistentId)).thenReturn(Optional.empty());

@@ -29,7 +29,7 @@ public class Supplier {
     @Column(nullable = false, length = 30)
     private String phone;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String email;
 
     @Column(length = 500)
@@ -57,7 +57,7 @@ public class Supplier {
         this.storeId = storeId != null ? storeId : DEFAULT_STORE_ID;
         this.name = name != null ? name.trim() : null;
         this.phone = phone != null ? phone.trim() : null;
-        this.email = email != null ? email.trim().toLowerCase() : null;
+        this.email = email != null && !email.isBlank() ? email.trim().toLowerCase() : null;
         this.notes = (notes != null && !notes.isBlank()) ? notes.trim() : null;
         this.active = active;
         this.createdAt = createdAt != null ? createdAt : OffsetDateTime.now();
@@ -80,7 +80,7 @@ public class Supplier {
             this.updatedAt = this.createdAt;
         }
         if (this.email != null) {
-            this.email = this.email.trim().toLowerCase();
+            this.email = this.email.isBlank() ? null : this.email.trim().toLowerCase();
         }
         if (this.notes != null && this.notes.isBlank()) {
             this.notes = null;
@@ -91,7 +91,7 @@ public class Supplier {
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now();
         if (this.email != null) {
-            this.email = this.email.trim().toLowerCase();
+            this.email = this.email.isBlank() ? null : this.email.trim().toLowerCase();
         }
         if (this.notes != null && this.notes.isBlank()) {
             this.notes = null;
@@ -135,7 +135,7 @@ public class Supplier {
     }
 
     public void setEmail(String email) {
-        this.email = email != null ? email.trim().toLowerCase() : null;
+        this.email = email != null && !email.isBlank() ? email.trim().toLowerCase() : null;
     }
 
     public String getNotes() {

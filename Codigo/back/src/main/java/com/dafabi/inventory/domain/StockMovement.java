@@ -1,5 +1,8 @@
 package com.dafabi.inventory.domain;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
+
 import com.dafabi.products.domain.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,14 +40,14 @@ public class StockMovement {
     @Column(name = "movement_type", nullable = false, length = 40)
     private StockMovementType movementType;
 
-    @Column(name = "previous_quantity", nullable = false)
-    private Integer previousQuantity;
+    @Column(name = "previous_quantity", nullable = false, precision = 14, scale = 3)
+    private BigDecimal previousQuantity;
 
-    @Column(name = "new_quantity", nullable = false)
-    private Integer newQuantity;
+    @Column(name = "new_quantity", nullable = false, precision = 14, scale = 3)
+    private BigDecimal newQuantity;
 
-    @Column(name = "quantity_delta", nullable = false)
-    private Integer quantityDelta;
+    @Column(name = "quantity_delta", nullable = false, precision = 14, scale = 3)
+    private BigDecimal quantityDelta;
 
     @Column(nullable = false, length = 100)
     private String origin;
@@ -67,14 +70,21 @@ public class StockMovement {
     public StockMovement(Product product, InventoryLot lot, StockMovementType movementType,
             int previousQuantity, int newQuantity, String origin, String reason, String performedBy,
             String referenceType, UUID referenceId) {
+        this(product, lot, movementType, Quantities.of(previousQuantity), Quantities.of(newQuantity),
+                origin, reason, performedBy, referenceType, referenceId);
+    }
+
+    public StockMovement(Product product, InventoryLot lot, StockMovementType movementType,
+            BigDecimal previousQuantity, BigDecimal newQuantity, String origin, String reason, String performedBy,
+            String referenceType, UUID referenceId) {
         this.id = UUID.randomUUID();
         this.product = product;
         this.lot = lot;
         this.occurredAt = OffsetDateTime.now();
         this.movementType = movementType;
-        this.previousQuantity = previousQuantity;
-        this.newQuantity = newQuantity;
-        this.quantityDelta = newQuantity - previousQuantity;
+        this.previousQuantity = Quantities.of(previousQuantity);
+        this.newQuantity = Quantities.of(newQuantity);
+        this.quantityDelta = this.newQuantity.subtract(this.previousQuantity);
         this.origin = origin;
         this.reason = reason;
         this.performedBy = performedBy;
@@ -93,9 +103,9 @@ public class StockMovement {
     public InventoryLot getLot() { return lot; }
     public OffsetDateTime getOccurredAt() { return occurredAt; }
     public StockMovementType getMovementType() { return movementType; }
-    public Integer getPreviousQuantity() { return previousQuantity; }
-    public Integer getNewQuantity() { return newQuantity; }
-    public Integer getQuantityDelta() { return quantityDelta; }
+    public BigDecimal getPreviousQuantity() { return previousQuantity; }
+    public BigDecimal getNewQuantity() { return newQuantity; }
+    public BigDecimal getQuantityDelta() { return quantityDelta; }
     public String getOrigin() { return origin; }
     public String getReason() { return reason; }
     public String getPerformedBy() { return performedBy; }

@@ -7,7 +7,7 @@ export type PurchaseStatus = 'REGISTERED' | 'CANCELED';
 
 export interface User { id: string; name: string; email: string; role: Role; active: boolean; passwordHash?: string; }
 export interface Category { id: string; name: string; }
-export interface Product { id: string; name: string; category: string; categoryId?: string; price: number; cost: number; stock: number; unit: string; barcode?: string; perishable: boolean; batch?: string; expiry?: string; status: ProductStatus; frequent?: boolean; version?: number; }
+export interface Product { id: string; name: string; category: string; categoryId?: string; price: number; cost: number; stock: number; sellable?: number; expiredStock?: number; untrackedStock?: number; unit: string; barcode?: string; perishable: boolean; batch?: string; expiry?: string; status: ProductStatus; frequent?: boolean; version?: number; }
 export interface SaleItem { productId: string; productName: string; unitPrice: number; quantity: number; subtotal: number; }
 export interface Payment { method: PaymentMethod; amount: number; received?: number; change?: number; }
 export interface Sale { id: string; externalId?: string; number: string; createdAt: string; operator: string; origin: SaleOrigin; payment: Payment; items: SaleItem[]; gross: number; discount: number; fees: number; net: number; status: SaleStatus; history: string[]; }
@@ -16,7 +16,7 @@ export interface CashMovement { id: string; date: string; description: string; t
 export interface Supplier { id: string; name: string; phone: string; email: string; notes?: string; active: boolean; }
 export interface PurchaseItem { productId: string; productName: string; quantity: number; unitCost: number; total: number; batch?: string; expiry?: string; }
 export interface Purchase { id: string; supplierId: string; supplierName: string; date: string; items: PurchaseItem[]; itemCount: number; total: number; status: PurchaseStatus; paymentStatus?: 'PENDING' | 'PAID'; paymentMethod?: PaymentMethod | null; paidAt?: string | null; }
-export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED'; paidAt?: string | null; }
+export interface Expense { id: string; description: string; category: string; amount: number; date: string; paymentMethod: PaymentMethod; notes?: string; status: 'PENDING' | 'CONSOLIDATED' | 'CANCELED' | 'REVERSED'; paidAt?: string | null; reversedAt?: string | null; reversalReason?: string | null; }
 export interface StockMovement { id: string; productId: string; productName: string; date: string; previousQuantity: number; newQuantity: number; difference: number; origin: string; user: string; reason: string; }
 export interface PerishableProduct { id: string; productId: string; productName: string; batch: string; receivedAt: string; expiry: string; quantity: number; status: 'VALID' | 'EXPIRED' | 'USED'; }
 export interface Integration { id: 'IFOOD' | '99FOOD'; name: string; status: 'CONNECTED' | 'UNAVAILABLE' | 'PENDING'; lastSync?: string; importedOrders: number; }

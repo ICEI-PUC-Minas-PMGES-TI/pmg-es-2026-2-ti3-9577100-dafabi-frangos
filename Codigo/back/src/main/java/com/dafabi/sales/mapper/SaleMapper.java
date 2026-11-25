@@ -29,7 +29,10 @@ public class SaleMapper {
                 sale.getItems().stream()
                         .map(this::toItemResponse)
                         .toList(),
-                sale.getOperatorName()
+                sale.getOperatorName(),
+                sale.getAmountReceived() == null ? null : normalize(sale.getAmountReceived()),
+                sale.getAmountReceived() == null ? null
+                        : normalize(sale.getAmountReceived().subtract(sale.getTotal()).max(java.math.BigDecimal.ZERO))
         );
     }
 

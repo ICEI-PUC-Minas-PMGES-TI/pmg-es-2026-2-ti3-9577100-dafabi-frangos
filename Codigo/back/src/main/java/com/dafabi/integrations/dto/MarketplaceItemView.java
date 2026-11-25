@@ -9,6 +9,7 @@ public record MarketplaceItemView(
         UUID id,
         IntegrationProvider provider,
         String externalStoreId,
+        String storeName,
         LocalDate date,
         String externalItemName,
         BigDecimal revenue,

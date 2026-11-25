@@ -20,5 +20,7 @@ public record ExpenseResponse(
         UUID userId,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        OffsetDateTime paidAt
+        OffsetDateTime paidAt,
+        OffsetDateTime reversedAt,
+        String reversalReason
 ) {}

@@ -84,11 +84,27 @@ class MarketplacePartialStockTest {
         var preview=service.preview(provider,"loja",date,date);
         assertThat(preview).extracting("status").containsExactly("PENDING","INSUFFICIENT_STOCK","UNMAPPED");
         apply(false);
-        assertThat(stock.getQuantity()).isEqualTo(1);
+        assertThat(stock.getQuantity()).isEqualByComparingTo("1");
         assertThat(applied).hasSize(1);
         apply(false);
-        assertThat(stock.getQuantity()).isEqualTo(1);
+        assertThat(stock.getQuantity()).isEqualByComparingTo("1");
         assertThat(applied).hasSize(1);
+    }
+
+    @Test
+    void halfChickenDeductsFractionalQuantityFromStock() {
+        var chicken=product("Frango",5,false);
+        var halfChicken=item("Meio Frango",3);
+        when(mappings.findByProviderAndExternalStoreIdAndExternalItemNameOrderByProductId(provider,"loja","Meio Frango"))
+                .thenReturn(List.of(new MarketplaceProductMapping(provider,"loja","Meio Frango",
+                        chicken.getProduct().getId(),new BigDecimal("0.5"))));
+        report(halfChicken);
+
+        var preview=service.preview(provider,"loja",date,date);
+        assertThat(preview).extracting("status").containsExactly("PENDING");
+        assertThat(preview.get(0).quantityToApply()).isEqualByComparingTo("1.5");
+        apply(false);
+        assertThat(chicken.getQuantity()).isEqualByComparingTo("3.5");
     }
 
     @Test
@@ -101,9 +117,9 @@ class MarketplacePartialStockTest {
         assertThat(service.preview(provider,"loja",date,date)).extracting("status")
                 .containsExactly("ITEM_REVIEW","INSUFFICIENT_STOCK","PENDING");
         apply(false);
-        assertThat(first.getQuantity()).isEqualTo(5);
+        assertThat(first.getQuantity()).isEqualByComparingTo("5");
         assertThat(second.getQuantity()).isZero();
-        assertThat(independent.getQuantity()).isEqualTo(2);
+        assertThat(independent.getQuantity()).isEqualByComparingTo("2");
     }
 
     @Test
@@ -116,11 +132,11 @@ class MarketplacePartialStockTest {
         applied.put(returnItem.getId()+":"+returned.getProduct().getId(),existing);
 
         apply(false);
-        assertThat(returned.getQuantity()).isEqualTo(2);
-        assertThat(sold.getQuantity()).isEqualTo(2);
+        assertThat(returned.getQuantity()).isEqualByComparingTo("2");
+        assertThat(sold.getQuantity()).isEqualByComparingTo("2");
         apply(true);
-        assertThat(returned.getQuantity()).isEqualTo(4);
-        assertThat(sold.getQuantity()).isEqualTo(2);
+        assertThat(returned.getQuantity()).isEqualByComparingTo("4");
+        assertThat(sold.getQuantity()).isEqualByComparingTo("2");
     }
 
     @Test
@@ -130,7 +146,7 @@ class MarketplacePartialStockTest {
         report(item("Perecível",2),item("Avulso",1));
         assertThat(service.preview(provider,"loja",date,date)).extracting("status").containsExactly("LOT_REVIEW","PENDING");
         apply(false);
-        assertThat(perishable.getQuantity()).isEqualTo(10);
-        assertThat(independent.getQuantity()).isEqualTo(3);
+        assertThat(perishable.getQuantity()).isEqualByComparingTo("10");
+        assertThat(independent.getQuantity()).isEqualByComparingTo("3");
     }
 }

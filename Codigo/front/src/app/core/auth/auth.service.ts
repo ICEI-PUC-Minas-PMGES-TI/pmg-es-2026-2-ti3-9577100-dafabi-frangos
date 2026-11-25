@@ -41,6 +41,8 @@ export class AuthService {
   readonly accessToken = computed<string | null>(() => this.sessionState()?.accessToken ?? null);
   readonly isAuthenticated = computed(() => !!this.sessionState()?.accessToken && !!this.sessionState()?.user);
   readonly isAdmin = computed(() => this.currentUser()?.role === 'ADMIN');
+  /** Tela inicial de cada perfil: o Operador de caixa não acessa o dashboard. */
+  readonly homeRoute = computed(() => this.isAdmin() ? '/app/dashboard' : '/app/vendas/nova');
 
   async login(identifier: string, password: string): Promise<User> {
     const response = await firstValueFrom(

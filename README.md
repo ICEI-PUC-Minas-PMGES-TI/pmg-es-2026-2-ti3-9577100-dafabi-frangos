@@ -37,7 +37,7 @@ Os documentos da Sprint 0 estão disponíveis em [`Artefatos/Sprint-0`](./Artefa
 
 ## Instruções de utilização
 
-A primeira versão navegável está separada em frontend e backend. A interface Angular está em [`Codigo/front`](./Codigo/front) e a API Spring Boot em [`Codigo/back`](./Codigo/back). Nesta entrega, Produtos já utiliza a API e PostgreSQL; os demais domínios ainda usam dados de demonstração até que suas APIs sejam implementadas. A autenticação da interface também continua mockada, pois a API ainda não oferece autenticação.
+O sistema está separado em frontend e backend. A interface Angular está em [`Codigo/front`](./Codigo/front) e a API Spring Boot com PostgreSQL em [`Codigo/back`](./Codigo/back). Todos os módulos (PDV, histórico, caixa, produtos, estoque e lotes, compras, fornecedores, despesas, estornos, integrações iFood e 99Food, dashboard e configurações) usam a API. O login é real: a API emite tokens JWT e aplica as permissões de cada perfil (Administradora e Operador de caixa).
 
 ```bash
 cd Codigo/front

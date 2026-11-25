@@ -1,5 +1,7 @@
 package com.dafabi.sales.application;
 
+import java.util.Optional;
+import com.dafabi.shared.Quantities;
 import com.dafabi.cash.application.CashRegisterService;
 import com.dafabi.cash.domain.CashMovementDirection;
 import com.dafabi.cash.domain.CashRegister;
@@ -74,15 +76,46 @@ public class SaleService {
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request) {
-        return createInternal(request, null);
+        return createInternal(request, null, null);
     }
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request, RequestUser user) {
-        return createInternal(request, user);
+        return create(request, user, null).sale();
     }
 
-    private SaleResponse createInternal(CreateSaleRequest request, RequestUser user) {
+    /**
+     * Registra a venda uma única vez por chave de idempotência: se a mesma tentativa
+     * chegar de novo (rede instável, clique repetido), devolve a venda já gravada.
+     */
+    @Transactional
+    public SaleCreation create(CreateSaleRequest request, RequestUser user, String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        if (key != null) {
+            Optional<Sale> previous = saleRepository.findByIdempotencyKey(key);
+            if (previous.isPresent()) {
+                return new SaleCreation(saleMapper.toResponse(previous.get()), false);
+            }
+        }
+        return new SaleCreation(createInternal(request, user, key), true);
+    }
+
+    public record SaleCreation(SaleResponse sale, boolean created) {
+    }
+
+    private String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return null;
+        }
+        String normalized = idempotencyKey.trim();
+        if (normalized.length() > 100) {
+            throw new BusinessException("INVALID_IDEMPOTENCY_KEY",
+                    "A chave de idempotência deve ter no máximo 100 caracteres.");
+        }
+        return normalized;
+    }
+
+    private SaleResponse createInternal(CreateSaleRequest request, RequestUser user, String idempotencyKey) {
         UUID storeId = request.storeId() != null ? request.storeId() : CashRegister.DEFAULT_STORE_ID;
 
         CashRegister register = cashRegisterRepository
@@ -95,9 +128,9 @@ public class SaleService {
         UUID operatorId = user == null ? resolveOperator(register, request.operatorId()) : user.id();
         String operatorName = user == null ? register.getOperatorName() : user.name();
 
-        Map<UUID, Integer> quantitiesByProduct = new TreeMap<>();
+        Map<UUID, BigDecimal> quantitiesByProduct = new TreeMap<>();
         for (SaleItemRequest item : request.items()) {
-            quantitiesByProduct.merge(item.productId(), item.quantity(), Integer::sum);
+            quantitiesByProduct.merge(item.productId(), Quantities.of(item.quantity()), BigDecimal::add);
         }
 
         Sale sale = new Sale(
@@ -112,11 +145,15 @@ public class SaleService {
                 BigDecimal.ZERO,
                 SaleStatus.COMPLETED);
         sale.setOperatorName(operatorName);
+        sale.setIdempotencyKey(idempotencyKey);
+        if (request.paymentMethod() == PaymentMethod.CASH && request.amountReceived() != null) {
+            sale.setAmountReceived(request.amountReceived().setScale(2, RoundingMode.HALF_UP));
+        }
 
         BigDecimal subtotal = BigDecimal.ZERO;
-        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+        for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {
             UUID productId = entry.getKey();
-            int quantity = entry.getValue();
+            BigDecimal quantity = entry.getValue();
 
             ProductStock stock = productStockRepository.findByProductIdForUpdate(productId)
                     .orElseThrow(() -> new ResourceNotFoundException("Produto", productId));
@@ -128,22 +165,22 @@ public class SaleService {
                         String.format("O produto \"%s\" está inativo e não pode ser vendido.", product.getName()));
             }
 
-            int previousQuantity = stock.getQuantity();
-            if (quantity > previousQuantity) {
+            BigDecimal previousQuantity = stock.getQuantity();
+            if (quantity.compareTo(previousQuantity) > 0) {
                 throw new BusinessException(
                         "INSUFFICIENT_STOCK",
-                        String.format("Estoque insuficiente para \"%s\": solicitado %d, disponível %d.",
-                                product.getName(), quantity, previousQuantity),
+                        String.format("Estoque insuficiente para \"%s\": solicitado %s, disponível %s.",
+                                product.getName(), Quantities.format(quantity), Quantities.format(previousQuantity)),
                         HttpStatus.CONFLICT);
             }
 
             BigDecimal unitPrice = product.getSalePrice().setScale(2, RoundingMode.HALF_UP);
-            BigDecimal itemSubtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
-            sale.addItem(new SaleItem(null, sale, product, BigDecimal.valueOf(quantity), unitPrice,
+            BigDecimal itemSubtotal = unitPrice.multiply(quantity).setScale(2, RoundingMode.HALF_UP);
+            sale.addItem(new SaleItem(null, sale, product, quantity, unitPrice,
                     product.getCurrentCost().setScale(2, RoundingMode.HALF_UP), itemSubtotal));
             subtotal = subtotal.add(itemSubtotal);
 
-            int newQuantity = previousQuantity - quantity;
+            BigDecimal newQuantity = previousQuantity.subtract(quantity);
             consumeLotsForSale(product, quantity, previousQuantity, newQuantity, sale, operatorName);
             stock.setQuantity(newQuantity);
         }
@@ -235,34 +272,34 @@ public class SaleService {
                 origin, origin != null, status, status != null, payment, payment != null, operator, operator != null);
     }
 
-    private void consumeLotsForSale(Product product, int quantity, int aggregateBefore, int aggregateAfter,
-                                    Sale sale, String operator) {
-        int remaining = quantity;
-        int aggregateBalance = aggregateBefore;
+    private void consumeLotsForSale(Product product, BigDecimal quantity, BigDecimal aggregateBefore,
+                                    BigDecimal aggregateAfter, Sale sale, String operator) {
+        BigDecimal remaining = quantity;
+        BigDecimal aggregateBalance = aggregateBefore;
         if (product.isPerishable()) {
             LocalDate businessDate = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
             List<InventoryLot> validLots = inventoryLotRepository.findAvailableByProductForUpdate(product.getId())
                     .stream().filter(lot -> !lot.getExpiry().isBefore(businessDate)).toList();
-            int sellable = validLots.stream().mapToInt(InventoryLot::getQuantity).sum();
-            if (remaining > sellable) {
+            BigDecimal sellable = validLots.stream().map(InventoryLot::getQuantity).reduce(Quantities.ZERO, BigDecimal::add);
+            if (remaining.compareTo(sellable) > 0) {
                 throw new BusinessException("INSUFFICIENT_SELLABLE_STOCK",
-                        String.format("Estoque vendável insuficiente para \"%s\": solicitado %d, vendável %d, saldo total %d. O saldo pode incluir lotes vencidos ou sem rastreabilidade.",
-                                product.getName(), quantity, sellable, aggregateBefore), HttpStatus.CONFLICT);
+                        String.format("Estoque vendável insuficiente para \"%s\": solicitado %s, vendável %s, saldo total %s. O saldo pode incluir lotes vencidos ou sem rastreabilidade.",
+                                product.getName(), Quantities.format(quantity), Quantities.format(sellable),
+                                Quantities.format(aggregateBefore)), HttpStatus.CONFLICT);
             }
             for (InventoryLot lot : validLots) {
-                if (remaining == 0) break;
-                int consumed = Math.min(remaining, lot.getQuantity());
-                int lotBefore = lot.getQuantity();
-                lot.setQuantity(lotBefore - consumed);
-                remaining -= consumed;
-                int nextBalance = aggregateBalance - consumed;
+                if (remaining.signum() == 0) break;
+                BigDecimal consumed = Quantities.min(remaining, lot.getQuantity());
+                lot.setQuantity(lot.getQuantity().subtract(consumed));
+                remaining = remaining.subtract(consumed);
+                BigDecimal nextBalance = aggregateBalance.subtract(consumed);
                 stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.COUNTER_SALE,
                         aggregateBalance, nextBalance, "Venda balcão", "Venda nº " + sale.getSaleNumber(),
                         operator, SALE_REFERENCE_TYPE, sale.getId()));
                 aggregateBalance = nextBalance;
             }
         }
-        if (remaining > 0) {
+        if (remaining.signum() > 0) {
             stockMovementRepository.save(new StockMovement(product, null, StockMovementType.COUNTER_SALE,
                     aggregateBalance, aggregateAfter, "Venda balcão", "Venda nº " + sale.getSaleNumber(),
                     operator, SALE_REFERENCE_TYPE, sale.getId()));

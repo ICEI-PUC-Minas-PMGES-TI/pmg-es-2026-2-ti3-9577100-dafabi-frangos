@@ -10,17 +10,17 @@ Aplicação Angular do sistema de gestão DaFabi Frangos. O projeto organiza a i
 - formulários reativos, signals e interceptor HTTP;
 - arquitetura por features.
 
-## O que já usa a API
+## Integração com a API
 
-O módulo **Produtos** está integrado ao backend Spring Boot em `../back`:
+Todas as telas usam o backend Spring Boot em `../back`, pela base `/api/v1`:
 
-- listagem, pesquisa e filtro de produtos;
-- categorias ativas;
-- inclusão, edição e inativação;
-- consulta por código de barras;
-- mensagens de carregamento, vazio, erro e sucesso.
+- login com JWT e renovação automática da sessão; as rotas respeitam o perfil (Administradora ou Operador de caixa);
+- PDV, histórico e detalhe de vendas, com chave de idempotência para não duplicar vendas;
+- caixa (abertura, movimentações e fechamento), estornos e despesas;
+- produtos, estoque com lotes de perecíveis (saldo vendável, vencido e sem lote) e quantidades decimais;
+- compras, fornecedores, integrações iFood e 99Food, dashboard financeiro e configurações da loja.
 
-Os demais módulos continuam em modo de demonstração com dados locais enquanto suas respectivas APIs não existirem. O login também permanece mockado nesta primeira versão, porque o backend ainda não possui autenticação. Isso não deve ser usado como mecanismo de segurança em produção.
+Em produção, a URL da API é definida em `src/environments/environment.ts`.
 
 ## Pré-requisitos
 
@@ -62,7 +62,7 @@ O resultado é gerado em `../../dist/front`.
 | Administradora | `admin` | `admin123` |
 | Operador de caixa | `caixa` | `caixa123` |
 
-As credenciais são exclusivamente do mock de interface; não são enviadas ao backend.
+São os usuários de demonstração criados no banco para a fase de testes (professores e equipe). Antes do uso real na loja, eles devem ser removidos e as senhas trocadas.
 
 ## Arquitetura
 

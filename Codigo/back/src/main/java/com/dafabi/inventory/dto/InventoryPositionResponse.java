@@ -9,11 +9,18 @@ public record InventoryPositionResponse(
         UUID productId,
         String productName,
         String categoryName,
-        Integer stockQuantity,
+        BigDecimal stockQuantity,
         String unit,
         BigDecimal currentCost,
         boolean perishable,
         ProductStatus productStatus,
-        StockMovementResponse lastMovement
+        StockMovementResponse lastMovement,
+        BigDecimal sellableQuantity,
+        BigDecimal expiredQuantity,
+        BigDecimal untrackedQuantity
 ) {
+    public InventoryPositionResponse withoutCost() {
+        return new InventoryPositionResponse(productId, productName, categoryName, stockQuantity, unit, null,
+                perishable, productStatus, lastMovement, sellableQuantity, expiredQuantity, untrackedQuantity);
+    }
 }

@@ -1,5 +1,7 @@
 package com.dafabi.inventory.repository;
 
+import java.util.Collection;
+import java.time.LocalDate;
 import com.dafabi.inventory.domain.InventoryLot;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,6 +23,15 @@ public interface InventoryLotRepository extends JpaRepository<InventoryLot, UUID
     @Query("select lot from InventoryLot lot where lot.product.id = :productId and lot.quantity > 0 " +
             "order by lot.expiry asc, lot.receivedAt asc, lot.createdAt asc")
     List<InventoryLot> findAvailableByProduct(@Param("productId") UUID productId);
+
+    /** Por produto: [id, saldo em lotes válidos na data, saldo em lotes vencidos]. */
+    @Query("select lot.product.id, " +
+            "sum(case when lot.expiry >= :today then lot.quantity else 0 end), " +
+            "sum(case when lot.expiry < :today then lot.quantity else 0 end) " +
+            "from InventoryLot lot where lot.quantity > 0 and lot.product.id in :productIds " +
+            "group by lot.product.id")
+    List<Object[]> summarizeAvailableByProduct(@Param("productIds") Collection<UUID> productIds,
+                                               @Param("today") LocalDate today);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select lot from InventoryLot lot where lot.product.id = :productId and lot.quantity > 0 " +

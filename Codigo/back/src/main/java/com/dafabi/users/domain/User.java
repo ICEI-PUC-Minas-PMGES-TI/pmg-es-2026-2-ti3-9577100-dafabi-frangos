@@ -62,6 +62,19 @@ public class User {
         return email;
     }
 
+    public void rename(String name) {
+        this.name = name;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void replaceRoles(Set<Role> roles) {
+        this.roles.clear();
+        this.roles.addAll(roles);
+    }
+
     public String getPassword() {
         return password;
     }

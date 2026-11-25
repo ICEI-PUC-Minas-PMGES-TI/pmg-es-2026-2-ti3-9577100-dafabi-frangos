@@ -24,6 +24,9 @@ export interface ApiInventoryPosition {
   perishable: boolean;
   productStatus: ProductStatus;
   lastMovement: ApiStockMovement | null;
+  sellableQuantity?: number;
+  expiredQuantity?: number;
+  untrackedQuantity?: number;
 }
 
 export interface ApiInventoryLot {
@@ -42,6 +45,9 @@ export interface ApiStockAdjustmentRequest {
   newQuantity: number;
   reason: string;
   performedBy?: string;
+  lotId?: string;
+  batch?: string;
+  expiry?: string;
 }
 
 export interface ApiCreateInventoryLotRequest {

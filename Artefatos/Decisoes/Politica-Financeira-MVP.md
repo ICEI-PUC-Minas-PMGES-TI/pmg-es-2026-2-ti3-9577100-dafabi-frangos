@@ -27,7 +27,7 @@ Manter compras, despesas, caixa e resultado financeiro coerentes sem contar a me
 - Nova despesa começa pendente e ainda não reduz o resultado nem o caixa.
 - Ao marcar como paga/consolidada, seu valor reduz o resultado na data da despesa.
 - Despesa consolidada em dinheiro gera uma saída no caixa aberto; outras formas de pagamento não alteram o saldo físico do caixa.
-- Despesa consolidada não pode ser editada nem cancelada nesta versão. A correção posterior exige um lançamento compensatório/histórico próprio.
+- Despesa consolidada não pode ser editada nem cancelada. A correção é feita por **estorno do pagamento**, com motivo obrigatório: a despesa passa a "Pagamento estornado", deixa de reduzir o resultado e, se foi paga em dinheiro, o valor volta ao caixa aberto como entrada. O registro original e a data do estorno ficam no histórico.
 - Despesa pendente pode ser editada ou cancelada sem gerar movimentação de caixa.
 
 ## Fórmula do resultado estimado

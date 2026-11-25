@@ -60,6 +60,8 @@ class SaleRefundControllerIT {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtService jwtService;
+    @Autowired private com.dafabi.users.repository.UserRepository testUserRepository;
+    @Autowired private com.dafabi.users.repository.RoleRepository testRoleRepository;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private SaleRepository saleRepository;
     @Autowired private SaleRefundRepository saleRefundRepository;
@@ -96,7 +98,7 @@ class SaleRefundControllerIT {
     @DisplayName("POST /sales/{id}/refund deve estornar a venda revertendo caixa e estoque na mesma operação")
     void shouldRefundSaleReversingCashAndStock() throws Exception {
         String saleId = createSale(PaymentMethod.CASH);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
 
         mockMvc.perform(asAdmin(post("/sales/{id}/refund", saleId))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,8 +116,8 @@ class SaleRefundControllerIT {
 
         Sale sale = saleRepository.findById(UUID.fromString(saleId)).orElseThrow();
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.REFUNDED);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
         assertThat(stockMovementRepository.findAll())
                 .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
                 .hasSize(2);
@@ -159,8 +161,8 @@ class SaleRefundControllerIT {
                 .andExpect(jsonPath("$.code", is("SALE_ALREADY_REFUNDED")));
 
         assertThat(saleRefundRepository.count()).isEqualTo(1);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
         assertThat(stockMovementRepository.findAll())
                 .filteredOn(movement -> movement.getMovementType() == StockMovementType.REFUND)
                 .hasSize(2);
@@ -184,7 +186,7 @@ class SaleRefundControllerIT {
                 .andExpect(jsonPath("$.code", is("SALE_CANCELLED")));
 
         assertThat(saleRefundRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test
@@ -212,7 +214,7 @@ class SaleRefundControllerIT {
         assertThat(saleRefundRepository.count()).isZero();
         assertThat(saleRepository.findById(UUID.fromString(saleId)).orElseThrow().getStatus())
                 .isEqualTo(SaleStatus.COMPLETED);
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test
@@ -289,6 +291,15 @@ class SaleRefundControllerIT {
 
     private MockHttpServletRequestBuilder withToken(MockHttpServletRequestBuilder builder,
                                                     UUID userId, String email, String name, UserRole role) {
+        // O filtro JWT só aceita tokens de usuários cadastrados e ativos.
+        if (!testUserRepository.existsById(userId)) {
+            String roleName = role == UserRole.ADMIN ? "ROLE_ADMIN" : "ROLE_CASHIER";
+            com.dafabi.users.domain.Role persistedRole = testRoleRepository.findAll().stream()
+                    .filter(existing -> roleName.equals(existing.getName())).findFirst()
+                    .orElseGet(() -> testRoleRepository.save(new com.dafabi.users.domain.Role(null, roleName)));
+            testUserRepository.save(new com.dafabi.users.domain.User(userId, email, "{noop}teste", name,
+                    new java.util.HashSet<>(java.util.Set.of(persistedRole))));
+        }
         String token = jwtService.generateAccessToken(userId, email, name, role, Duration.ofMinutes(5));
         return builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
     }
@@ -324,5 +335,13 @@ class SaleRefundControllerIT {
         inventoryLotRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
+    }
+
+    @Test
+    void tokenOfUserThatNoLongerExistsIsRejected() throws Exception {
+        String token = jwtService.generateAccessToken(UUID.randomUUID(), "removido@dafabi.com.br", "Removido",
+                UserRole.ADMIN, Duration.ofMinutes(5));
+        mockMvc.perform(get("/refunds").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 }

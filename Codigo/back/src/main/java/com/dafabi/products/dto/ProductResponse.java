@@ -17,9 +17,17 @@ public record ProductResponse(
         boolean perishable,
         boolean frequent,
         ProductStatus status,
-        Integer stockQuantity,
+        BigDecimal stockQuantity,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        Long version
+        Long version,
+        BigDecimal sellableQuantity,
+        BigDecimal expiredQuantity,
+        BigDecimal untrackedQuantity
 ) {
+    public ProductResponse withoutCost() {
+        return new ProductResponse(id, category, name, salePrice, null, unit, barcode, perishable, frequent,
+                status, stockQuantity, createdAt, updatedAt, version, sellableQuantity, expiredQuantity,
+                untrackedQuantity);
+    }
 }

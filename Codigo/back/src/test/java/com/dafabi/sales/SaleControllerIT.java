@@ -105,8 +105,8 @@ class SaleControllerIT {
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(3);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(7);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("7");
 
         String id = objectMapper.readTree(body).get("id").asText();
         mockMvc.perform(get("/sales/{id}", id))
@@ -130,8 +130,8 @@ class SaleControllerIT {
                 .andExpect(jsonPath("$.code", is("INSUFFICIENT_STOCK")));
 
         assertThat(saleRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
-        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
+        assertThat(productStockRepository.findById(farofa.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("10");
     }
 
     @Test
@@ -148,7 +148,7 @@ class SaleControllerIT {
                 .andExpect(jsonPath("$.code", is("CASH_CLOSED")));
 
         assertThat(saleRepository.count()).isZero();
-        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("5");
     }
 
     @Test
@@ -243,5 +243,32 @@ class SaleControllerIT {
         inventoryLotRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
+    }
+
+    @Test
+    void repeatedSaleWithSameIdempotencyKeyIsRecordedOnce() throws Exception {
+        openCashRegister();
+        CreateSaleRequest request = new CreateSaleRequest(List.of(
+                new SaleItemRequest(chicken.getId(), 1)
+        ), PaymentMethod.PIX, null, UUID.randomUUID());
+        String key = UUID.randomUUID().toString();
+
+        String first = mockMvc.perform(post("/sales")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String second = mockMvc.perform(post("/sales")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(objectMapper.readTree(second).get("id").asText())
+                .isEqualTo(objectMapper.readTree(first).get("id").asText());
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("4");
     }
 }

@@ -1,5 +1,17 @@
 package com.dafabi.products.application;
 
+import java.time.ZoneId;
+import java.time.LocalDate;
+import com.dafabi.inventory.repository.StockMovementRepository;
+import com.dafabi.inventory.repository.InventoryLotRepository;
+import com.dafabi.inventory.domain.StockMovementType;
+import com.dafabi.inventory.domain.StockMovement;
+import com.dafabi.inventory.domain.InventoryLot;
+import java.util.Map;
+import com.dafabi.inventory.application.StockAvailabilityService;
+import com.dafabi.inventory.application.StockAvailability;
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -27,16 +39,27 @@ import java.util.UUID;
 @Service
 public class ProductService {
 
+    private static final ZoneId STORE_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final StockAvailabilityService stockAvailabilityService;
+    private final InventoryLotRepository inventoryLotRepository;
+    private final StockMovementRepository stockMovementRepository;
 
     public ProductService(ProductRepository productRepository,
             CategoryRepository categoryRepository,
-            ProductMapper productMapper) {
+            ProductMapper productMapper,
+            StockAvailabilityService stockAvailabilityService,
+            InventoryLotRepository inventoryLotRepository,
+            StockMovementRepository stockMovementRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productMapper = productMapper;
+        this.stockAvailabilityService = stockAvailabilityService;
+        this.inventoryLotRepository = inventoryLotRepository;
+        this.stockMovementRepository = stockMovementRepository;
     }
 
     @Transactional
@@ -60,16 +83,32 @@ public class ProductService {
 
         Product product = productMapper.toEntity(request, category);
 
-        int initialQuantity = request.initialStock() != null
-                ? request.initialStock()
-                : 0;
+        BigDecimal initialQuantity = Quantities.of(request.initialStock());
+        boolean needsInitialLot = product.isPerishable() && initialQuantity.signum() > 0;
+        if (needsInitialLot) {
+            validateInitialLot(request);
+        }
 
         ProductStock stock = new ProductStock(product, initialQuantity);
         product.setStock(stock);
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        if (initialQuantity.signum() > 0) {
+            InventoryLot lot = null;
+            if (needsInitialLot) {
+                LocalDate today = LocalDate.now(STORE_ZONE);
+                lot = new InventoryLot(saved, request.initialBatch().trim(), today, request.initialExpiry(), initialQuantity);
+                inventoryLotRepository.save(lot);
+            }
+            stockMovementRepository.save(new StockMovement(saved, lot,
+                    needsInitialLot ? StockMovementType.LOT_RECEIPT : StockMovementType.INITIAL_BALANCE,
+                    Quantities.ZERO, initialQuantity, "Cadastro do produto",
+                    needsInitialLot ? "Estoque inicial no lote " + lot.getBatch() : "Estoque inicial",
+                    "Cadastro de produto", "PRODUCT", saved.getId()));
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +116,7 @@ public class ProductService {
         Product product = productRepository.findWithCategoryAndStockById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", id));
 
-        return productMapper.toResponse(product);
+        return toResponse(product);
     }
 
     @Transactional(readOnly = true)
@@ -137,8 +176,9 @@ public class ProductService {
                                     search)));
         }
 
-        return productRepository.findAll(specification, pageable)
-                .map(productMapper::toListResponse);
+        Page<Product> products = productRepository.findAll(specification, pageable);
+        Map<UUID, StockAvailability> availability = stockAvailabilityService.forProducts(products.getContent());
+        return products.map(product -> productMapper.toListResponse(product, availability.get(product.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -151,7 +191,7 @@ public class ProductService {
         Product product = productRepository.findByBarcode(normalizedBarcode)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", normalizedBarcode));
 
-        return productMapper.toResponse(product);
+        return toResponse(product);
     }
 
     @Transactional
@@ -176,11 +216,18 @@ public class ProductService {
                     .orElseThrow(() -> new ResourceNotFoundException("Categoria", request.categoryId()));
         }
 
+        BigDecimal currentStock = product.getStock() == null ? Quantities.ZERO : product.getStock().getQuantity();
+        if (currentStock.signum() > 0 && request.currentCost() != null && product.getCurrentCost() != null
+                && request.currentCost().compareTo(product.getCurrentCost()) != 0) {
+            throw new BusinessException("COST_MANAGED_BY_PURCHASES",
+                    "Com estoque disponível, o custo é o custo médio calculado pelas compras e não pode ser alterado à mão.");
+        }
+
         productMapper.updateEntity(product, request, category);
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -192,7 +239,21 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
 
-        return productMapper.toResponse(saved);
+        return toResponse(saved);
+    }
+
+    private void validateInitialLot(CreateProductRequest request) {
+        if (request.initialBatch() == null || request.initialBatch().isBlank() || request.initialExpiry() == null) {
+            throw new BusinessException("INITIAL_LOT_REQUIRED",
+                    "Produto perecível com estoque inicial precisa de lote e validade.");
+        }
+        if (request.initialExpiry().isBefore(LocalDate.now(STORE_ZONE))) {
+            throw new BusinessException("INVALID_EXPIRY", "A validade do lote inicial deve ser hoje ou uma data futura.");
+        }
+    }
+
+    private ProductResponse toResponse(Product product) {
+        return productMapper.toResponse(product, stockAvailabilityService.forProduct(product));
     }
 
     private String normalizeBarcode(String barcode) {

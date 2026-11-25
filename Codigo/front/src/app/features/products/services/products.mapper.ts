@@ -10,7 +10,10 @@ export function toProduct(api: ApiProduct | ApiProductListItem): Product {
     categoryId: api.category?.id,
     price: Number(api.salePrice),
     cost: 'currentCost' in api ? Number(api.currentCost) : 0,
-    stock: api.stockQuantity,
+    stock: Number(api.stockQuantity),
+    sellable: Number(api.sellableQuantity ?? api.stockQuantity),
+    expiredStock: Number(api.expiredQuantity ?? 0),
+    untrackedStock: Number(api.untrackedQuantity ?? 0),
     unit: api.unit,
     barcode: api.barcode ?? undefined,
     perishable: 'perishable' in api ? api.perishable ?? false : false,
@@ -36,7 +39,9 @@ export function toCreateRequest(value: ProductFormValue): ApiCreateProductReques
     perishable: value.perishable,
     frequent: value.frequent,
     status: value.status,
-    initialStock: value.stock
+    initialStock: value.stock,
+    initialBatch: value.perishable && value.stock > 0 ? value.initialBatch?.trim() || undefined : undefined,
+    initialExpiry: value.perishable && value.stock > 0 ? value.initialExpiry || undefined : undefined
   };
 }
 

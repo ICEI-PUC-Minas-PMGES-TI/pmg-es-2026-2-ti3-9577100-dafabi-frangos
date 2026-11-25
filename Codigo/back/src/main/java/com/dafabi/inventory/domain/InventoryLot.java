@@ -1,5 +1,8 @@
 package com.dafabi.inventory.domain;
 
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
+
 import com.dafabi.products.domain.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,8 +37,8 @@ public class InventoryLot {
     @Column(nullable = false)
     private LocalDate expiry;
 
-    @Column(nullable = false)
-    private Integer quantity;
+    @Column(nullable = false, precision = 14, scale = 3)
+    private BigDecimal quantity;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -44,12 +47,16 @@ public class InventoryLot {
     }
 
     public InventoryLot(Product product, String batch, LocalDate receivedAt, LocalDate expiry, Integer quantity) {
+        this(product, batch, receivedAt, expiry, quantity == null ? null : Quantities.of(quantity));
+    }
+
+    public InventoryLot(Product product, String batch, LocalDate receivedAt, LocalDate expiry, BigDecimal quantity) {
         this.id = UUID.randomUUID();
         this.product = product;
         this.batch = batch.trim();
         this.receivedAt = receivedAt;
         this.expiry = expiry;
-        this.quantity = quantity;
+        this.quantity = Quantities.of(quantity);
         this.createdAt = OffsetDateTime.now();
     }
 
@@ -64,7 +71,8 @@ public class InventoryLot {
     public String getBatch() { return batch; }
     public LocalDate getReceivedAt() { return receivedAt; }
     public LocalDate getExpiry() { return expiry; }
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public BigDecimal getQuantity() { return quantity; }
+    public void setQuantity(BigDecimal quantity) { this.quantity = Quantities.of(quantity); }
+    public void setQuantity(int quantity) { this.quantity = Quantities.of(quantity); }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }

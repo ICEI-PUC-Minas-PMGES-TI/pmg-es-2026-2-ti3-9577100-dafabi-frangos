@@ -1,5 +1,6 @@
 package com.dafabi.products.controller;
 
+import com.dafabi.shared.security.CostVisibility;
 import com.dafabi.products.application.ProductService;
 import com.dafabi.products.domain.ProductStatus;
 import com.dafabi.products.dto.CreateProductRequest;
@@ -51,20 +52,15 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(
-                productService.findAll(
-                        query,
-                        categoryId,
-                        status,
-                        includeInactive,
-                        page,
-                        size));
+        var products = productService.findAll(query, categoryId, status, includeInactive, page, size);
+        return ResponseEntity.ok(CostVisibility.canSeeCost() ? products : products.map(ProductListResponse::withoutCost));
     }
 
     @GetMapping("/by-barcode/{barcode}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public ResponseEntity<ProductResponse> findByBarcode(@PathVariable String barcode) {
-        return ResponseEntity.ok(productService.findByBarcode(barcode));
+        ProductResponse response = productService.findByBarcode(barcode);
+        return ResponseEntity.ok(CostVisibility.canSeeCost() ? response : response.withoutCost());
     }
 
     @GetMapping("/{id}")
@@ -72,7 +68,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> findById(
             @PathVariable UUID id) {
         ProductResponse response = productService.findById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(CostVisibility.canSeeCost() ? response : response.withoutCost());
     }
 
     @PutMapping("/{id}")

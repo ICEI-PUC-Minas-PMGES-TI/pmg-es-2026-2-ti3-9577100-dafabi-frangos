@@ -84,6 +84,7 @@ export interface MarketplaceItemSnapshot {
   id: string;
   provider: IntegrationProvider;
   externalStoreId: string;
+  storeName?: string | null;
   date: string;
   externalItemName: string;
   revenue: number;

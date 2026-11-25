@@ -55,7 +55,10 @@ class StoreSettingsControllerIT {
 
     @Test
     @WithMockUser(roles = "CASHIER")
-    void shouldDenyStoreSettingsToCashier() throws Exception {
-        mockMvc.perform(get("/settings/store")).andExpect(status().isForbidden());
+    void cashierCanReadButNotChangeStoreSettings() throws Exception {
+        mockMvc.perform(get("/settings/store")).andExpect(status().isOk());
+        mockMvc.perform(put("/settings/store").contentType(MediaType.APPLICATION_JSON).content("""
+                {"name":"Loja","phone":"(31) 99999-0000","address":"Rua A","defaultPayment":"CASH","compactMode":true}
+                """)).andExpect(status().isForbidden());
     }
 }
