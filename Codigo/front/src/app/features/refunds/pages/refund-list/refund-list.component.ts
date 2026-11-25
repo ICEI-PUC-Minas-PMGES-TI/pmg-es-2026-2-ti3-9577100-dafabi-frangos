@@ -15,8 +15,8 @@ import { RefundsService } from '../../services/refunds.service';
   selector: 'app-refund-list', standalone: true,
   imports: [CurrencyPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, PageHeaderComponent,
     StatusChipComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
-  template: `<app-page-header eyebrow="Financeiro" title="Estornos" subtitle="Histórico auditável das vendas revertidas."/>
-  <div class="toolbar"><span class="grow"></span><a mat-flat-button class="primary-button" routerLink="/app/estornos/novo"><mat-icon>undo</mat-icon>Novo estorno</a></div>
+  template: `<app-page-header eyebrow="Financeiro" title="Estornos" subtitle="Histórico auditável das vendas revertidas." actionLabel="Novo estorno" actionIcon="undo" actionLink="/app/estornos/novo"/>
+  
   @if(loading()){<section class="surface"><app-loading-state label="Carregando histórico de estornos…"/></section>}
   @else if(error()){<app-error-state title="Histórico indisponível" message="Não foi possível carregar os estornos."/><div class="retry"><button mat-stroked-button (click)="load()">Tentar novamente</button></div>}
   @else if(!refunds().length){<section class="surface"><app-empty-state icon="undo" title="Nenhum estorno registrado" message="Os estornos concluídos aparecerão aqui."/></section>}

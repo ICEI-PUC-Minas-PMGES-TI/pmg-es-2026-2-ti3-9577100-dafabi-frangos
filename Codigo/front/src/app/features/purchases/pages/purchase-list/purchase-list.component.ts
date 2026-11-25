@@ -1,7 +1,7 @@
 import { paymentLabel } from '../../../../shared/utils/labels';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,12 +22,12 @@ type PaymentFilter = 'ALL' | 'PENDING' | 'PAID' | 'CANCELED';
 
 @Component({
   selector: 'app-purchase-list', standalone: true,
-  imports: [CurrencyPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, MatMenuModule, PageHeaderComponent, StatusChipComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
-  template: `<app-page-header eyebrow="Estoque" title="Compras" subtitle="A compra atualiza o estoque e o custo médio; o pagamento afeta o caixa quando é em dinheiro."/>
+  imports: [CurrencyPipe, DatePipe, MatButtonModule, MatIconModule, MatMenuModule, PageHeaderComponent, StatusChipComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
+  template: `<app-page-header eyebrow="Estoque" title="Compras" subtitle="A compra atualiza o estoque e o custo médio; o pagamento afeta o caixa quando é em dinheiro." actionLabel="Nova compra" actionLink="/app/compras/nova"/>
     <div class="toolbar">
       <label class="filter">Fornecedor<select [value]="supplier()" (change)="supplier.set($any($event.target).value)"><option value="">Todos</option>@for(s of suppliers();track s.id){<option [value]="s.id">{{s.name}}</option>}</select></label>
       <div class="chips" role="group" aria-label="Filtrar por situação">@for(f of filters;track f.value){<button type="button" [class.active]="paymentFilter()===f.value" [attr.aria-pressed]="paymentFilter()===f.value" (click)="paymentFilter.set(f.value)">{{f.label}}</button>}</div>
-      <span class="grow"></span><a mat-flat-button class="primary-button" routerLink="/app/compras/nova"><mat-icon>add</mat-icon>Nova compra</a>
+      
     </div>
     <section class="surface">@if(service.loading()){<app-loading-state/>}@else if(service.error()){<app-error-state title="Não foi possível carregar as compras" [message]="service.error()!"/>}@else if(!service.purchases().length){<app-empty-state icon="shopping_cart" title="Nenhuma compra registrada" message="Registre uma compra para atualizar o estoque." actionLabel="Nova compra" actionLink="/app/compras/nova"/>}@else if(!visible().length){<app-empty-state icon="filter_alt_off" title="Nenhuma compra neste filtro" message="Altere o fornecedor ou a situação para ver outras compras."/>}@else{
       <div class="table-wrap"><table class="data-table"><thead><tr><th>Compra</th><th>Fornecedor</th><th>Data</th><th>Itens</th><th>Valor total</th><th>Compra</th><th>Pagamento</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody>@for(c of visible();track c.id){<tr>

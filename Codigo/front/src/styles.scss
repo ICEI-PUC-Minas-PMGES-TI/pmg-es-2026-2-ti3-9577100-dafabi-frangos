@@ -67,3 +67,8 @@ body.compact-tables .data-table th, body.compact-tables .data-table td { padding
   .data-table td[colspan]::before { content: none; }
   .data-table tfoot { display: block; }
 }
+
+/* Ações do cabeçalho de página (#120): sempre à direita do título. */
+.page-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.page-header-actions:empty { display: none; }
+@media (max-width: 780px) { .page-header-actions { width: 100%; } .page-header-actions > a, .page-header-actions > button { flex: 1; } }
