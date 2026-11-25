@@ -26,7 +26,7 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
       @else {
         <label class="field">Loja no marketplace
           <select [value]="storeId()" (change)="changeStore($any($event.target).value)">
-            @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }} · {{ store.id }}</option> }
+            @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
           </select>
         </label>
 
@@ -36,10 +36,18 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
         @if (mappingLoading()) { <div class="loading"><mat-progress-bar mode="indeterminate"/><span>Carregando associações…</span></div> }
         @else if (mappingRows().length) {
           @if (!products().length) { <div class="notice warning" role="status"><mat-icon>inventory_2</mat-icon>Cadastre produtos ativos no estoque antes de associar os itens da plataforma.</div> }
-          <div class="mapping-list">
-            @for (mapping of mappingRows(); track mapping.externalItemName) {
-              <article class="mapping-row">
-                <div class="item-name"><strong>{{ mapping.externalItemName }}</strong><small>Nome do relatório · {{ itemSummary(mapping.externalItemName) }}</small></div>
+          <div class="mapping-toolbar"><div class="chips" role="group" aria-label="Filtrar itens">@for (f of mappingFilters; track f.value) {<button type="button" [class.active]="mappingFilter()===f.value" [attr.aria-pressed]="mappingFilter()===f.value" (click)="mappingFilter.set(f.value)">{{ f.label }} ({{ countByState(f.value) }})</button>}</div></div>
+          <div class="mapping-table" role="table" aria-label="Itens do relatório e vínculos">
+            <div class="mapping-head" role="row"><span role="columnheader">Item do relatório</span><span role="columnheader">Vendido</span><span role="columnheader">Vínculo</span><span role="columnheader"><span class="sr-only">Ações</span></span></div>
+            @for (mapping of visibleMappingRows(); track mapping.externalItemName) {
+              <div class="mapping-line" role="row" [class.open]="editingItem()===mapping.externalItemName">
+                <span role="cell" class="item-name"><strong>{{ mapping.externalItemName }}</strong>@if (variants(mapping.externalItemName).length > 1) {<small>Agrupa {{ variants(mapping.externalItemName).join(' / ') }}</small>}</span>
+                <span role="cell" class="muted">{{ itemSummary(mapping.externalItemName) }}</span>
+                <span role="cell"><span [class]="'map-state ' + state(mapping.externalItemName)">{{ stateLabel(mapping.externalItemName) }}</span></span>
+                <span role="cell" class="row-actions"><button mat-button type="button" (click)="toggleEditing(mapping.externalItemName)" [attr.aria-expanded]="editingItem()===mapping.externalItemName">{{ editingItem()===mapping.externalItemName ? 'Fechar' : state(mapping.externalItemName)==='unmapped' ? 'Vincular' : 'Editar' }}</button></span>
+              </div>
+              @if (editingItem()===mapping.externalItemName) {
+              <div class="mapping-editor">
                 <div class="components">
                   @if (!draft(mapping.externalItemName).ignored) {
                     @for (component of draft(mapping.externalItemName).components; track $index; let i = $index) {
@@ -62,11 +70,12 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
                   <button mat-stroked-button type="button" (click)="saveMapping(mapping.externalItemName)" [disabled]="!mappingApiAvailable() || savingItem()===mapping.externalItemName || (!draft(mapping.externalItemName).ignored && !draftValid(mapping.externalItemName))">
                     <mat-icon>save</mat-icon>{{ savingItem()===mapping.externalItemName ? 'Salvando…' : 'Salvar associação' }}
                   </button>
-                  @if (savedItem()===mapping.externalItemName) { <span class="saved" role="status">Associação salva</span> }
                 </div>
-              </article>
-            }
+              </div>
+              }
+            } @empty { <p class="muted empty-filter">Nenhum item neste filtro.</p> }
           </div>
+          @if (savedItem()) { <span class="saved" role="status">Associação de “{{ savedItem() }}” salva</span> }
         } @else if (!hasItemsForStore()) { <div class="empty"><mat-icon>inventory_2</mat-icon><strong>Nenhum item encontrado</strong><span>Os relatórios importados não contêm itens para esta loja.</span></div> }
 
         <div class="baseline-block">
@@ -101,19 +110,19 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
           <p>Consulte a área Financeiro do portal e registre aqui cada período de pagamento. Repasses ficam separados das vendas e não entram novamente no faturamento nem no caixa físico.</p>
           <div class="notice warning"><mat-icon>account_balance</mat-icon>Este lançamento é digitado a partir do resumo financeiro do portal; os relatórios de repasse ainda não têm um formato de arquivo validado para leitura automática.</div>
           <div class="settlement-form">
-            <label class="field">ID ou referência do repasse<input [value]="settlementId()" (input)="settlementId.set($any($event.target).value)" maxlength="160"></label>
-            <label class="field">Período inicial<input type="date" [value]="settlementStart()" (change)="settlementStart.set($any($event.target).value)"></label>
-            <label class="field">Período final<input type="date" [value]="settlementEnd()" (change)="settlementEnd.set($any($event.target).value)"></label>
+            <label class="field">ID ou referência do repasse *<input [value]="settlementId()" (input)="settlementId.set($any($event.target).value)" maxlength="160"></label>
+            <label class="field">Período inicial *<input type="date" [value]="settlementStart()" (change)="settlementStart.set($any($event.target).value)"></label>
+            <label class="field">Período final *<input type="date" [value]="settlementEnd()" (change)="settlementEnd.set($any($event.target).value)"></label>
             <label class="field">Valor bruto<input type="number" min="0" step="0.01" [value]="settlementGross()" (input)="settlementGross.set($any($event.target).value)"></label>
             <label class="field">Taxas e comissões<input type="number" min="0" step="0.01" [value]="settlementFees()" (input)="settlementFees.set($any($event.target).value)"></label>
             <label class="field">Ajustes<input type="number" step="0.01" [value]="settlementAdjustments()" (input)="settlementAdjustments.set($any($event.target).value)"></label>
             <label class="field">Valor retido<input type="number" min="0" step="0.01" [value]="settlementRetained()" (input)="settlementRetained.set($any($event.target).value)"></label>
-            <label class="field">Valor recebido<input type="number" min="0" step="0.01" [value]="settlementReceived()" (input)="settlementReceived.set($any($event.target).value)"></label>
-            <label class="field">Data do crédito<input type="date" [value]="settlementPayoutDate()" (change)="settlementPayoutDate.set($any($event.target).value)"></label>
+            <label class="field">Valor recebido{{settlementStatus()==='PAGO'?' *':''}}<input type="number" min="0" step="0.01" [value]="settlementReceived()" (input)="settlementReceived.set($any($event.target).value)"></label>
+            <label class="field">Data do crédito{{settlementStatus()==='PAGO'?' *':''}}<input type="date" [value]="settlementPayoutDate()" (change)="settlementPayoutDate.set($any($event.target).value)"></label>
             <label class="field">Situação<select [value]="settlementStatus()" (change)="settlementStatus.set($any($event.target).value)"><option value="PENDENTE">Pendente</option><option value="PAGO">Pago</option><option value="RETIDO">Retido</option><option value="NAO_NECESSARIO">Pagamento não necessário</option></select></label>
             <label class="field source-reference">Observação do portal<textarea [value]="settlementReference()" (input)="settlementReference.set($any($event.target).value)" maxlength="1000"></textarea></label>
           </div>
-          @if(settlementStatus()==='PAGO'&&(!settlementPayoutDate()||!settlementReceived())){<p class="validation-note" role="alert">Para marcar como pago, informe a data do crédito e o valor recebido.</p>}
+          <p class="required-note">* Campos obrigatórios.</p>@if(settlementMissing().length){<p class="validation-note" role="status">Para registrar, falta: {{ settlementMissing().join(', ') }}.</p>}
           <div class="actions"><button mat-flat-button class="primary-button" type="button" (click)="saveSettlement()" [disabled]="settlementSaving() || !settlementValid()"><mat-icon>save</mat-icon>{{settlementSaving()?'Salvando…':'Registrar repasse'}}</button></div>
           @if(settlements().length){<div class="settlement-history"><div class="settlement-head"><span>Referência</span><span>Período</span><span>Taxas / ajustes / retenção</span><span>Recebido</span><span>Situação</span></div>@for(row of settlements();track row.id){<div class="settlement-row"><strong>{{row.externalSettlementId}}</strong><span>{{row.periodStart|date:'dd/MM/yy':'':'pt-BR'}}–{{row.periodEnd|date:'dd/MM/yy':'':'pt-BR'}}</span><span>{{moneyOrDash(row.feesAmount)}} / {{moneyOrDash(row.adjustmentsAmount)}} / {{moneyOrDash(row.retainedAmount)}}</span><span>{{moneyOrDash(row.amountReceived)}}</span><span>{{row.status==='PAGO'?'Pago':row.status==='RETIDO'?'Retido':row.status==='NAO_NECESSARIO'?'Não necessário':'Pendente'}}</span></div>}</div>}
         </div>
@@ -123,8 +132,8 @@ interface MappingDraft { ignored: boolean; components: DraftComponent[]; }
     </section>
   `,
   styles: [`
-    :host{display:block}.stock-workflow{max-width:1100px;margin-top:18px}.heading{display:flex;justify-content:space-between;gap:16px}.heading h2{font-size:1rem;margin:5px 0}.heading p,.baseline-block p,.effects-block p,.settlement-block p{font-size:.75rem;color:var(--muted);line-height:1.5;margin:0 0 12px}.heading>mat-icon{color:var(--red);font-size:26px}.eyebrow{font-size:.65rem;color:var(--red-dark);text-transform:uppercase;letter-spacing:.08em;font-weight:800}.notice{display:flex;gap:8px;align-items:flex-start;padding:11px 13px;border-radius:9px;font-size:.75rem;line-height:1.5;margin:14px 0}.notice mat-icon{font-size:18px;width:18px;height:18px;flex:none}.notice.warning{background:#fff8db;color:#694d0b;border:1px solid #f3dc86}.notice.error{background:#fff0ee;color:#8f1d14;border:1px solid #f3c4bf}.notice.success{background:#edf7ed;color:#246b2d;border:1px solid #b9dfbd}.field{display:grid;gap:5px;color:var(--muted);font-size:.68rem;font-weight:700}.field select,.field input,.field textarea{min-height:38px;border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);background:#fff}.field select:focus-visible,.field input:focus-visible,.field textarea:focus-visible{outline:2px solid var(--red);outline-offset:1px}.mapping-list{display:grid;gap:9px;margin-top:13px}.mapping-row{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(360px,1.6fr);gap:14px;padding:13px;border:1px solid var(--border);border-radius:9px}.item-name strong,.item-name small{display:block}.item-name strong{font-size:.78rem}.item-name small,.muted{font-size:.66rem;color:var(--muted);margin-top:4px}.components{display:grid;gap:8px}.component-line{display:grid;grid-template-columns:1fr 140px 40px;align-items:end;gap:8px}.components>button{justify-self:start}.ignore{display:flex;align-items:center;gap:7px;font-size:.69rem;color:var(--text)}.saved{font-size:.68rem;color:#246b2d}.baseline-block,.effects-block,.settlement-block{border-top:1px solid var(--border);margin-top:20px;padding-top:17px}.baseline-block h3,.effects-block h3,.settlement-block h3{font-size:.88rem;margin:0 0 6px}.baseline-form,.effect-filters{display:flex;align-items:end;gap:10px;flex-wrap:wrap}.baseline-form .field{min-width:220px}.effect-filters .field{min-width:150px}.effect-list,.settlement-history{overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:12px}.effect-head,.effect-row{display:grid;grid-template-columns:.45fr 1.25fr 1fr .55fr .55fr .55fr 1.4fr;gap:8px;padding:9px 11px;border-bottom:1px solid var(--border);font-size:.67rem;min-width:820px}.effect-head,.settlement-head{font-weight:700;color:var(--muted);background:#fafaf9}.effect-row:last-child,.settlement-row:last-child{border-bottom:0}.effect-status{font-weight:700;color:#246b2d}.effect-status.pending{color:#8a6200}.effect-status small{display:block;font-weight:400;line-height:1.4;margin-top:3px;color:var(--muted)}.return-confirm{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:.72rem;color:#694d0b}.actions{display:flex;justify-content:flex-end;margin-top:12px}.empty{display:grid;justify-items:center;text-align:center;gap:7px;padding:24px;color:var(--muted);font-size:.73rem}.empty strong{color:var(--text)}.empty mat-icon{color:#a8a29e}.loading{display:grid;gap:8px;margin:14px 0;color:var(--muted);font-size:.72rem}.settlement-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.source-reference{grid-column:1/-1}.settlement-head,.settlement-row{display:grid;grid-template-columns:1.1fr 1fr 1.6fr 1fr .8fr;gap:8px;padding:9px 11px;border-bottom:1px solid var(--border);font-size:.67rem;min-width:680px}.settlement-head{position:sticky;top:0}.settlement-row strong{overflow-wrap:anywhere}
-    @media(max-width:700px){.mapping-row{grid-template-columns:1fr}.component-line{grid-template-columns:1fr 110px 36px}.baseline-form{align-items:stretch;flex-direction:column}.baseline-form .field{min-width:0}}
+    :host{display:block}.stock-workflow{max-width:1100px;margin-top:18px}.heading{display:flex;justify-content:space-between;gap:16px}.heading h2{font-size:1rem;margin:5px 0}.heading p,.baseline-block p,.effects-block p,.settlement-block p{font-size:.75rem;color:var(--muted);line-height:1.5;margin:0 0 12px}.heading>mat-icon{color:var(--red);font-size:26px}.eyebrow{font-size:.65rem;color:var(--red-dark);text-transform:uppercase;letter-spacing:.08em;font-weight:800}.notice{display:flex;gap:8px;align-items:flex-start;padding:11px 13px;border-radius:9px;font-size:.75rem;line-height:1.5;margin:14px 0}.notice mat-icon{font-size:18px;width:18px;height:18px;flex:none}.notice.warning{background:#fff8db;color:#694d0b;border:1px solid #f3dc86}.notice.error{background:#fff0ee;color:#8f1d14;border:1px solid #f3c4bf}.notice.success{background:#edf7ed;color:#246b2d;border:1px solid #b9dfbd}.field{display:grid;gap:5px;color:var(--muted);font-size:.68rem;font-weight:700}.field select,.field input,.field textarea{min-height:38px;border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);background:#fff}.field select:focus-visible,.field input:focus-visible,.field textarea:focus-visible{outline:2px solid var(--red);outline-offset:1px}.mapping-toolbar{margin-top:13px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:.7rem;font-weight:700;cursor:pointer}.chips button.active{background:var(--red);border-color:var(--red);color:#fff}.mapping-table{border:1px solid var(--border);border-radius:9px;margin-top:10px;overflow:hidden}.mapping-head,.mapping-line{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(110px,.8fr) minmax(150px,1fr) 96px;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:.72rem}.mapping-head{background:#fafaf9;color:var(--muted);font-weight:700}.mapping-line.open{background:#fffaf0}.row-actions{text-align:right}.map-state{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.66rem;font-weight:800}.map-state.unmapped{background:#fff0ee;color:#8f1d14}.map-state.mapped{background:#edf7ed;color:#246b2d}.map-state.ignored{background:#f1f0ee;color:var(--muted)}.mapping-editor{padding:12px 14px;border-bottom:1px solid var(--border);background:#fffaf0}.empty-filter{padding:14px;text-align:center}.required-note{font-size:.66rem;color:var(--muted);margin:8px 0 0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.item-name strong,.item-name small{display:block}.item-name strong{font-size:.78rem}.item-name small,.muted{font-size:.66rem;color:var(--muted);margin-top:4px}.components{display:grid;gap:8px}.component-line{display:grid;grid-template-columns:1fr 140px 40px;align-items:end;gap:8px}.components>button{justify-self:start}.ignore{display:flex;align-items:center;gap:7px;font-size:.69rem;color:var(--text)}.saved{font-size:.68rem;color:#246b2d}.baseline-block,.effects-block,.settlement-block{border-top:1px solid var(--border);margin-top:20px;padding-top:17px}.baseline-block h3,.effects-block h3,.settlement-block h3{font-size:.88rem;margin:0 0 6px}.baseline-form,.effect-filters{display:flex;align-items:end;gap:10px;flex-wrap:wrap}.baseline-form .field{min-width:220px}.effect-filters .field{min-width:150px}.effect-list,.settlement-history{overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:12px}.effect-head,.effect-row{display:grid;grid-template-columns:.45fr 1.25fr 1fr .55fr .55fr .55fr 1.4fr;gap:8px;padding:9px 11px;border-bottom:1px solid var(--border);font-size:.67rem;min-width:820px}.effect-head,.settlement-head{font-weight:700;color:var(--muted);background:#fafaf9}.effect-row:last-child,.settlement-row:last-child{border-bottom:0}.effect-status{font-weight:700;color:#246b2d}.effect-status.pending{color:#8a6200}.effect-status small{display:block;font-weight:400;line-height:1.4;margin-top:3px;color:var(--muted)}.return-confirm{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:.72rem;color:#694d0b}.actions{display:flex;justify-content:flex-end;margin-top:12px}.empty{display:grid;justify-items:center;text-align:center;gap:7px;padding:24px;color:var(--muted);font-size:.73rem}.empty strong{color:var(--text)}.empty mat-icon{color:#a8a29e}.loading{display:grid;gap:8px;margin:14px 0;color:var(--muted);font-size:.72rem}.settlement-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.source-reference{grid-column:1/-1}.settlement-head,.settlement-row{display:grid;grid-template-columns:1.1fr 1fr 1.6fr 1fr .8fr;gap:8px;padding:9px 11px;border-bottom:1px solid var(--border);font-size:.67rem;min-width:680px}.settlement-head{position:sticky;top:0}.settlement-row strong{overflow-wrap:anywhere}
+    @media(max-width:700px){.mapping-head{display:none}.mapping-line{grid-template-columns:1fr auto}.mapping-line>span:nth-child(2){display:none}.component-line{grid-template-columns:1fr 110px 36px}.baseline-form{align-items:stretch;flex-direction:column}.baseline-form .field{min-width:0}}
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -148,12 +157,12 @@ export class MarketplaceStockWorkflowComponent implements OnInit {
   async load():Promise<void>{this.loading.set(true);this.error.set('');try{
     const [items,productPage]=await Promise.all([firstValueFrom(this.integrations.items(this.provider())),firstValueFrom(this.productsApi.list({status:'ACTIVE',page:0,size:100}))]);
     this.items.set(items);this.products.set(productPage.content);
-    const stores=[...new Map(items.map(item=>[item.externalStoreId,{id:item.externalStoreId,name:item.externalStoreId}])).values()];
+    const stores=[...new Map(items.map(item=>[item.externalStoreId,{id:item.externalStoreId,name:this.storeLabel(item)}])).values()];
     this.stores.set(stores);if(stores.length){const selected=this.storeId()&&stores.some(s=>s.id===this.storeId())?this.storeId():stores[0].id;this.storeId.set(selected);await this.loadStore(selected);}
   }catch{this.error.set('Não foi possível carregar itens importados e produtos. Confira a conexão e tente novamente.');}finally{this.loading.set(false);}}
   async changeStore(value:string){this.storeId.set(value);await this.loadStore(value);}
   private async loadStore(value:string){this.mappingLoading.set(true);this.message.set('');this.errorMessage.set('');this.mappingError.set('');this.mappingApiAvailable.set(true);this.mappings.set([]);
-    const names=[...new Set(this.items().filter(item=>item.externalStoreId===value).map(item=>item.externalItemName))];
+    const allNames=[...new Set(this.items().filter(item=>item.externalStoreId===value).map(item=>item.externalItemName))];
     try{
       const maps=await firstValueFrom(this.integrations.mappings(this.provider(),value));
       this.mappings.set(maps);
@@ -162,7 +171,7 @@ export class MarketplaceStockWorkflowComponent implements OnInit {
       this.mappingError.set('Os itens do relatório foram carregados, mas o servidor não disponibiliza as associações agora. Você pode conferir os itens, mas não salvar vínculos nem aplicar baixas até atualizar o backend.');
     }
     const drafts:Record<string,MappingDraft>={};for(const map of this.mappings())drafts[map.externalItemName]={ignored:map.ignored,components:map.components.length?map.components.map(c=>({productId:c.productId,quantityPerItem:c.quantityPerItem})):[{productId:'',quantityPerItem:1}]};
-    for(const name of names)if(!drafts[name])drafts[name]={ignored:false,components:[{productId:'',quantityPerItem:1}]};this.drafts.set(drafts);
+    for(const name of allNames)if(!drafts[name])drafts[name]={ignored:false,components:[{productId:'',quantityPerItem:1}]};this.drafts.set(drafts);
     const dates=this.items().filter(item=>item.externalStoreId===value).map(item=>item.date).sort();this.startDate.set(dates[0]??'');this.endDate.set(dates[dates.length-1]??'');
     this.baselineDate.set('');this.baselineSaved.set('');this.invalidatePreview();
     try{const baseline=await firstValueFrom(this.integrations.getStockBaseline(this.provider(),value));this.baselineDate.set(baseline?.startDate??'');this.baselineSaved.set(baseline?.startDate??'');}
@@ -171,16 +180,41 @@ export class MarketplaceStockWorkflowComponent implements OnInit {
     catch{this.settlements.set([]);}
     this.mappingLoading.set(false);
   }
+  /** Nome amigável da loja: o nome do relatório quando existe e é diferente do código. */
+  private storeLabel(item:MarketplaceItemSnapshot):string{
+    const name=item.storeName?.trim();
+    return name&&name!==item.externalStoreId?name:`Loja ${item.externalStoreId.length>6?'…'+item.externalStoreId.slice(-4):item.externalStoreId}`;
+  }
+  private key(name:string):string{return name.trim().toLocaleLowerCase('pt-BR');}
+  /** Variações do mesmo item que diferem só por maiúsculas/espaços ("pudim" e "Pudim"). */
+  variants(name:string):string[]{
+    const key=this.key(name);
+    return [...new Set(this.items().filter(item=>item.externalStoreId===this.storeId()&&this.key(item.externalItemName)===key).map(item=>item.externalItemName))];
+  }
+  /** Um nome representativo por grupo: prefere o que já tem vínculo, depois o mais vendido. */
+  private groupNames(store:string):string[]{
+    const groups=new Map<string,Map<string,number>>();
+    for(const item of this.items().filter(i=>i.externalStoreId===store)){const k=this.key(item.externalItemName);const g=groups.get(k)??new Map<string,number>();g.set(item.externalItemName,(g.get(item.externalItemName)??0)+Number(item.quantity||0));groups.set(k,g);}
+    const mapped=new Set(this.mappings().map(m=>m.externalItemName));
+    return [...groups.values()].map(g=>[...g.entries()].sort((a,b)=>Number(mapped.has(b[0]))-Number(mapped.has(a[0]))||b[1]-a[1])[0][0]);
+  }
+  readonly mappingFilter=signal<'all'|'unmapped'|'mapped'|'ignored'>('all');readonly editingItem=signal('');
+  readonly mappingFilters=[{value:'all' as const,label:'Todos'},{value:'unmapped' as const,label:'Sem vínculo'},{value:'mapped' as const,label:'Vinculados'},{value:'ignored' as const,label:'Não controlados'}];
+  state(name:string):'unmapped'|'mapped'|'ignored'{const saved=this.mappings().find(m=>m.externalItemName===name);if(!saved)return 'unmapped';return saved.ignored?'ignored':saved.components.length?'mapped':'unmapped';}
+  stateLabel(name:string):string{const st=this.state(name);if(st==='ignored')return 'Não controlado';if(st==='unmapped')return 'Sem vínculo';const saved=this.mappings().find(m=>m.externalItemName===name)!;const names=saved.components.map(c=>this.products().find(p=>p.id===c.productId)?.name??'Produto');return names.length>1?`${names[0]} + ${names.length-1}`:names[0];}
+  countByState(filter:'all'|'unmapped'|'mapped'|'ignored'):number{const rows=this.mappingRows();return filter==='all'?rows.length:rows.filter(r=>this.state(r.externalItemName)===filter).length;}
+  visibleMappingRows():MarketplaceMapping[]{const f=this.mappingFilter();return f==='all'?this.mappingRows():this.mappingRows().filter(r=>this.state(r.externalItemName)===f||this.editingItem()===r.externalItemName);}
+  toggleEditing(name:string){this.editingItem.set(this.editingItem()===name?'':name);this.savedItem.set('');}
   mappingRows():MarketplaceMapping[]{
     const byName=new Map(this.mappings().map(mapping=>[mapping.externalItemName,mapping]));
-    const names=new Set(this.items().filter(item=>item.externalStoreId===this.storeId()).map(item=>item.externalItemName));
+    const names=this.groupNames(this.storeId());
     return [...names].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(name=>byName.get(name)??{
       provider:this.provider(),externalStoreId:this.storeId(),externalItemName:name,ignored:false,components:[]
     });
   }
   hasItemsForStore():boolean{return this.items().some(item=>item.externalStoreId===this.storeId());}
   itemSummary(name:string):string{
-    const rows=this.items().filter(item=>item.externalStoreId===this.storeId()&&item.externalItemName===name);
+    const key=this.key(name);const rows=this.items().filter(item=>item.externalStoreId===this.storeId()&&this.key(item.externalItemName)===key);
     const quantity=rows.reduce((sum,item)=>sum+Number(item.quantity||0),0);
     const revenue=rows.reduce((sum,item)=>sum+Number(item.revenue||0),0);
     return `${quantity.toLocaleString('pt-BR')} un. · ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(revenue)}`;
@@ -193,7 +227,7 @@ export class MarketplaceStockWorkflowComponent implements OnInit {
   addComponent(name:string){this.update(name,d=>({...d,components:[...d.components,{productId:'',quantityPerItem:1}]}));}
   removeComponent(name:string,index:number){this.update(name,d=>({...d,components:d.components.filter((_,i)=>i!==index)}));}
   draftValid(name:string):boolean{const d=this.draft(name);return d.components.length>0&&d.components.every(c=>!!c.productId&&Number.isFinite(c.quantityPerItem)&&c.quantityPerItem>0);}
-  async saveMapping(name:string){if(!this.mappingApiAvailable())return;const d=this.draft(name);this.savingItem.set(name);this.errorMessage.set('');try{const saved=await firstValueFrom(this.integrations.saveMapping(this.provider(),this.storeId(),name,{ignored:d.ignored,components:d.ignored?[]:d.components.map(c=>({productId:c.productId,quantityPerItem:c.quantityPerItem}))}));this.mappings.update(rows=>[...rows.filter(row=>row.externalItemName!==name),saved]);this.savedItem.set(name);this.invalidatePreview();this.message.set('Associação salva. Confira novamente a prévia do estoque antes de aplicá-lo.');}catch{this.errorMessage.set(`Não foi possível salvar a associação de "${name}".`);}finally{this.savingItem.set('');}}
+  async saveMapping(name:string){if(!this.mappingApiAvailable())return;const d=this.draft(name);this.savingItem.set(name);this.errorMessage.set('');try{const body={ignored:d.ignored,components:d.ignored?[]:d.components.map(c=>({productId:c.productId,quantityPerItem:c.quantityPerItem}))};const names=this.variants(name);if(!names.includes(name))names.unshift(name);const saved:MarketplaceMapping[]=[];for(const variant of names)saved.push(await firstValueFrom(this.integrations.saveMapping(this.provider(),this.storeId(),variant,body)));this.mappings.update(rows=>[...rows.filter(row=>!names.includes(row.externalItemName)),...saved]);this.savedItem.set(name);this.editingItem.set('');this.invalidatePreview();this.message.set('Associação salva. Confira novamente a prévia do estoque antes de aplicá-lo.');}catch{this.errorMessage.set(`Não foi possível salvar a associação de "${name}".`);}finally{this.savingItem.set('');}}
   async saveBaseline(){this.baselineSaving.set(true);this.errorMessage.set('');try{const response=await firstValueFrom(this.integrations.setStockBaseline(this.provider(),this.storeId(),this.baselineDate()));this.baselineSaved.set(response.startDate);this.message.set('Data inicial salva. Os relatórios anteriores a essa data não serão baixados do estoque.');this.invalidatePreview();}catch{this.errorMessage.set('Não foi possível salvar a data inicial do estoque.');}finally{this.baselineSaving.set(false);}}
   async preview(){if(!this.startDate()||!this.endDate())return;const store=this.storeId(), start=this.startDate(), end=this.endDate(), revision=++this.previewRevision;this.previewLoading.set(true);this.effectError.set('');this.previewed.set(false);try{const effects=await firstValueFrom(this.integrations.stockEffects(this.provider(),store,start,end));if(revision===this.previewRevision&&store===this.storeId()&&start===this.startDate()&&end===this.endDate()){this.effects.set(effects);this.previewed.set(true);}}catch{this.effectError.set('Não foi possível calcular a prévia. Confira o período e a loja selecionada.');}finally{this.previewLoading.set(false);}}
   hasReturnReview():boolean{return this.effects().some(e=>e.status==='RETURN_REVIEW'||e.quantityToApply<0);}
@@ -204,6 +238,16 @@ export class MarketplaceStockWorkflowComponent implements OnInit {
   canApply():boolean{return this.previewed()&&!this.savingItem()&&!this.previewLoading()&&!!this.baselineSaved()&&this.effects().some(e=>e.status==='PENDING'||(e.status==='RETURN_REVIEW'&&this.confirmReturns())||(e.status==='HISTORICAL_REVIEW'&&this.confirmHistorical()&&this.startDate()===this.endDate()));}
   async apply(){this.applying.set(true);this.effectError.set('');this.message.set('');try{this.effects.set(await firstValueFrom(this.integrations.applyStock(this.provider(),this.storeId(),this.startDate(),this.endDate(),this.confirmReturns(),this.confirmHistorical())));this.message.set('Movimentações de estoque processadas. Confira as situações exibidas na prévia.');this.confirmReturns.set(false);this.confirmHistorical.set(false);this.previewed.set(true);}catch{this.effectError.set('Não foi possível aplicar os movimentos. Nenhuma atualização parcial do período foi confirmada.');}finally{this.applying.set(false);}}
   statusLabel(status:string):string{return({PENDING:'Pendente de confirmação',APPLIED:'Aplicado',IGNORED:'Ignorado',UNMAPPED:'Sem associação',BASELINE_REQUIRED:'Data inicial necessária',BEFORE_BASELINE:'Anterior à data inicial',UNIT_REVIEW:'Revisar unidade',INSUFFICIENT_STOCK:'Saldo insuficiente',HISTORICAL_REVIEW:'Conferir período histórico',FUTURE_REVIEW:'Conferir data futura',RETURN_REVIEW:'Conferir devolução',LOT_REVIEW:'Conferir lotes',ITEM_REVIEW:'Conferir componentes',PRODUCT_REVIEW:'Conferir produto'} as Record<string,string>)[status]??status;}
+  settlementMissing():string[]{
+    const missing:string[]=[];
+    if(!this.settlementId().trim())missing.push('referência do repasse');
+    if(!this.settlementStart())missing.push('período inicial');
+    if(!this.settlementEnd())missing.push('período final');
+    if(this.settlementStart()&&this.settlementEnd()&&this.settlementStart()>this.settlementEnd())missing.push('período final igual ou posterior ao inicial');
+    if(this.settlementStatus()==='PAGO'&&!this.settlementPayoutDate())missing.push('data do crédito');
+    if(this.settlementStatus()==='PAGO'&&this.settlementReceived().trim()==='')missing.push('valor recebido');
+    return missing;
+  }
   settlementValid():boolean{
     const values=[[this.settlementGross(),false],[this.settlementFees(),false],[this.settlementAdjustments(),true],[this.settlementRetained(),false],[this.settlementReceived(),false]] as const;
     const amountsValid=values.every(([value,negativeAllowed])=>value.trim()===''||(Number.isFinite(Number(value))&&(negativeAllowed||Number(value)>=0)));

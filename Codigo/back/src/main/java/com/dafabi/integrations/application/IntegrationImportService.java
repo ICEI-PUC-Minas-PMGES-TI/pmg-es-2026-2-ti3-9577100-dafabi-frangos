@@ -120,7 +120,7 @@ public class IntegrationImportService {
         return orderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThanOrderByOrderAtDesc(provider,start,end).stream().map(o->new MarketplaceOrderView(o.getId(),o.getProvider(),o.getExternalStoreId(),o.getExternalOrderId(),o.getOrderAt(),o.getRawStatus(),o.getNormalizedStatus(),o.getItemsValue(),o.getCustomerPaid(),o.getFeesAndCommissions(),o.getNetReported(),o.getPaymentMethodRaw(),o.getMarketingCost(),o.getLogisticsCost(),o.getRefundAmount(),o.getFreeDeliveryCost(),o.getTipAmount(),o.getOriginalItemCount(),o.getCompletedAt(),o.getCancelledAt(),o.getCancellationResponsible(),o.getCancellationReason())).toList();}
 
     @Transactional(readOnly=true)
-    public List<MarketplaceItemView> items(IntegrationProvider provider){return itemRepository.findByProviderOrderByBusinessDateDesc(provider).stream().map(i->new MarketplaceItemView(i.getId(),i.getProvider(),i.getExternalStoreId(),i.getBusinessDate(),i.getExternalItemName(),i.getItemRevenue(),i.getSoldQuantity())).toList();}
+    public List<MarketplaceItemView> items(IntegrationProvider provider){return itemRepository.findByProviderOrderByBusinessDateDesc(provider).stream().map(i->new MarketplaceItemView(i.getId(),i.getProvider(),i.getExternalStoreId(),i.getStoreName(),i.getBusinessDate(),i.getExternalItemName(),i.getItemRevenue(),i.getSoldQuantity())).toList();}
 
     @Transactional(readOnly=true)
     public List<IntegrationOverviewResponse> overview(){return Arrays.stream(IntegrationProvider.values()).map(p->{
