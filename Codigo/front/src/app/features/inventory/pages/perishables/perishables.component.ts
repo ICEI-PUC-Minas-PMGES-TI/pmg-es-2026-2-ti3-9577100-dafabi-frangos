@@ -29,16 +29,17 @@ const today = new Date().toISOString().slice(0, 10);
         <form [formGroup]="form" (ngSubmit)="save(drawer)">
           <mat-form-field appearance="outline"><mat-label>Tipo de registro</mat-label><mat-select [value]="assignExisting()" (selectionChange)="assignExisting.set($event.value)"><mat-option [value]="false">Nova entrada: aumenta o estoque</mat-option><mat-option [value]="true">Vincular saldo existente: não altera o total</mat-option></mat-select></mat-form-field>
           @if(assignExisting()){<p>Informe os dados reais do lote correspondente ao saldo já contado. A quantidade não será somada novamente ao estoque.</p>}
-          <mat-form-field appearance="outline"><mat-label>Produto</mat-label><mat-select formControlName="productId">@for(p of perishableProducts();track p.id){<mat-option [value]="p.id">{{p.name}}</mat-option>}</mat-select></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Produto</mat-label><mat-select formControlName="productId">@for(p of perishableProducts();track p.id){<mat-option [value]="p.id">{{p.name}}@if((p.untrackedStock??0)>0){ · {{p.untrackedStock|qty}} sem lote}</mat-option>}</mat-select></mat-form-field>@if(selectedProduct();as product){<div class="stock-info" [class.attention]="(product.untrackedStock??0)>0" aria-live="polite"><div><span>Estoque total</span><strong>{{product.stock|qty}} {{product.unit}}</strong></div><div><span>Em lotes</span><strong>{{(product.stock-(product.untrackedStock??0))|qty}}</strong></div><div><span>Sem lote</span><strong>{{(product.untrackedStock??0)|qty}}</strong></div></div>@if(assignExisting()&&!(product.untrackedStock??0)){<p class="warn">Este produto não tem saldo sem lote para vincular.</p>}}
           <mat-form-field appearance="outline"><mat-label>Lote</mat-label><input matInput formControlName="batch"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Data de entrada</mat-label><input matInput type="date" formControlName="receivedAt"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Validade</mat-label><input matInput type="date" formControlName="expiry"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Quantidade recebida</mat-label><input matInput type="number" min="0.001" step="0.001" formControlName="quantity"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>{{assignExisting()?'Quantidade a vincular':'Quantidade recebida'}}</mat-label><input matInput type="number" min="0.001" step="0.001" formControlName="quantity">@if(assignExisting()&&selectedProduct()){<mat-hint>Até {{(selectedProduct()!.untrackedStock??0)|qty}} sem lote</mat-hint>}</mat-form-field>
           <button mat-flat-button class="primary-button" type="submit" [disabled]="saving()">{{saving()?'Registrando…':'Registrar lote'}}</button>
         </form>
       </mat-drawer>
       <mat-drawer-content>
         <app-page-header eyebrow="Estoque" title="Produtos perecíveis" subtitle="Consulte e registre lotes, quantidades e validades." actionLabel="Registrar lote" (action)="drawer.open()"/>
+        @if(untrackedProducts().length){<div class="notice warning untracked" role="status"><mat-icon>inventory</mat-icon><span><strong>{{untrackedProducts().length}} {{untrackedProducts().length===1?'produto perecível tem':'produtos perecíveis têm'}} saldo sem lote</strong>, que não pode ser vendido: @for(p of untrackedProducts();track p.id){{{p.name}} ({{p.untrackedStock|qty}}){{$last?'':', '}}}. Use “Vincular saldo existente” depois da contagem.</span><button mat-stroked-button (click)="startLink(drawer)">Vincular saldo</button></div>}
         <section class="surface">
           @if(loading()) { <app-loading-state/> }
           @else if(error()) { <app-error-state title="Não foi possível carregar os lotes" [message]="error()!"/> }
@@ -47,7 +48,7 @@ const today = new Date().toISOString().slice(0, 10);
       </mat-drawer-content>
     </mat-drawer-container>
   `,
-  styles: [`.drawer-shell{background:transparent;min-height:calc(100vh - 130px)}.form-drawer{width:min(430px,92vw);padding:24px}.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.drawer-head h2{margin:3px 0 0}.form-drawer form{display:grid;gap:6px}.form-drawer form>button{height:46px}.perishable-note{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:.76rem;padding:14px 18px;border-top:1px solid var(--border)}.empty-row{text-align:center;color:var(--muted);padding:28px}`],
+  styles: [`.drawer-shell{background:transparent;min-height:calc(100vh - 130px)}.form-drawer{width:min(430px,92vw);padding:24px}.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.drawer-head h2{margin:3px 0 0}.form-drawer form{display:grid;gap:6px}.form-drawer form>button{height:46px}.perishable-note{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:.76rem;padding:14px 18px;border-top:1px solid var(--border)}.stock-info{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:-4px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:9px}.stock-info.attention{border-color:#e7c46a;background:var(--yellow-light)}.stock-info span{display:block;font-size:.66rem;color:var(--muted)}.stock-info strong{font-size:.86rem}.warn{margin:-6px 0 8px;color:var(--red-dark);font-size:.76rem;font-weight:700}.untracked{margin-bottom:16px;align-items:center}.untracked span{flex:1}.empty-row{text-align:center;color:var(--muted);padding:28px}`],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PerishablesComponent {
@@ -58,6 +59,9 @@ export class PerishablesComponent {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly perishableProducts = computed(() => this.service.products().filter(product => product.perishable));
+  readonly untrackedProducts = computed(() => this.perishableProducts().filter(product => (product.untrackedStock ?? 0) > 0));
+  private readonly productId = signal('');
+  readonly selectedProduct = computed(() => this.perishableProducts().find(product => product.id === this.productId()) ?? null);
   readonly form = new FormGroup({
     productId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     batch: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -66,7 +70,18 @@ export class PerishablesComponent {
     quantity: new FormControl(1, { nonNullable: true, validators: [Validators.required, Validators.min(0.001)] })
   });
 
-  constructor() { void this.load(); }
+  constructor() {
+    void this.load();
+    this.form.controls.productId.valueChanges.subscribe(id => this.productId.set(id));
+  }
+
+  /** Abre o formulário já no modo de vínculo, com o primeiro produto que tem saldo sem lote. */
+  startLink(drawer: MatDrawer): void {
+    const product = this.untrackedProducts()[0];
+    this.assignExisting.set(true);
+    if (product) this.form.patchValue({ productId: product.id, quantity: product.untrackedStock ?? 1 });
+    void drawer.open();
+  }
 
   async load(): Promise<void> {
     try {
