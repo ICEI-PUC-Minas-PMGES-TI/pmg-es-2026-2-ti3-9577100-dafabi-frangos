@@ -19,6 +19,8 @@ public record CashRegisterResponse(
         BigDecimal countedBalance,
         BigDecimal difference,
         String justification,
-        CashRegisterStatus status
+        CashRegisterStatus status,
+        UUID closedById,
+        String closedByName
 ) {
 }

@@ -104,4 +104,26 @@ class InventoryControllerIT {
                 .andExpect(jsonPath("$[0].stockQuantity", is(17)))
                 .andExpect(jsonPath("$[0].lastMovement.origin", is("Registro de lote")));
     }
+
+    @Test
+    void assigningExistingStockDoesNotChangePhysicalTotal() throws Exception {
+        var user = new com.dafabi.shared.security.RequestUser(UUID.randomUUID(), "Administradora", com.dafabi.shared.security.UserRole.ADMIN);
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(user, null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        CreateInventoryLotRequest request = new CreateInventoryLotRequest(product.getId(), "LOTE-REAL",
+                LocalDate.now().minusDays(3), LocalDate.now().minusDays(1), 3, "Não confiar");
+        mockMvc.perform(post("/inventory/lots/assign-existing")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.quantity", is(3)))
+                .andExpect(jsonPath("$.status", is("EXPIRED")));
+        mockMvc.perform(get("/inventory")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].stockQuantity", is(5)));
+        mockMvc.perform(post("/inventory/lots/assign-existing")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateInventoryLotRequest(product.getId(), "OUTRO",
+                                LocalDate.now(), LocalDate.now().plusDays(1), 3, null))))
+                .andExpect(status().isConflict());
+    }
 }

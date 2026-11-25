@@ -59,8 +59,7 @@ public class FinancialDashboardService {
                 .stream()
                 .filter(sale -> sale.getStatus() == SaleStatus.COMPLETED)
                 .toList();
-        List<Expense> expenses = expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(
-                        range.start(), range.end()).stream()
+        List<Expense> expenses = expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(start, endExclusive).stream()
                 .filter(expense -> expense.getStatus() == ExpenseStatus.CONSOLIDATED)
                 .toList();
         List<MarketplaceOrder> marketplaceOrders = java.util.Arrays.stream(IntegrationProvider.values())
@@ -117,6 +116,7 @@ public class FinancialDashboardService {
                         food99Fees,
                         otherMarketplaceCosts,
                         marketplaceFeesComplete,
+                        marketplaceOrders.isEmpty(),
                         estimatedResult,
                         sales.size() + marketplaceOrders.size(),
                         originCounts.get(SaleOrigin.COUNTER),

@@ -17,11 +17,13 @@ import com.dafabi.products.repository.ProductRepository;
 import com.dafabi.products.repository.ProductStockRepository;
 import com.dafabi.shared.exception.BusinessException;
 import com.dafabi.shared.exception.ResourceNotFoundException;
+import com.dafabi.shared.security.RequestUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -128,11 +130,41 @@ public class InventoryService {
     }
 
     @Transactional
+    public InventoryLotResponse assignExistingStockToLot(CreateInventoryLotRequest request, RequestUser user) {
+        if (request.expiry().isBefore(request.receivedAt())) {
+            throw new BusinessException("INVALID_EXPIRY", "A validade não pode ser anterior à data de entrada.");
+        }
+        ProductStock stock = productStockRepository.findByProductIdForUpdate(request.productId())
+                .orElseThrow(() -> new ResourceNotFoundException("Produto", request.productId()));
+        Product product = stock.getProduct();
+        if (!product.isPerishable()) {
+            throw new BusinessException("PRODUCT_NOT_PERISHABLE", "O produto não é perecível.");
+        }
+        if (inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(request.productId(), request.batch().trim())) {
+            throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.", HttpStatus.CONFLICT);
+        }
+        int assigned = inventoryLotRepository.findAvailableByProductForUpdate(request.productId()).stream()
+                .mapToInt(InventoryLot::getQuantity).sum();
+        int unassigned = stock.getQuantity() - assigned;
+        if (request.quantity() > unassigned) {
+            throw new BusinessException("INSUFFICIENT_UNASSIGNED_STOCK",
+                    "Quantidade superior ao saldo sem lote: " + Math.max(0, unassigned) + ".", HttpStatus.CONFLICT);
+        }
+        InventoryLot lot = inventoryLotRepository.save(new InventoryLot(product, request.batch(),
+                request.receivedAt(), request.expiry(), request.quantity()));
+        stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.LOT_ASSIGNMENT,
+                stock.getQuantity(), stock.getQuantity(), "Regularização de lote",
+                "Vinculadas " + request.quantity() + " unidades do saldo existente ao lote " + lot.getBatch(),
+                actor(user.name()), "INVENTORY_LOT", lot.getId()));
+        return inventoryMapper.toLotResponse(lot);
+    }
+
+    @Transactional
     public InventoryLotResponse createLot(CreateInventoryLotRequest request) {
         if (request.expiry().isBefore(request.receivedAt())) {
             throw new BusinessException("INVALID_EXPIRY", "A validade não pode ser anterior à data de entrada.");
         }
-        if (request.expiry().isBefore(LocalDate.now())) {
+        if (request.expiry().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo")))) {
             throw new BusinessException("INVALID_EXPIRY", "A validade deve ser hoje ou uma data futura.");
         }
         if (inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(request.productId(), request.batch().trim())) {

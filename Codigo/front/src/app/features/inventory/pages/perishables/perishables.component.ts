@@ -26,6 +26,8 @@ const today = new Date().toISOString().slice(0, 10);
       <mat-drawer #drawer position="end" mode="over" class="form-drawer">
         <div class="drawer-head"><div><p class="eyebrow">Perecíveis</p><h2>Registrar lote</h2></div><button mat-icon-button (click)="drawer.close()" aria-label="Fechar"><mat-icon>close</mat-icon></button></div>
         <form [formGroup]="form" (ngSubmit)="save(drawer)">
+          <mat-form-field appearance="outline"><mat-label>Tipo de registro</mat-label><mat-select [value]="assignExisting()" (selectionChange)="assignExisting.set($event.value)"><mat-option [value]="false">Nova entrada: aumenta o estoque</mat-option><mat-option [value]="true">Vincular saldo existente: não altera o total</mat-option></mat-select></mat-form-field>
+          @if(assignExisting()){<p>Informe os dados reais do lote correspondente ao saldo já contado. A quantidade não será somada novamente ao estoque.</p>}
           <mat-form-field appearance="outline"><mat-label>Produto</mat-label><mat-select formControlName="productId">@for(p of perishableProducts();track p.id){<mat-option [value]="p.id">{{p.name}}</mat-option>}</mat-select></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Lote</mat-label><input matInput formControlName="batch"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Data de entrada</mat-label><input matInput type="date" formControlName="receivedAt"></mat-form-field>
@@ -51,6 +53,7 @@ export class PerishablesComponent {
   readonly service = inject(InventoryService);
   private readonly snack = inject(MatSnackBar);
   readonly saving = signal(false);
+  readonly assignExisting = signal(false);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly perishableProducts = computed(() => this.service.products().filter(product => product.perishable));
@@ -81,10 +84,10 @@ export class PerishablesComponent {
     }
     this.saving.set(true);
     try {
-      await this.service.addPerishable(this.form.getRawValue());
+      await this.service.addPerishable(this.form.getRawValue(), this.assignExisting());
       drawer.close();
       this.form.reset({ productId: '', batch: '', receivedAt: today, expiry: '', quantity: 1 });
-      this.snack.open('Lote registrado e estoque atualizado.', 'Fechar', { duration: 3500 });
+      this.snack.open(this.assignExisting() ? 'Saldo existente vinculado ao lote.' : 'Lote registrado e estoque atualizado.', 'Fechar', { duration: 3500 });
     } catch (error) {
       this.snack.open(error instanceof ApiError ? error.message : 'Não foi possível registrar o lote.', 'Fechar', { duration: 4500 });
     } finally {

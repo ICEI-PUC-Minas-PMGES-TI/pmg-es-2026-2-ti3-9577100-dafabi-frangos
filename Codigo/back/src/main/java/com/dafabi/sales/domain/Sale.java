@@ -20,6 +20,9 @@ public class Sale {
   @Column(name = "operator_id", nullable = false)
   private UUID operatorId;
 
+  @Column(name = "operator_name", length = 150)
+  private String operatorName;
+
   @Column(name = "sale_number", nullable = false)
   private Long saleNumber;
 
@@ -110,6 +113,9 @@ public class Sale {
   public UUID getOperatorId() {
     return operatorId;
   }
+
+  public String getOperatorName() { return operatorName; }
+  public void setOperatorName(String name) { this.operatorName = name; }
 
   public void setOperatorId(UUID operatorId) {
     this.operatorId = operatorId;

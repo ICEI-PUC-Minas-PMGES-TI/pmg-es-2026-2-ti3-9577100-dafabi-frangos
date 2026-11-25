@@ -7,6 +7,8 @@ import com.dafabi.sales.domain.SaleStatus;
 import com.dafabi.sales.dto.CreateSaleRequest;
 import com.dafabi.sales.dto.SaleResponse;
 import jakarta.validation.Valid;
+import com.dafabi.shared.security.RequestUser;
+import org.springframework.security.core.Authentication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,6 +28,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.math.BigDecimal;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/sales")
@@ -39,8 +43,9 @@ public class SaleController {
     }
 
     @PostMapping
-    public ResponseEntity<SaleResponse> create(@Valid @RequestBody CreateSaleRequest request) {
-        SaleResponse response = saleService.create(request);
+    public ResponseEntity<SaleResponse> create(@Valid @RequestBody CreateSaleRequest request, Authentication authentication) {
+        RequestUser user = RequestUser.from(authentication);
+        SaleResponse response = saleService.create(request, user);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -66,5 +71,15 @@ public class SaleController {
     @GetMapping("/{id}")
     public ResponseEntity<SaleResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(saleService.findById(id));
+    }
+
+    @GetMapping("/summary")
+    public Map<String, BigDecimal> summary(@RequestParam(required = false) String query,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate,
+            @RequestParam(required = false) SaleOrigin origin, @RequestParam(required = false) SaleStatus status,
+            @RequestParam(required = false) PaymentMethod paymentMethod, @RequestParam(required = false) UUID operatorId) {
+        return Map.of("completedCounterTotal", saleService.completedCounterTotal(query, startDate, endDate,
+                origin, status, paymentMethod, operatorId));
     }
 }

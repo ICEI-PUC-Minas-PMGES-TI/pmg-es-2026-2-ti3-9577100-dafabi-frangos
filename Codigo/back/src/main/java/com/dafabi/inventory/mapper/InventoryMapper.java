@@ -10,6 +10,7 @@ import com.dafabi.products.domain.Product;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Component
 public class InventoryMapper {
@@ -59,6 +60,6 @@ public class InventoryMapper {
 
     private LotStatus resolveStatus(InventoryLot lot) {
         if (lot.getQuantity() == 0) return LotStatus.USED;
-        return lot.getExpiry().isBefore(LocalDate.now()) ? LotStatus.EXPIRED : LotStatus.VALID;
+        return lot.getExpiry().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo"))) ? LotStatus.EXPIRED : LotStatus.VALID;
     }
 }

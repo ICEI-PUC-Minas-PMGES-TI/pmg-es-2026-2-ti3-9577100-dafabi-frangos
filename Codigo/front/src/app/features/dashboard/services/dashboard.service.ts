@@ -43,6 +43,7 @@ export class DashboardService {
       summary,
       otherMarketplaceCosts: Number(dashboard.summary.otherMarketplaceCosts ?? 0),
       marketplaceFeesComplete: dashboard.summary.marketplaceFeesComplete !== false,
+      marketplaceCostComplete: dashboard.summary.marketplaceCostComplete === true,
       chartGranularity,
       daily: aggregateRevenue(rawDaily, chartGranularity),
       recentSales: (dashboard.recentSales ?? []).map(sale => ({

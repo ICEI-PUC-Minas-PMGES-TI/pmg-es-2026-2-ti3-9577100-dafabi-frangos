@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,7 +54,7 @@ class FinancialDashboardServiceTest {
 
     private void stubNoData() {
         when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
-        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
         when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
                 .thenReturn(List.of());
         when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(any(), any(), any()))
@@ -74,7 +75,7 @@ class FinancialDashboardServiceTest {
 
     @Test
     void shouldCalculateRevenueAndOriginCountsFromCompletedSales() {
-        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
         when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
                 .thenReturn(List.of());
         Sale sale = new Sale(UUID.randomUUID(), null, null, 1L,
@@ -99,7 +100,7 @@ class FinancialDashboardServiceTest {
 
     @Test
     void shouldSubtractCostOfGoodsSoldFromEstimatedResult() {
-        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
         when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
                 .thenReturn(List.of());
         when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(any(), any(), any()))
@@ -132,7 +133,7 @@ class FinancialDashboardServiceTest {
         Expense paid = mock(Expense.class);
         when(paid.getStatus()).thenReturn(ExpenseStatus.CONSOLIDATED);
         when(paid.getAmount()).thenReturn(new BigDecimal("15.00"));
-        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any()))
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any()))
                 .thenReturn(List.of(pending, paid));
 
         FinancialDashboardResponse response = service.getSummary(
@@ -143,13 +144,25 @@ class FinancialDashboardServiceTest {
     }
 
     @Test
+    void queriesExpensesByPaymentInstantInTheStoreTimeZone() {
+        stubNoData();
+        LocalDate november = LocalDate.of(2026, 11, 1);
+        service.getSummary("custom", november, november.withDayOfMonth(30));
+        var start = november.atStartOfDay(ZoneId.of("America/Sao_Paulo")).toOffsetDateTime();
+        var end = november.plusMonths(1).atStartOfDay(ZoneId.of("America/Sao_Paulo")).toOffsetDateTime();
+        org.mockito.Mockito.verify(expenseRepository).findByPaidAtGreaterThanEqualAndPaidAtLessThan(start, end);
+        org.mockito.Mockito.verify(expenseRepository, org.mockito.Mockito.never())
+                .findByDateGreaterThanEqualAndDateLessThanEqual(any(), any());
+    }
+
+    @Test
     void shouldTreatMarketplaceFeesAsCostsRegardlessOfTheirSign() {
         MarketplaceOrder ifoodNegative = marketplaceOrder(IntegrationProvider.IFOOD, "-4.00", "-1.00");
         MarketplaceOrder ifoodPositive = marketplaceOrder(IntegrationProvider.IFOOD, "4.00", "1.00");
         MarketplaceOrder food99Negative = marketplaceOrder(IntegrationProvider.FOOD_99, "-7.00", null);
         MarketplaceOrder food99Positive = marketplaceOrder(IntegrationProvider.FOOD_99, "7.00", null);
         when(saleRepository.findByDateTimeGreaterThanEqualAndDateTimeLessThan(any(), any())).thenReturn(List.of());
-        when(expenseRepository.findByDateGreaterThanEqualAndDateLessThanEqual(any(), any())).thenReturn(List.of());
+        when(expenseRepository.findByPaidAtGreaterThanEqualAndPaidAtLessThan(any(), any())).thenReturn(List.of());
         when(cashMovementRepository.findByOccurredAtGreaterThanEqualAndOccurredAtLessThan(any(), any()))
                 .thenReturn(List.of());
         when(marketplaceOrderRepository.findByProviderAndOrderAtGreaterThanEqualAndOrderAtLessThan(

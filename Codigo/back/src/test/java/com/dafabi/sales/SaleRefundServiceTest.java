@@ -202,6 +202,27 @@ class SaleRefundServiceTest {
     }
 
     @Test
+    void restoresBothOriginalLotsIncludingExpiredPhysicalStock() {
+        Sale sale = saleOf(PaymentMethod.PIX, SaleStatus.COMPLETED);
+        mockLockedSale(sale);
+        when(cashMovementRepository.findByReferenceTypeAndReferenceId("SALE", sale.getId())).thenReturn(List.of());
+        mockStock(chickenStock);
+        mockStock(farofaStock);
+        var expired = new InventoryLot(chickenStock.getProduct(), "ANTIGO", LocalDate.now().minusDays(4), LocalDate.now().minusDays(1), 0);
+        var valid = new InventoryLot(chickenStock.getProduct(), "NOVO", LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1);
+        var first = new StockMovement(chickenStock.getProduct(), expired, StockMovementType.COUNTER_SALE,
+                3, 2, "Venda", "Venda", "Operador", "SALE", sale.getId());
+        var second = new StockMovement(chickenStock.getProduct(), valid, StockMovementType.COUNTER_SALE,
+                2, 1, "Venda", "Venda", "Operador", "SALE", sale.getId());
+        when(stockMovementRepository.findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
+                "SALE", sale.getId(), StockMovementType.COUNTER_SALE)).thenReturn(List.of(first, second));
+        when(saleRefundRepository.save(any(SaleRefund.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        saleRefundService.refund(sale.getId(), request, admin, null);
+        assertThat(expired.getQuantity()).isEqualTo(1);
+        assertThat(valid.getQuantity()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("Deve limitar o nome do responsável ao tamanho aceito pelas movimentações de estoque")
     void shouldTruncateLongResponsibleName() {
         RequestUser longNameAdmin = new RequestUser(UUID.randomUUID(), "A".repeat(200), UserRole.ADMIN);

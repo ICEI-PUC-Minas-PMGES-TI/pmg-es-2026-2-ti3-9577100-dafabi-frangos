@@ -43,6 +43,12 @@ public class CashRegister {
     @Column(name = "closed_at")
     private OffsetDateTime closedAt;
 
+    @Column(name = "closed_by_id")
+    private UUID closedById;
+
+    @Column(name = "closed_by_name", length = 150)
+    private String closedByName;
+
     @Column(name = "initial_balance", nullable = false, precision = 14, scale = 2)
     private BigDecimal initialBalance;
 
@@ -170,6 +176,11 @@ public class CashRegister {
     public OffsetDateTime getClosedAt() {
         return closedAt;
     }
+
+    public UUID getClosedById() { return closedById; }
+    public String getClosedByName() { return closedByName; }
+    public void setClosedById(UUID id) { this.closedById = id; }
+    public void setClosedByName(String name) { this.closedByName = name; }
 
     public void setClosedAt(OffsetDateTime closedAt) {
         this.closedAt = closedAt;

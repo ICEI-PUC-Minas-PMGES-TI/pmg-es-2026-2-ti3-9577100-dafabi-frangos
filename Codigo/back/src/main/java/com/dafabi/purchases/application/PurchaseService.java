@@ -207,7 +207,7 @@ public class PurchaseService {
         }
 
         if (request.paymentMethod() == ExpensePaymentMethod.CASH) {
-            CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(
+            CashRegister register = cashRegisterRepository.findByStoreIdAndStatusForUpdate(
                             CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
                     .orElseThrow(() -> new BusinessException("CASH_CLOSED",
                             "Abra o caixa antes de registrar o pagamento em dinheiro.", HttpStatus.CONFLICT));

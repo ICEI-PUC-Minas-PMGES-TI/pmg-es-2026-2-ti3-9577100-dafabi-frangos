@@ -15,6 +15,7 @@ export interface ApiSale {
   saleNumber: number;
   cashRegisterId: string | null;
   operatorId: string;
+  operatorName?: string | null;
   dateTime: string;
   origin: 'COUNTER' | 'IFOOD' | 'FOOD_99';
   paymentMethod: PaymentMethod;

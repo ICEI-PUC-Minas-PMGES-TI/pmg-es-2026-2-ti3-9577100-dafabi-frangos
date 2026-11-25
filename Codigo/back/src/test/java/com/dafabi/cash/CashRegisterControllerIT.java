@@ -48,6 +48,9 @@ class CashRegisterControllerIT {
 
     @BeforeEach
     void setUp() {
+        var principal = new com.dafabi.shared.security.RequestUser(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Fabiana Nogueira", com.dafabi.shared.security.UserRole.ADMIN);
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        org.springframework.security.test.context.TestSecurityContextHolder.setAuthentication(authentication);
         cashMovementRepository.deleteAll();
         cashRegisterRepository.deleteAll();
     }
@@ -111,6 +114,8 @@ class CashRegisterControllerIT {
                 .andExpect(jsonPath("$.countedBalance", is(150.00)))
                 .andExpect(jsonPath("$.expectedBalance", is(150.00)))
                 .andExpect(jsonPath("$.difference", is(0.00)))
+                .andExpect(jsonPath("$.closedById", is("11111111-1111-1111-1111-111111111111")))
+                .andExpect(jsonPath("$.closedByName", is("Fabiana Nogueira")))
                 .andExpect(jsonPath("$.closedAt").isNotEmpty());
     }
 
@@ -180,7 +185,7 @@ class CashRegisterControllerIT {
         // Agora retorna o caixa aberto
         mockMvc.perform(get("/cash-registers/current"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.operator", is("Carlos")))
+                .andExpect(jsonPath("$.operator", is("Fabiana Nogueira")))
                 .andExpect(jsonPath("$.initialBalance", is(120.00)))
                 .andExpect(jsonPath("$.status", is("OPEN")));
     }

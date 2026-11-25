@@ -31,4 +31,8 @@ export class InventoryApiService {
   createLot(request: ApiCreateInventoryLotRequest) {
     return this.http.post<ApiInventoryLot>(`${this.baseUrl}/lots`, request);
   }
+
+  assignExistingLot(request: ApiCreateInventoryLotRequest) {
+    return this.http.post<ApiInventoryLot>(`${this.baseUrl}/lots/assign-existing`, request);
+  }
 }

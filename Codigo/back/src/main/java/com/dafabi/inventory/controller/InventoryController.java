@@ -7,6 +7,8 @@ import com.dafabi.inventory.dto.InventoryPositionResponse;
 import com.dafabi.inventory.dto.StockAdjustmentRequest;
 import com.dafabi.inventory.dto.StockMovementResponse;
 import jakarta.validation.Valid;
+import com.dafabi.shared.security.RequestUser;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,5 +60,13 @@ public class InventoryController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InventoryLotResponse> createLot(@Valid @RequestBody CreateInventoryLotRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.createLot(request));
+    }
+
+    @PostMapping("/lots/assign-existing")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InventoryLotResponse> assignExistingStock(@Valid @RequestBody CreateInventoryLotRequest request,
+                                                                    Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(inventoryService.assignExistingStockToLot(request, RequestUser.from(authentication)));
     }
 }

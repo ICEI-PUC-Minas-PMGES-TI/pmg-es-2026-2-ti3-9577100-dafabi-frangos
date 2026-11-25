@@ -23,6 +23,7 @@ public record FinancialDashboardResponse(
             BigDecimal food99Fees,
             BigDecimal otherMarketplaceCosts,
             boolean marketplaceFeesComplete,
+            boolean marketplaceCostComplete,
             BigDecimal estimatedResult,
             long salesCount,
             long counterSales,

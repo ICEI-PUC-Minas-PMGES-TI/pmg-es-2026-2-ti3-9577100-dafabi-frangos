@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, UUID> {
@@ -67,4 +68,24 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
             @Param("operatorId") UUID operatorId,
             @Param("hasOperatorId") boolean hasOperatorId,
             Pageable pageable);
+
+    @Query("""
+            select coalesce(sum(s.total), 0) from Sale s
+            where s.origin = com.dafabi.sales.domain.SaleOrigin.COUNTER
+              and s.status = com.dafabi.sales.domain.SaleStatus.COMPLETED
+              and (:hasQuery = false or cast(s.saleNumber as string) like concat('%', cast(:query as string), '%'))
+              and (:hasStartDate = false or s.dateTime >= :startDate)
+              and (:hasEndDate = false or s.dateTime <= :endDate)
+              and (:hasOrigin = false or s.origin = :origin)
+              and (:hasStatus = false or s.status = :status)
+              and (:hasPaymentMethod = false or s.paymentMethod = :paymentMethod)
+              and (:hasOperatorId = false or s.operatorId = :operatorId)
+            """)
+    BigDecimal sumCompletedCounterSales(@Param("query") String query, @Param("hasQuery") boolean hasQuery,
+            @Param("startDate") OffsetDateTime startDate, @Param("hasStartDate") boolean hasStartDate,
+            @Param("endDate") OffsetDateTime endDate, @Param("hasEndDate") boolean hasEndDate,
+            @Param("origin") SaleOrigin origin, @Param("hasOrigin") boolean hasOrigin,
+            @Param("status") SaleStatus status, @Param("hasStatus") boolean hasStatus,
+            @Param("paymentMethod") PaymentMethod paymentMethod, @Param("hasPaymentMethod") boolean hasPaymentMethod,
+            @Param("operatorId") UUID operatorId, @Param("hasOperatorId") boolean hasOperatorId);
 }

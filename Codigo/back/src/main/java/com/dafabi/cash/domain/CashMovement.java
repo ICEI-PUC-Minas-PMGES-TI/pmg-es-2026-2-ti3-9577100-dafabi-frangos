@@ -51,6 +51,12 @@ public class CashMovement {
     @Column(name = "occurred_at", nullable = false)
     private OffsetDateTime occurredAt;
 
+    @Column(name = "performed_by_id")
+    private UUID performedById;
+
+    @Column(name = "performed_by_name", length = 150)
+    private String performedByName;
+
     protected CashMovement() {
     }
 
@@ -82,6 +88,11 @@ public class CashMovement {
     public UUID getId() {
         return id;
     }
+
+    public UUID getPerformedById() { return performedById; }
+    public String getPerformedByName() { return performedByName; }
+    public void setPerformedById(UUID id) { this.performedById = id; }
+    public void setPerformedByName(String name) { this.performedByName = name; }
 
     public void setId(UUID id) {
         this.id = id;

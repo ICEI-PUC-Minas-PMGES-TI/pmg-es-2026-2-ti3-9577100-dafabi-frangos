@@ -26,6 +26,7 @@ import com.dafabi.sales.mapper.SaleMapper;
 import com.dafabi.sales.repository.SaleRepository;
 import com.dafabi.shared.exception.BusinessException;
 import com.dafabi.shared.exception.ResourceNotFoundException;
+import com.dafabi.shared.security.RequestUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -70,6 +74,15 @@ public class SaleService {
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request) {
+        return createInternal(request, null);
+    }
+
+    @Transactional
+    public SaleResponse create(CreateSaleRequest request, RequestUser user) {
+        return createInternal(request, user);
+    }
+
+    private SaleResponse createInternal(CreateSaleRequest request, RequestUser user) {
         UUID storeId = request.storeId() != null ? request.storeId() : CashRegister.DEFAULT_STORE_ID;
 
         CashRegister register = cashRegisterRepository
@@ -79,7 +92,8 @@ public class SaleService {
                         "Não existe caixa aberto para o operador. Abra o caixa antes de registrar vendas.",
                         HttpStatus.CONFLICT));
 
-        UUID operatorId = resolveOperator(register, request.operatorId());
+        UUID operatorId = user == null ? resolveOperator(register, request.operatorId()) : user.id();
+        String operatorName = user == null ? register.getOperatorName() : user.name();
 
         Map<UUID, Integer> quantitiesByProduct = new TreeMap<>();
         for (SaleItemRequest item : request.items()) {
@@ -97,6 +111,7 @@ public class SaleService {
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 SaleStatus.COMPLETED);
+        sale.setOperatorName(operatorName);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
@@ -129,8 +144,8 @@ public class SaleService {
             subtotal = subtotal.add(itemSubtotal);
 
             int newQuantity = previousQuantity - quantity;
+            consumeLotsForSale(product, quantity, previousQuantity, newQuantity, sale, operatorName);
             stock.setQuantity(newQuantity);
-            consumeLotsForSale(product, quantity, previousQuantity, newQuantity, sale, register.getOperatorName());
         }
 
         sale.setSubtotal(subtotal);
@@ -212,12 +227,29 @@ public class SaleService {
         return operatorId;
     }
 
+    @Transactional(readOnly = true)
+    public BigDecimal completedCounterTotal(String query, OffsetDateTime start, OffsetDateTime end,
+            SaleOrigin origin, SaleStatus status, PaymentMethod payment, UUID operator) {
+        String q = query == null || query.isBlank() ? null : query.trim();
+        return saleRepository.sumCompletedCounterSales(q, q != null, start, start != null, end, end != null,
+                origin, origin != null, status, status != null, payment, payment != null, operator, operator != null);
+    }
+
     private void consumeLotsForSale(Product product, int quantity, int aggregateBefore, int aggregateAfter,
                                     Sale sale, String operator) {
         int remaining = quantity;
         int aggregateBalance = aggregateBefore;
         if (product.isPerishable()) {
-            for (InventoryLot lot : inventoryLotRepository.findAvailableByProductForUpdate(product.getId())) {
+            LocalDate businessDate = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+            List<InventoryLot> validLots = inventoryLotRepository.findAvailableByProductForUpdate(product.getId())
+                    .stream().filter(lot -> !lot.getExpiry().isBefore(businessDate)).toList();
+            int sellable = validLots.stream().mapToInt(InventoryLot::getQuantity).sum();
+            if (remaining > sellable) {
+                throw new BusinessException("INSUFFICIENT_SELLABLE_STOCK",
+                        String.format("Estoque vendável insuficiente para \"%s\": solicitado %d, vendável %d, saldo total %d. O saldo pode incluir lotes vencidos ou sem rastreabilidade.",
+                                product.getName(), quantity, sellable, aggregateBefore), HttpStatus.CONFLICT);
+            }
+            for (InventoryLot lot : validLots) {
                 if (remaining == 0) break;
                 int consumed = Math.min(remaining, lot.getQuantity());
                 int lotBefore = lot.getQuantity();

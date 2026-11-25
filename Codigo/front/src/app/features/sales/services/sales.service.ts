@@ -33,17 +33,21 @@ export class SalesService {
   readonly loadingSales = signal(false);
   readonly salesError = signal<string | null>(null);
   readonly pageState = signal({ page: 0, size: 20, totalElements: 0, totalPages: 0 });
+  readonly completedCounterTotal = signal(0);
+  private productsRequest = 0;
+  private historyRequest = 0;
 
   async loadProducts(query = ''): Promise<void> {
+    const request = ++this.productsRequest;
     this.loadingProducts.set(true);
     this.productsError.set(null);
     try {
       const response = await firstValueFrom(this.productsApi.list({ query, status: 'ACTIVE', page: 0, size: 100 }));
-      this.products.set(response.content.map(toProduct));
+      if (request === this.productsRequest) this.products.set(response.content.map(toProduct));
     } catch (error) {
-      this.productsError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar os produtos.');
+      if (request === this.productsRequest) this.productsError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar os produtos.');
     } finally {
-      this.loadingProducts.set(false);
+      if (request === this.productsRequest) this.loadingProducts.set(false);
     }
   }
 
@@ -114,16 +118,21 @@ export class SalesService {
   }
 
   async loadHistory(query: SaleQuery = {}): Promise<void> {
+    const request = ++this.historyRequest;
     this.loadingSales.set(true);
     this.salesError.set(null);
     try {
-      const response = await firstValueFrom(this.api.list(query));
+      const [response, summary] = await Promise.all([
+        firstValueFrom(this.api.list(query)), firstValueFrom(this.api.summary(query))
+      ]);
+      if (request !== this.historyRequest) return;
       this.sales.set(response.content.map(toSale));
+      this.completedCounterTotal.set(summary.completedCounterTotal);
       this.pageState.set({ page: response.number, size: response.size, totalElements: response.totalElements, totalPages: response.totalPages });
     } catch (error) {
-      this.salesError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar o histórico de vendas.');
+      if (request === this.historyRequest) this.salesError.set(error instanceof ApiError ? error.message : 'Não foi possível carregar o histórico de vendas.');
     } finally {
-      this.loadingSales.set(false);
+      if (request === this.historyRequest) this.loadingSales.set(false);
     }
   }
 

@@ -18,6 +18,8 @@ public record CashMovementResponse(
         String referenceType,
         UUID referenceId,
         OffsetDateTime occurredAt,
-        OffsetDateTime date
+        OffsetDateTime date,
+        UUID performedById,
+        String performedByName
 ) {
 }

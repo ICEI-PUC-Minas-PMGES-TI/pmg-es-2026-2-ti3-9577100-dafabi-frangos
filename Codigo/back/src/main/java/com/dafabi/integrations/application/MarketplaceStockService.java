@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -129,8 +130,8 @@ public class MarketplaceStockService {
     public List<MarketplaceStockEffectView> apply(IntegrationProvider provider,MarketplaceStockApplyRequest request) {
         validateRange(request.externalStoreId(),request.startDate(),request.endDate());
         List<MarketplaceStockEffectView> preview=effectViews(provider,request.externalStoreId(),request.startDate(),request.endDate());
-        if(preview.stream().anyMatch(effect->Set.of("UNMAPPED","BASELINE_REQUIRED","UNIT_REVIEW","INSUFFICIENT_STOCK").contains(effect.status())))
-            throw bad("STOCK_REVIEW_REQUIRED","Resolva os itens sem associação, unidades fracionadas ou saldo insuficiente antes de aplicar o período.");
+        if(preview.stream().anyMatch(effect->Set.of("UNMAPPED","BASELINE_REQUIRED","UNIT_REVIEW","INSUFFICIENT_STOCK","HISTORICAL_REVIEW").contains(effect.status())))
+            throw bad("STOCK_REVIEW_REQUIRED","Resolva as divergências de associação, período, unidades ou saldo antes de aplicar o relatório.");
         if(!request.confirmReturnedProducts()&&preview.stream().anyMatch(effect->effect.quantityToApply().signum()<0))
             throw bad("RETURN_CONFIRMATION_REQUIRED","Confirme a devolução física dos produtos antes de recompor o estoque.");
         List<MarketplaceItemSnapshot> items=snapshots.findByProviderAndExternalStoreIdAndBusinessDateBetweenOrderByBusinessDateAscExternalItemNameAsc(
@@ -199,7 +200,16 @@ public class MarketplaceStockService {
         int aggregateBalance = aggregateBefore;
         String origin = item.getProvider() == IntegrationProvider.IFOOD ? "iFood" : "99Food";
         if (direction > 0 && product.isPerishable()) {
-            for (InventoryLot lot : lots.findAvailableByProductForUpdate(product.getId())) {
+            List<InventoryLot> eligible = lots.findAvailableByProductForUpdate(product.getId()).stream()
+                    .filter(lot -> !lot.getReceivedAt().isAfter(item.getBusinessDate())
+                            && !lot.getExpiry().isBefore(item.getBusinessDate())).toList();
+            int traceable = eligible.stream().mapToInt(InventoryLot::getQuantity).sum();
+            if (traceable < amount) {
+                throw new BusinessException("MARKETPLACE_LOT_REVIEW_REQUIRED",
+                        "A baixa não pode ser atribuída com segurança aos lotes válidos na data do relatório. Confira o estoque.",
+                        HttpStatus.CONFLICT);
+            }
+            for (InventoryLot lot : eligible) {
                 if (remaining == 0) break;
                 int consumed = Math.min(remaining, lot.getQuantity());
                 lot.setQuantity(lot.getQuantity() - consumed);
@@ -283,6 +293,7 @@ public class MarketplaceStockService {
                 else if(item.getBusinessDate().isBefore(baseline.getStartDate())){status="BEFORE_BASELINE";explanation="Este registro é anterior ao início do controle de estoque.";}
                 else if(reported.stripTrailingZeros().scale()>0){status="UNIT_REVIEW";explanation="A quantidade calculada é fracionada e o estoque atual aceita apenas unidades inteiras.";}
                 else if(reported.compareTo(applied)==0){status="APPLIED";explanation="O saldo do estoque já corresponde a este relatório.";}
+                else if(product!=null && product.isPerishable() && !item.getBusinessDate().equals(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="HISTORICAL_REVIEW";explanation="Relatório de outra data: a atribuição aos lotes precisa de conferência; o saldo atual não comprova o estoque daquele dia.";}
                 else if(app!=null&&"INSUFFICIENT_STOCK".equals(app.getStatus())&&delta.signum()>0&&BigDecimal.valueOf(currentStock).compareTo(delta)<0){status=app.getStatus();explanation="O saldo atual é insuficiente; ajuste o estoque e aplique novamente.";}
                 else if(app!=null&&"RETURN_REVIEW".equals(app.getStatus())){status=app.getStatus();explanation="A quantidade do relatório diminuiu; confirme se os produtos foram devolvidos ao estoque.";}
                 else {status="PENDING";explanation=reported.compareTo(applied)<0?"Confirme a devolução física antes de recompor o estoque.":"A baixa será aplicada após confirmar a revisão.";}

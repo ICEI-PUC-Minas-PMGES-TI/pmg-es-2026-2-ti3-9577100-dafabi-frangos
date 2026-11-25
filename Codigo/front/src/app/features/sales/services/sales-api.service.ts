@@ -17,6 +17,14 @@ export class SalesApiService {
   }
 
   list(query: SaleQuery = {}) {
+    return this.http.get<ApiSalePage>(this.baseUrl, { params: this.params(query) });
+  }
+
+  summary(query: SaleQuery = {}) {
+    return this.http.get<{ completedCounterTotal: number }>(`${this.baseUrl}/summary`, { params: this.params(query) });
+  }
+
+  private params(query: SaleQuery) {
     let params = new HttpParams()
       .set('page', query.page ?? 0)
       .set('size', query.size ?? 20);
@@ -26,6 +34,6 @@ export class SalesApiService {
     if (query.origin && query.origin !== 'ALL') params = params.set('origin', query.origin === '99FOOD' ? 'FOOD_99' : query.origin);
     if (query.paymentMethod && query.paymentMethod !== 'ALL') params = params.set('paymentMethod', query.paymentMethod);
     if (query.status && query.status !== 'ALL') params = params.set('status', query.status === 'CANCELED' ? 'CANCELLED' : query.status);
-    return this.http.get<ApiSalePage>(this.baseUrl, { params });
+    return params;
   }
 }

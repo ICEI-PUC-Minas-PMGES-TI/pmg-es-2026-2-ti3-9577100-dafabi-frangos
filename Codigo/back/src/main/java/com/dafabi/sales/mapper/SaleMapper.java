@@ -28,7 +28,8 @@ public class SaleMapper {
                 sale.getStatus(),
                 sale.getItems().stream()
                         .map(this::toItemResponse)
-                        .toList()
+                        .toList(),
+                sale.getOperatorName()
         );
     }
 

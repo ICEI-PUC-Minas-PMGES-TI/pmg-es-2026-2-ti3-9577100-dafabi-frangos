@@ -18,10 +18,12 @@ export class ProductsService {
   readonly products = signal<Product[]>([]);
   readonly categories = signal<Category[]>([]);
   readonly pageState = signal<ProductPageState>({ page: 0, size: 50, totalElements: 0, totalPages: 0 });
+  private loadRequest = 0;
 
   constructor(private readonly api: ProductsApiService) {}
 
   async load(query: ProductListQuery = {}): Promise<void> {
+    const request = ++this.loadRequest;
     const status = query.status === 'ALL' ? undefined : query.status;
     const response = await firstValueFrom(this.api.list({
       query: query.query,
@@ -31,6 +33,7 @@ export class ProductsService {
       page: query.page ?? 0,
       size: query.size ?? 50
     }));
+    if (request !== this.loadRequest) return;
     this.products.set(response.content.map(toProduct));
     this.pageState.set({
       page: response.number,

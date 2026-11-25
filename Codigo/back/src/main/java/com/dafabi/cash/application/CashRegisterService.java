@@ -15,6 +15,8 @@ import com.dafabi.cash.repository.CashMovementRepository;
 import com.dafabi.cash.repository.CashRegisterRepository;
 import com.dafabi.shared.exception.BusinessException;
 import com.dafabi.shared.exception.ResourceNotFoundException;
+import com.dafabi.shared.security.RequestUser;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +67,7 @@ public class CashRegisterService {
 
     @Transactional
     public CashRegisterResponse closeCashRegister(UUID id, CloseCashRequest request) {
-        CashRegister register = cashRegisterRepository.findById(id)
+        CashRegister register = cashRegisterRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caixa", id));
 
         if (register.getStatus() == CashRegisterStatus.CLOSED) {
@@ -87,6 +89,11 @@ public class CashRegisterService {
         }
 
         register.setClosedAt(OffsetDateTime.now());
+        RequestUser actor = currentActor();
+        if (actor != null) {
+            register.setClosedById(actor.id());
+            register.setClosedByName(actor.name());
+        }
         register.setExpectedBalanceAtClose(expectedBalance);
         register.setCountedBalance(countedBalance);
         register.setDifference(difference);
@@ -100,7 +107,7 @@ public class CashRegisterService {
     @Transactional
     public CashRegisterResponse closeCurrentCashRegister(UUID storeId, CloseCashRequest request) {
         UUID resolvedStoreId = storeId != null ? storeId : CashRegister.DEFAULT_STORE_ID;
-        CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(resolvedStoreId, CashRegisterStatus.OPEN)
+        CashRegister register = cashRegisterRepository.findByStoreIdAndStatusForUpdate(resolvedStoreId, CashRegisterStatus.OPEN)
                 .orElseThrow(() -> new BusinessException("CASH_CLOSED", "Não existe caixa aberto para encerramento neste estabelecimento.", HttpStatus.NOT_FOUND));
 
         return closeCashRegister(register.getId(), request);
@@ -175,7 +182,7 @@ public class CashRegisterService {
 
     @Transactional
     public CashMovementResponse createMovement(UUID id, CreateCashMovementRequest request) {
-        CashRegister register = cashRegisterRepository.findById(id)
+        CashRegister register = cashRegisterRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caixa", id));
 
         if (register.getStatus() == CashRegisterStatus.CLOSED) {
@@ -194,6 +201,7 @@ public class CashRegisterService {
                 request.referenceId()
         );
 
+        setActor(movement);
         CashMovement saved = cashMovementRepository.save(movement);
         return cashRegisterMapper.toMovementResponse(saved);
     }
@@ -207,7 +215,7 @@ public class CashRegisterService {
                                        String description,
                                        String referenceType,
                                        UUID referenceId) {
-        CashRegister register = cashRegisterRepository.findById(cashRegisterId)
+        CashRegister register = cashRegisterRepository.findByIdForUpdate(cashRegisterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Caixa", cashRegisterId));
 
         if (register.getStatus() == CashRegisterStatus.CLOSED) {
@@ -224,7 +232,22 @@ public class CashRegisterService {
                 referenceType,
                 referenceId
         );
+        setActor(movement);
         return cashMovementRepository.save(movement);
+    }
+
+    private RequestUser currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof RequestUser user ? user : null;
+    }
+
+    private void setActor(CashMovement movement) {
+        RequestUser actor = currentActor();
+        if (actor != null) {
+            movement.setPerformedById(actor.id());
+            movement.setPerformedByName(actor.name());
+        }
     }
 
     public BigDecimal calculateExpectedBalance(CashRegister register) {

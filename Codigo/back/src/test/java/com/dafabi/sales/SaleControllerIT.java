@@ -13,6 +13,9 @@ import com.dafabi.products.repository.CategoryRepository;
 import com.dafabi.products.repository.ProductRepository;
 import com.dafabi.products.repository.ProductStockRepository;
 import com.dafabi.sales.domain.PaymentMethod;
+import com.dafabi.sales.domain.Sale;
+import com.dafabi.sales.domain.SaleOrigin;
+import com.dafabi.sales.domain.SaleStatus;
 import com.dafabi.sales.dto.CreateSaleRequest;
 import com.dafabi.sales.dto.SaleItemRequest;
 import com.dafabi.sales.repository.SaleRepository;
@@ -63,6 +66,9 @@ class SaleControllerIT {
 
     @BeforeEach
     void setUp() {
+        var principal = new com.dafabi.shared.security.RequestUser(operatorId, "Fabiana", com.dafabi.shared.security.UserRole.ADMIN);
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        org.springframework.security.test.context.TestSecurityContextHolder.setAuthentication(authentication);
         cleanUp();
 
         Category category = categoryRepository.save(new Category(UUID.randomUUID(), "Frangos", true));
@@ -83,7 +89,7 @@ class SaleControllerIT {
                 new SaleItemRequest(chicken.getId(), 2),
                 new SaleItemRequest(farofa.getId(), 1),
                 new SaleItemRequest(farofa.getId(), 2)
-        ), PaymentMethod.PIX);
+        ), PaymentMethod.PIX, null, UUID.randomUUID());
 
         String body = mockMvc.perform(post("/sales")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -197,6 +203,23 @@ class SaleControllerIT {
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.totalElements", is(1)))
                 .andExpect(jsonPath("$.content[0].paymentMethod", is("PIX")));
+    }
+
+    @Test
+    void summaryCoversEveryPageAndExcludesRefundedSales() throws Exception {
+        for (int i = 1; i <= 25; i++) {
+            saleRepository.save(new Sale(UUID.randomUUID(), null, operatorId, (long) i,
+                    OffsetDateTime.parse("2026-10-02T12:00:00-03:00").plusMinutes(i),
+                    SaleOrigin.COUNTER, PaymentMethod.PIX, new BigDecimal("10.00"),
+                    new BigDecimal("10.00"), i == 1 ? SaleStatus.REFUNDED : SaleStatus.COMPLETED));
+        }
+        mockMvc.perform(get("/sales").param("page", "1").param("size", "20"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements", is(25)))
+                .andExpect(jsonPath("$.content", hasSize(5)));
+        mockMvc.perform(get("/sales/summary").param("paymentMethod", "PIX"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.completedCounterTotal", is(240.0)));
+        mockMvc.perform(get("/sales/summary").param("status", "REFUNDED"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.completedCounterTotal", is(0)));
     }
 
     private CashRegister openCashRegister() {

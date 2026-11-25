@@ -43,11 +43,12 @@ export class InventoryService {
     this.perishables.set(lots.map(toPerishableProduct));
   }
 
-  async addPerishable(request: PerishableRequest): Promise<PerishableProduct> {
-    const response = await firstValueFrom(this.api.createLot({
+  async addPerishable(request: PerishableRequest, assignExisting = false): Promise<PerishableProduct> {
+    const payload = {
       ...request,
       performedBy: this.auth.currentUser()?.name
-    }));
+    };
+    const response = await firstValueFrom(assignExisting ? this.api.assignExistingLot(payload) : this.api.createLot(payload));
     const lot = toPerishableProduct(response);
     this.perishables.update(items => [lot, ...items]);
     await this.loadPositions();

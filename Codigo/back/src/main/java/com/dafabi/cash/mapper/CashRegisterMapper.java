@@ -37,7 +37,9 @@ public class CashRegisterMapper {
                 normalize(register.getCountedBalance()),
                 normalize(register.getDifference()),
                 register.getJustification(),
-                register.getStatus()
+                register.getStatus(),
+                register.getClosedById(),
+                register.getClosedByName()
         );
     }
 
@@ -84,7 +86,9 @@ public class CashRegisterMapper {
                 movement.getReferenceType(),
                 movement.getReferenceId(),
                 movement.getOccurredAt(),
-                movement.getOccurredAt()
+                movement.getOccurredAt(),
+                movement.getPerformedById(),
+                movement.getPerformedByName()
         );
     }
 

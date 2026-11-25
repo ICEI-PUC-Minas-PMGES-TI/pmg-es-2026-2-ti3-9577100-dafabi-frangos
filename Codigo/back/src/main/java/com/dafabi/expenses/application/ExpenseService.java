@@ -86,7 +86,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse update(UUID id, UpdateExpenseRequest request) {
-        Expense expense = findEntity(id);
+        Expense expense = findEntityForUpdate(id);
         ensurePending(expense);
         removeCashMovement(expense.getId());
         expense.setDescription(request.description().trim());
@@ -101,7 +101,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse cancel(UUID id) {
-        Expense expense = findEntity(id);
+        Expense expense = findEntityForUpdate(id);
         ensurePending(expense);
         expense.setStatus(ExpenseStatus.CANCELLED);
         removeCashMovement(expense.getId());
@@ -110,10 +110,10 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse consolidate(UUID id) {
-        Expense expense = findEntity(id);
+        Expense expense = findEntityForUpdate(id);
         ensurePending(expense);
         if (expense.getPaymentMethod() == ExpensePaymentMethod.CASH) {
-            CashRegister register = cashRegisterRepository.findByStoreIdAndStatus(
+            CashRegister register = cashRegisterRepository.findByStoreIdAndStatusForUpdate(
                             CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
                     .orElseThrow(() -> new BusinessException("CASH_CLOSED",
                             "Abra o caixa antes de registrar o pagamento em dinheiro.", HttpStatus.CONFLICT));
@@ -128,6 +128,11 @@ public class ExpenseService {
 
     private Expense findEntity(UUID id) {
         return expenseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Despesa", id));
+    }
+
+    private Expense findEntityForUpdate(UUID id) {
+        return expenseRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Despesa", id));
     }
 

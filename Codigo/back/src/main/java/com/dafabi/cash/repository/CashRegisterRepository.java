@@ -16,6 +16,10 @@ import java.util.UUID;
 @Repository
 public interface CashRegisterRepository extends JpaRepository<CashRegister, UUID> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select register from CashRegister register where register.id = :id")
+    Optional<CashRegister> findByIdForUpdate(@Param("id") UUID id);
+
     Optional<CashRegister> findByStoreIdAndStatus(UUID storeId, CashRegisterStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

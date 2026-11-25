@@ -8,6 +8,8 @@ import com.dafabi.cash.dto.CashRegisterResponse;
 import com.dafabi.cash.dto.CashRegisterSummaryResponse;
 import com.dafabi.cash.dto.OpenCashRequest;
 import jakarta.validation.Valid;
+import com.dafabi.shared.security.RequestUser;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,8 +38,10 @@ public class CashRegisterController {
     }
 
     @PostMapping
-    public ResponseEntity<CashRegisterResponse> openCashRegister(@Valid @RequestBody OpenCashRequest request) {
-        CashRegisterResponse response = cashRegisterService.openCashRegister(request);
+    public ResponseEntity<CashRegisterResponse> openCashRegister(@Valid @RequestBody OpenCashRequest request, Authentication authentication) {
+        RequestUser user = RequestUser.from(authentication);
+        CashRegisterResponse response = cashRegisterService.openCashRegister(new OpenCashRequest(
+                request.initialBalance(), request.storeId(), user.id(), user.name()));
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")

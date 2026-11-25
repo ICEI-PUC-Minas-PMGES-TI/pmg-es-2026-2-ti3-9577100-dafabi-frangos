@@ -39,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -159,6 +160,41 @@ class SaleServiceTest {
         verify(stockMovementRepository, times(2)).save(movements.capture());
         assertThat(movements.getAllValues()).extracting(movement -> movement.getLot().getBatch())
                 .containsExactly("LOTE-A", "LOTE-B");
+    }
+
+    @Test
+    void rejectsUntraceableAndExpiredStockWithoutSavingSaleOrMovements() {
+        mockOpenRegister();
+        chickenStock.getProduct().setPerishable(true);
+        mockStock(chickenStock);
+        LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+        InventoryLot expired = new InventoryLot(chickenStock.getProduct(), "VENCIDO", today.minusDays(2), today.minusDays(1), 3);
+        InventoryLot valid = new InventoryLot(chickenStock.getProduct(), "VALIDO", today.minusDays(1), today, 1);
+        when(inventoryLotRepository.findAvailableByProductForUpdate(chickenStock.getProductId()))
+                .thenReturn(List.of(expired, valid));
+
+        assertThatThrownBy(() -> saleService.create(new CreateSaleRequest(List.of(
+                new SaleItemRequest(chickenStock.getProductId(), 2)), PaymentMethod.CASH)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("vendável 1, saldo total 5");
+        assertThat(expired.getQuantity()).isEqualTo(3);
+        assertThat(valid.getQuantity()).isEqualTo(1);
+        verify(stockMovementRepository, never()).save(any());
+        verify(saleRepository, never()).save(any());
+        verify(cashRegisterService, never()).recordMovement(any(), any(), anyString(), any(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void lotExpiringTodayIsSellable() {
+        mockOpenRegister();
+        chickenStock.getProduct().setPerishable(true);
+        mockStock(chickenStock);
+        LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+        InventoryLot lot = new InventoryLot(chickenStock.getProduct(), "HOJE", today.minusDays(1), today, 1);
+        when(inventoryLotRepository.findAvailableByProductForUpdate(chickenStock.getProductId())).thenReturn(List.of(lot));
+        when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        saleService.create(new CreateSaleRequest(List.of(new SaleItemRequest(chickenStock.getProductId(), 1)), PaymentMethod.PIX));
+        assertThat(lot.getQuantity()).isZero();
     }
 
     @Test

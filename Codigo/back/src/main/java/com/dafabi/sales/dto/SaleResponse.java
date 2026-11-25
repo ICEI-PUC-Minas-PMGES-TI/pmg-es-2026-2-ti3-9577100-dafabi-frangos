@@ -20,6 +20,7 @@ public record SaleResponse(
         BigDecimal subtotal,
         BigDecimal total,
         SaleStatus status,
-        List<SaleItemResponse> items
+        List<SaleItemResponse> items,
+        String operatorName
 ) {
 }

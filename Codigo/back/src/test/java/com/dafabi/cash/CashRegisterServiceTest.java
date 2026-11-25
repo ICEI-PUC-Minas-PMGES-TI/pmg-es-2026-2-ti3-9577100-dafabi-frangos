@@ -106,7 +106,7 @@ class CashRegisterServiceTest {
                 UUID registerId = openRegister.getId();
                 CloseCashRequest request = new CloseCashRequest(new BigDecimal("150.00"));
 
-                when(cashRegisterRepository.findById(registerId)).thenReturn(Optional.of(openRegister));
+                when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
                 when(cashMovementRepository.findByCashRegister_IdOrderByOccurredAtDesc(registerId))
                                 .thenReturn(List.of());
                 when(cashRegisterRepository.save(any(CashRegister.class)))
@@ -130,7 +130,7 @@ class CashRegisterServiceTest {
                 UUID registerId = openRegister.getId();
                 CloseCashRequest request = new CloseCashRequest(new BigDecimal("140.00"), "Falta troco no caixa");
 
-                when(cashRegisterRepository.findById(registerId)).thenReturn(Optional.of(openRegister));
+                when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
                 when(cashMovementRepository.findByCashRegister_IdOrderByOccurredAtDesc(registerId))
                                 .thenReturn(List.of());
                 when(cashRegisterRepository.save(any(CashRegister.class)))
@@ -149,7 +149,7 @@ class CashRegisterServiceTest {
                 UUID registerId = openRegister.getId();
                 CloseCashRequest request = new CloseCashRequest(new BigDecimal("140.00"), null);
 
-                when(cashRegisterRepository.findById(registerId)).thenReturn(Optional.of(openRegister));
+                when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
                 when(cashMovementRepository.findByCashRegister_IdOrderByOccurredAtDesc(registerId))
                                 .thenReturn(List.of());
 
@@ -167,7 +167,7 @@ class CashRegisterServiceTest {
                 openRegister.setStatus(CashRegisterStatus.CLOSED);
                 CloseCashRequest request = new CloseCashRequest(new BigDecimal("150.00"));
 
-                when(cashRegisterRepository.findById(registerId)).thenReturn(Optional.of(openRegister));
+                when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
 
                 assertThatThrownBy(() -> cashRegisterService.closeCashRegister(registerId, request))
                                 .isInstanceOf(BusinessException.class)
@@ -204,7 +204,7 @@ class CashRegisterServiceTest {
                 CreateCashMovementRequest request = new CreateCashMovementRequest(
                                 CashMovementDirection.IN, "SALE", new BigDecimal("50.00"), "Venda", null, null, null);
 
-                when(cashRegisterRepository.findById(registerId)).thenReturn(Optional.of(openRegister));
+                when(cashRegisterRepository.findByIdForUpdate(registerId)).thenReturn(Optional.of(openRegister));
 
                 assertThatThrownBy(() -> cashRegisterService.createMovement(registerId, request))
                                 .isInstanceOf(BusinessException.class)
