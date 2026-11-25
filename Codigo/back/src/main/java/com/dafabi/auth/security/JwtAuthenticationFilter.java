@@ -1,6 +1,8 @@
 package com.dafabi.auth.security;
 
+import com.dafabi.auth.application.AuthService;
 import com.dafabi.shared.security.RequestUser;
+import com.dafabi.shared.security.UserRole;
 import com.dafabi.users.domain.User;
 import com.dafabi.users.repository.UserRepository;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -60,7 +62,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             JwtClaims claims = jwtService.parseToken(token);
 
             Optional<User> persistedUser = userRepository.findById(claims.userId());
-            if (persistedUser.isPresent() && !persistedUser.get().isActive()) {
+            // Usuário excluído ou bloqueado perde o acesso na hora, mesmo com token ainda válido.
+            if (persistedUser.isEmpty() || !persistedUser.get().isActive()) {
                 request.setAttribute(AUTH_ERROR_CODE_ATTR, "SESSION_EXPIRED");
                 request.setAttribute(AUTH_ERROR_DETAIL_ATTR, "Usuário com acesso bloqueado ou inativo.");
                 SecurityContextHolder.clearContext();
@@ -68,9 +71,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            RequestUser principal = new RequestUser(claims.userId(), claims.name(), claims.role());
+            // O perfil vem do cadastro atual: rebaixar uma Administradora vale a partir da próxima requisição.
+            UserRole currentRole = AuthService.resolveRole(persistedUser.get());
+            RequestUser principal = new RequestUser(claims.userId(), persistedUser.get().getName(), currentRole);
             List<SimpleGrantedAuthority> authorities = List.of(
-                    new SimpleGrantedAuthority("ROLE_" + claims.role().name())
+                    new SimpleGrantedAuthority("ROLE_" + currentRole.name())
             );
 
             UsernamePasswordAuthenticationToken authentication =

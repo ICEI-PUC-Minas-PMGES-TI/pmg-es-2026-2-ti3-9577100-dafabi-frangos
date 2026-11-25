@@ -60,6 +60,8 @@ class SaleRefundControllerIT {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtService jwtService;
+    @Autowired private com.dafabi.users.repository.UserRepository testUserRepository;
+    @Autowired private com.dafabi.users.repository.RoleRepository testRoleRepository;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private SaleRepository saleRepository;
     @Autowired private SaleRefundRepository saleRefundRepository;
@@ -289,6 +291,15 @@ class SaleRefundControllerIT {
 
     private MockHttpServletRequestBuilder withToken(MockHttpServletRequestBuilder builder,
                                                     UUID userId, String email, String name, UserRole role) {
+        // O filtro JWT só aceita tokens de usuários cadastrados e ativos.
+        if (!testUserRepository.existsById(userId)) {
+            String roleName = role == UserRole.ADMIN ? "ROLE_ADMIN" : "ROLE_CASHIER";
+            com.dafabi.users.domain.Role persistedRole = testRoleRepository.findAll().stream()
+                    .filter(existing -> roleName.equals(existing.getName())).findFirst()
+                    .orElseGet(() -> testRoleRepository.save(new com.dafabi.users.domain.Role(null, roleName)));
+            testUserRepository.save(new com.dafabi.users.domain.User(userId, email, "{noop}teste", name,
+                    new java.util.HashSet<>(java.util.Set.of(persistedRole))));
+        }
         String token = jwtService.generateAccessToken(userId, email, name, role, Duration.ofMinutes(5));
         return builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
     }
@@ -324,5 +335,13 @@ class SaleRefundControllerIT {
         inventoryLotRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
+    }
+
+    @Test
+    void tokenOfUserThatNoLongerExistsIsRejected() throws Exception {
+        String token = jwtService.generateAccessToken(UUID.randomUUID(), "removido@dafabi.com.br", "Removido",
+                UserRole.ADMIN, Duration.ofMinutes(5));
+        mockMvc.perform(get("/refunds").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 }
