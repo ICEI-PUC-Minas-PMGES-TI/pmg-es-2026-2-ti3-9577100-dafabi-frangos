@@ -1,5 +1,6 @@
+import { startResponsiveTables } from '../responsive-tables';
 import { SettingsService } from '../../../features/settings/services/settings.service';
-import { ChangeDetectionStrategy, Component, inject, HostListener, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, HostListener, signal, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { filter } from 'rxjs';
@@ -17,6 +18,6 @@ import { BreadcrumbsComponent } from '../../../shared/components/breadcrumbs/bre
   </mat-sidenav-container>`, changeDetection: ChangeDetectionStrategy.OnPush })
 export class ShellComponent {
   readonly collapsed = signal(false); readonly isTablet = signal(window.innerWidth < 1100);
-  constructor(router: Router) { void inject(SettingsService).loadPreferences(); router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => document.getElementById('conteudo-principal')?.focus({ preventScroll: true })); }
+  constructor(router: Router) { void inject(SettingsService).loadPreferences(); const stopTables = startResponsiveTables(); inject(DestroyRef).onDestroy(stopTables); router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => document.getElementById('conteudo-principal')?.focus({ preventScroll: true })); }
   @HostListener('window:resize') onResize(): void { this.isTablet.set(window.innerWidth < 1100); }
 }

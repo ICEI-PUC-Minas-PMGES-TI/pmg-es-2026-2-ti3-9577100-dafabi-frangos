@@ -49,3 +49,21 @@ body.compact-tables .data-table th, body.compact-tables .data-table td { padding
 
 @media (max-width: 1200px) { .cards-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 780px) { main { padding: 22px 16px 36px; }.topbar { padding-right: 12px; }.topbar-context { display:none; }.user-copy { display:none; }.page-header { align-items:flex-start; flex-direction:column; }.page-header button { width:100%; }.form-grid,.split-grid { grid-template-columns:1fr; }.form-grid .full,.form-actions,.form-note { grid-column:auto; }.cards-grid { grid-template-columns:1fr; }.surface-header { align-items:flex-start; flex-direction:column; }.form-actions { justify-content:stretch; }.form-actions button { flex:1; } }
+
+/* Tabelas viram cartões em telas estreitas (rótulos vindos de core/layout/responsive-tables.ts). */
+@media (max-width: 600px) {
+  .table-wrap { overflow-x: visible; }
+  .data-table { min-width: 0; }
+  .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+  .data-table tbody tr { border: 1px solid var(--border); border-radius: 10px; margin: 10px 0; padding: 6px 12px; background: #fff; }
+  .data-table tbody tr:last-child td, .data-table th, .data-table td { border-bottom: 0; }
+  .data-table td { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 7px 0; text-align: right; border-bottom: 1px dashed var(--border); }
+  .data-table td:last-child { border-bottom: 0; }
+  .data-table td::before { content: attr(data-label); flex: none; max-width: 45%; text-align: left; color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .data-table td[data-label=""]::before { content: none; }
+  .data-table td[data-label=""] { justify-content: flex-end; }
+  .data-table td[colspan] { display: block; text-align: center; }
+  .data-table td[colspan]::before { content: none; }
+  .data-table tfoot { display: block; }
+}
