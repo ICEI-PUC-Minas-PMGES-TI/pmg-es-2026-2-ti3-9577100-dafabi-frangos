@@ -146,6 +146,9 @@ public class SaleService {
                 SaleStatus.COMPLETED);
         sale.setOperatorName(operatorName);
         sale.setIdempotencyKey(idempotencyKey);
+        if (request.paymentMethod() == PaymentMethod.CASH && request.amountReceived() != null) {
+            sale.setAmountReceived(request.amountReceived().setScale(2, RoundingMode.HALF_UP));
+        }
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {

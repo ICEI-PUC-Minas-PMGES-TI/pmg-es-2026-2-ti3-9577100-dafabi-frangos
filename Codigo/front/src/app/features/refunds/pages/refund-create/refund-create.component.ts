@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -42,6 +42,14 @@ export class RefundCreateComponent {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   readonly search = new FormControl('', { nonNullable: true });
+  private readonly initialSale = inject(ActivatedRoute).snapshot.queryParamMap.get('venda');
+
+  constructor() {
+    if (this.initialSale) {
+      this.search.setValue(this.initialSale);
+      void this.findSale();
+    }
+  }
   readonly sale = signal<RefundSaleSummary | null>(null);
   readonly notFound = signal(false);
   readonly loading = signal(false);

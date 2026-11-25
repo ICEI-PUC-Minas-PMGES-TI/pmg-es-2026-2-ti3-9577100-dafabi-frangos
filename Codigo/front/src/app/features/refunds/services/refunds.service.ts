@@ -67,6 +67,16 @@ export class RefundsService {
     return this.toDomain(response);
   }
 
+  /** Estorno de uma venda, para exibir no detalhe da venda estornada. */
+  async findBySale(saleId: string): Promise<Refund | null> {
+    try {
+      const refund = await firstValueFrom(this.http.get<ApiRefund>(`${environment.apiBaseUrl}/sales/${saleId}/refund`));
+      return this.toDomain(refund);
+    } catch {
+      return null;
+    }
+  }
+
   private toDomain(refund: ApiRefund): Refund {
     return {
       id: refund.id,

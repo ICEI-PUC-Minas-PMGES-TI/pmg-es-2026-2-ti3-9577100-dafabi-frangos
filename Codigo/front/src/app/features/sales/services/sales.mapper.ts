@@ -36,8 +36,9 @@ export function toSale(api: ApiSale): Sale {
     gross: Number(api.subtotal),
     discount: 0,
     fees: 0,
-    net: total,
+    // Venda estornada ou cancelada não gera receita: o líquido fica zerado.
+    net: api.status === 'REFUNDED' || api.status === 'CANCELLED' ? 0 : total,
     status: api.status === 'CANCELLED' ? 'CANCELED' : api.status,
-    history: ['Venda registrada pela API', 'Estoque atualizado']
+    history: ['Venda registrada', 'Estoque baixado']
   };
 }

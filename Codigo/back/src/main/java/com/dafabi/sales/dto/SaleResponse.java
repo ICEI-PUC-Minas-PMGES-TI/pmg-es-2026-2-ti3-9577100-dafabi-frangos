@@ -21,6 +21,8 @@ public record SaleResponse(
         BigDecimal total,
         SaleStatus status,
         List<SaleItemResponse> items,
-        String operatorName
+        String operatorName,
+        BigDecimal amountReceived,
+        BigDecimal change
 ) {
 }
