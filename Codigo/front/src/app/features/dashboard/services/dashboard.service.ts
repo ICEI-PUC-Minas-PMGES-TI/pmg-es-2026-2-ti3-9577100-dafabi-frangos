@@ -35,7 +35,8 @@ export class DashboardService {
       value: Number(point.revenue)
     }));
     const periodDays = Math.max(1, Math.round((Date.parse(`${chartDashboard.endDate}T00:00:00Z`) - Date.parse(`${chartDashboard.startDate}T00:00:00Z`)) / 86_400_000) + 1);
-    const chartGranularity: DashboardView['chartGranularity'] = periodDays <= 14 ? 'dia' : periodDays <= 90 ? 'semana' : 'mês';
+    // No filtro Hoje o gráfico mostra cada dia do mês até hoje; nos demais, agrupa conforme o tamanho do período.
+    const chartGranularity: DashboardView['chartGranularity'] = period === 'today' || periodDays <= 14 ? 'dia' : periodDays <= 90 ? 'semana' : 'mês';
 
     return {
       startDate: dashboard.startDate,
@@ -83,7 +84,8 @@ function aggregateRevenue(points: DashboardView['daily'], granularity: Dashboard
       const monday = new Date(date);
       monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
       key = monday.toISOString().slice(0, 10);
-      label = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }).format(monday);
+      // Rótulo = primeiro dia do período dentro da semana (ex.: 01/11), não a segunda-feira anterior.
+      label = point.day;
     } else {
       key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
       const month = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' }).format(date).replace('.', '');
