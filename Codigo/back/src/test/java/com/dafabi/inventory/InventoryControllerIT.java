@@ -65,8 +65,17 @@ class InventoryControllerIT {
     @Test
     @DisplayName("POST /inventory/adjustments deve atualizar o saldo e registrar o histórico")
     void shouldAdjustStockAndCreateMovement() throws Exception {
-        StockAdjustmentRequest request = new StockAdjustmentRequest(
+        StockAdjustmentRequest withoutLot = new StockAdjustmentRequest(
                 product.getId(), new BigDecimal("9"), "Contagem física do estoque", "Fabiana Nogueira");
+        mockMvc.perform(post("/inventory/adjustments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(withoutLot)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("LOT_REQUIRED")));
+
+        StockAdjustmentRequest request = new StockAdjustmentRequest(
+                product.getId(), new BigDecimal("9"), "Contagem física do estoque", "Fabiana Nogueira",
+                null, "L-AJUSTE", LocalDate.now().plusDays(4));
 
         mockMvc.perform(post("/inventory/adjustments")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -81,6 +90,8 @@ class InventoryControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].productId", is(product.getId().toString())))
                 .andExpect(jsonPath("$[0].stockQuantity", is(9)))
+                .andExpect(jsonPath("$[0].sellableQuantity", is(4)))
+                .andExpect(jsonPath("$[0].untrackedQuantity", is(5)))
                 .andExpect(jsonPath("$[0].lastMovement.origin", is("Ajuste manual")));
     }
 

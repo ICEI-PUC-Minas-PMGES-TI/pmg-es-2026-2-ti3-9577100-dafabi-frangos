@@ -45,6 +45,9 @@ export interface ApiStockAdjustmentRequest {
   newQuantity: number;
   reason: string;
   performedBy?: string;
+  lotId?: string;
+  batch?: string;
+  expiry?: string;
 }
 
 export interface ApiCreateInventoryLotRequest {

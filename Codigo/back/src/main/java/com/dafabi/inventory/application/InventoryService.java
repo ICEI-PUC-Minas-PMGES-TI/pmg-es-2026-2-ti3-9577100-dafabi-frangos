@@ -120,6 +120,16 @@ public class InventoryService {
                 reduction = reduction.subtract(amount);
             }
         }
+        if (reduction.signum() < 0 && stock.getProduct().isPerishable()) {
+            BigDecimal increase = reduction.negate();
+            InventoryLot lot = resolveLotForIncrease(stock.getProduct(), request);
+            lot.setQuantity(lot.getQuantity().add(increase));
+            adjustments.add(stockMovementRepository.save(new StockMovement(
+                    stock.getProduct(), lot, StockMovementType.MANUAL_ADJUSTMENT,
+                    aggregateBalance, newQuantity, "Ajuste manual", request.reason().trim(),
+                    actor(request.performedBy()), "STOCK_ADJUSTMENT", null)));
+            aggregateBalance = newQuantity;
+        }
         if (aggregateBalance.compareTo(newQuantity) != 0 || adjustments.isEmpty()) {
             adjustments.add(stockMovementRepository.save(new StockMovement(
                     stock.getProduct(), null, StockMovementType.MANUAL_ADJUSTMENT,
@@ -127,6 +137,36 @@ public class InventoryService {
                     actor(request.performedBy()), "STOCK_ADJUSTMENT", null)));
         }
         return inventoryMapper.toMovementResponse(adjustments.get(adjustments.size() - 1));
+    }
+
+    /**
+     * Aumento de perecível precisa de lote: sem ele o saldo não pode ser vendido.
+     * Usa um lote existente válido ou cria um novo lote com a validade informada.
+     */
+    private InventoryLot resolveLotForIncrease(Product product, StockAdjustmentRequest request) {
+        LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+        if (request.lotId() != null) {
+            InventoryLot lot = inventoryLotRepository.findById(request.lotId())
+                    .filter(found -> found.getProduct().getId().equals(product.getId()))
+                    .orElseThrow(() -> new BusinessException("LOT_NOT_FOUND", "O lote informado não pertence a este produto."));
+            if (lot.getExpiry().isBefore(today)) {
+                throw new BusinessException("INVALID_EXPIRY", "Não é possível adicionar unidades a um lote vencido.");
+            }
+            return lot;
+        }
+        if (request.batch() == null || request.batch().isBlank() || request.expiry() == null) {
+            throw new BusinessException("LOT_REQUIRED",
+                    "Para aumentar o estoque de um perecível, escolha um lote válido ou informe lote e validade.");
+        }
+        if (request.expiry().isBefore(today)) {
+            throw new BusinessException("INVALID_EXPIRY", "A validade deve ser hoje ou uma data futura.");
+        }
+        if (inventoryLotRepository.existsByProduct_IdAndBatchIgnoreCase(product.getId(), request.batch().trim())) {
+            throw new BusinessException("DUPLICATE_BATCH", "Este lote já foi registrado para o produto informado.",
+                    HttpStatus.CONFLICT);
+        }
+        InventoryLot lot = new InventoryLot(product, request.batch().trim(), today, request.expiry(), Quantities.ZERO);
+        return inventoryLotRepository.save(lot);
     }
 
     @Transactional(readOnly = true)
