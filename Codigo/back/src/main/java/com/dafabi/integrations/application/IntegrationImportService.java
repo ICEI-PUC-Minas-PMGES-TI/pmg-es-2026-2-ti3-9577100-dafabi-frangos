@@ -153,7 +153,8 @@ public class IntegrationImportService {
         int completed=0,cancelled=0,partial=0;
         boolean food99FeesKnown=true;
         for(StagedReportRow row:rows){
-            if(!row.valid()||row.duplicateInFile())continue;
+            // Totais só dos registros novos: repetidos já estão no sistema e seriam somados duas vezes.
+            if(!row.valid()||row.duplicateInFile()||row.duplicateInSystem())continue;
             if(report.reportType()==IntegrationReportType.ORDERS){ParsedOrderRow p=(ParsedOrderRow)row.payload();
                 if(p.itemsValue()!=null)gross=gross.add(p.itemsValue());if(p.customerPaid()!=null)paid=paid.add(p.customerPaid());
                 if(p.ifoodPromotion()!=null)ifoodPromo=ifoodPromo.add(p.ifoodPromotion());if(p.storePromotion()!=null)storePromo=storePromo.add(p.storePromotion());
