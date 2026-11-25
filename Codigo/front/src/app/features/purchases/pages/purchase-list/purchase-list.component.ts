@@ -23,7 +23,7 @@ type PaymentFilter = 'ALL' | 'PENDING' | 'PAID' | 'CANCELED';
 @Component({
   selector: 'app-purchase-list', standalone: true,
   imports: [CurrencyPipe, DatePipe, MatButtonModule, MatIconModule, MatMenuModule, PageHeaderComponent, StatusChipComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
-  template: `<app-page-header eyebrow="Estoque" title="Compras" subtitle="A compra atualiza o estoque e o custo médio; o pagamento afeta o caixa quando é em dinheiro." actionLabel="Nova compra" actionLink="/app/compras/nova"/>
+  template: `<app-page-header eyebrow="Compras" title="Compras" subtitle="A compra atualiza o estoque e o custo médio; o pagamento afeta o caixa quando é em dinheiro." actionLabel="Nova compra" actionLink="/app/compras/nova"/>
     <div class="toolbar">
       <label class="filter">Fornecedor<select [value]="supplier()" (change)="supplier.set($any($event.target).value)"><option value="">Todos</option>@for(s of suppliers();track s.id){<option [value]="s.id">{{s.name}}</option>}</select></label>
       <div class="chips" role="group" aria-label="Filtrar por situação">@for(f of filters;track f.value){<button type="button" [class.active]="paymentFilter()===f.value" [attr.aria-pressed]="paymentFilter()===f.value" (click)="paymentFilter.set(f.value)">{{f.label}}</button>}</div>

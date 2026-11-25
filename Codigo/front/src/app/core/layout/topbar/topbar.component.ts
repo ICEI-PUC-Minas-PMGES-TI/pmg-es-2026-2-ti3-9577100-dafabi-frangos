@@ -18,7 +18,7 @@ import { AuthService } from '../../auth/auth.service';
   </header>`, changeDetection: ChangeDetectionStrategy.OnPush })
 export class TopbarComponent {
   readonly menuClick = output<void>(); readonly compact = input(false);
-  readonly today = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' }).format(new Date());
+  readonly today = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'long' }).format(new Date()).replace('.', '');
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly settings = inject(SettingsService);

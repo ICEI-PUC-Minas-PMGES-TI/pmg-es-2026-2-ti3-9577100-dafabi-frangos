@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 @Component({ selector: 'app-status-chip', standalone: true, template: `<span class="status-chip" [class]="tone()"><span aria-hidden="true">{{ icon() }}</span>{{ label() }}</span>`, changeDetection: ChangeDetectionStrategy.OnPush })
 export class StatusChipComponent {
   readonly status = input.required<string>();
-  readonly label = computed(() => ({ ACTIVE: 'Ativo', INACTIVE: 'Inativo', COMPLETED: 'Concluída', CANCELED: 'Cancelada', REFUNDED: 'Estornada', OPEN: 'Aberto', CLOSED: 'Fechado', CONNECTED: 'Conectado', UNAVAILABLE: 'Indisponível', PENDING: 'Pendente', CONSOLIDATED: 'Paga', PAID: 'Paga', REVERSED: 'Pagamento estornado', REGISTERED: 'Registrada', VALID: 'Válido', EXPIRED: 'Vencido', USED: 'Utilizado' }[this.status()] ?? this.status()));
+  readonly label = computed(() => ({ ACTIVE: 'Ativo', INACTIVE: 'Inativo', COMPLETED: 'Concluída', CANCELED: 'Cancelada', REFUNDED: 'Estornada', OPEN: 'Aberto', CLOSED: 'Fechado', CONNECTED: 'Conectado', UNAVAILABLE: 'Indisponível', PENDING: 'Pendente', CONSOLIDATED: 'Paga', PAID: 'Paga', REVERSED: 'Pagamento estornado', REGISTERED: 'Registrada', VALID: 'Válido', EXPIRED: 'Vencido', USED: 'Utilizado', REFUND_COMPLETED: 'Estorno registrado', REFUND_CANCELED: 'Estorno cancelado' }[this.status()] ?? this.status()));
   readonly tone = computed(() => ['ACTIVE','COMPLETED','CONNECTED','REGISTERED','VALID','OPEN','PAID','CONSOLIDATED'].includes(this.status()) ? 'success' : ['PENDING','EXPIRED'].includes(this.status()) ? 'warning' : 'neutral');
   readonly icon = computed(() => this.tone() === 'success' ? '●' : this.tone() === 'warning' ? '◆' : '○');
 }

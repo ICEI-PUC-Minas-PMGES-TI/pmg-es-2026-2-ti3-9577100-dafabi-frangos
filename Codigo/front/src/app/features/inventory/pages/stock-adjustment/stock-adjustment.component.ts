@@ -21,7 +21,7 @@ import { InventoryService } from '../../services/inventory.service';
   standalone: true,
   imports:[QuantityPipe,DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, ErrorStateComponent, LoadingStateComponent, PageHeaderComponent],
   template: `
-    <app-page-header eyebrow="Estoque / Ajuste" title="Ajustar estoque" subtitle="Informe a quantidade real e registre o motivo."/>
+    <app-page-header eyebrow="Estoque" title="Ajustar estoque" subtitle="Informe a quantidade real e registre o motivo."/>
     @if(loading()) { <app-loading-state/> }
     @else if(error()) { <app-error-state title="Não foi possível carregar o estoque" [message]="error()!"/> }
     @else {

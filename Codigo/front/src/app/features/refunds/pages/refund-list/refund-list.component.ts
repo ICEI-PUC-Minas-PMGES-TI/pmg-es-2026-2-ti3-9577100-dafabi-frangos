@@ -15,12 +15,12 @@ import { RefundsService } from '../../services/refunds.service';
   selector: 'app-refund-list', standalone: true,
   imports: [CurrencyPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, PageHeaderComponent,
     StatusChipComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
-  template: `<app-page-header eyebrow="Financeiro" title="Estornos" subtitle="Histórico auditável das vendas revertidas." actionLabel="Novo estorno" actionIcon="undo" actionLink="/app/estornos/novo"/>
+  template: `<app-page-header eyebrow="Estornos" title="Estornos" subtitle="Histórico auditável das vendas revertidas." actionLabel="Novo estorno" actionIcon="undo" actionLink="/app/estornos/novo"/>
   
   @if(loading()){<section class="surface"><app-loading-state label="Carregando histórico de estornos…"/></section>}
   @else if(error()){<app-error-state title="Histórico indisponível" message="Não foi possível carregar os estornos."/><div class="retry"><button mat-stroked-button (click)="load()">Tentar novamente</button></div>}
   @else if(!refunds().length){<section class="surface"><app-empty-state icon="undo" title="Nenhum estorno registrado" message="Os estornos concluídos aparecerão aqui."/></section>}
-  @else{<section class="surface"><div class="table-wrap"><table class="data-table"><thead><tr><th>Venda</th><th>Data</th><th>Usuário</th><th>Motivo</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody>@for(r of refunds();track r.id){<tr><td class="cell-title">{{r.saleNumber}}</td><td>{{r.date|date:'dd/MM/yyyy HH:mm'}}</td><td>{{r.user}}</td><td>{{r.reason}}</td><td class="money">{{r.amount|currency:'BRL':'symbol':'1.2-2':'pt-BR'}}</td><td><app-status-chip [status]="r.status"/></td><td><a mat-icon-button [routerLink]="['/app/estornos',r.id]" aria-label="Ver detalhes"><mat-icon>chevron_right</mat-icon></a></td></tr>}</tbody></table></div></section>}`,
+  @else{<section class="surface"><div class="table-wrap"><table class="data-table"><thead><tr><th>Venda</th><th>Data</th><th>Usuário</th><th>Motivo</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody>@for(r of refunds();track r.id){<tr><td class="cell-title">{{r.saleNumber}}</td><td>{{r.date|date:'dd/MM/yyyy HH:mm'}}</td><td>{{r.user}}</td><td>{{r.reason}}</td><td class="money">{{r.amount|currency:'BRL':'symbol':'1.2-2':'pt-BR'}}</td><td><app-status-chip [status]="'REFUND_' + r.status"/></td><td><a mat-icon-button [routerLink]="['/app/estornos',r.id]" aria-label="Ver detalhes"><mat-icon>chevron_right</mat-icon></a></td></tr>}</tbody></table></div></section>}`,
   styles: [`.grow{flex:1}.retry{text-align:center;margin:12px}`],
   changeDetection: ChangeDetectionStrategy.OnPush
 })

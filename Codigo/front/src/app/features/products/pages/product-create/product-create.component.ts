@@ -13,7 +13,7 @@ import { ProductsService } from '../../services/products.service';
   selector: 'app-product-create',
   standalone: true,
   imports: [ErrorStateComponent, LoadingStateComponent, PageHeaderComponent, ProductFormComponent],
-  template: `<app-page-header eyebrow="Produtos / Novo" title="Cadastrar produto" subtitle="Preencha os dados comerciais e de estoque."/>@if(loading()){<app-loading-state/>}@else if(error()){<app-error-state title="Não foi possível carregar as categorias" [message]="error()!"/>}@else{<app-product-form [categories]="service.categories()" [saving]="saving()" (saved)="save($event)" (cancel)="router.navigate(['/app/produtos'])"/>}`,
+  template: `<app-page-header eyebrow="Produtos" title="Cadastrar produto" subtitle="Preencha os dados comerciais e de estoque."/>@if(loading()){<app-loading-state/>}@else if(error()){<app-error-state title="Não foi possível carregar as categorias" [message]="error()!"/>}@else{<app-product-form [categories]="service.categories()" [saving]="saving()" (saved)="save($event)" (cancel)="router.navigate(['/app/produtos'])"/>}`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductCreateComponent {

@@ -14,7 +14,7 @@ import { ProductsService } from '../../services/products.service';
   selector: 'app-product-edit',
   standalone: true,
   imports: [ErrorStateComponent, LoadingStateComponent, PageHeaderComponent, ProductFormComponent],
-  template: `<app-page-header eyebrow="Produtos / Editar" title="Editar produto" subtitle="Atualize os dados necessários e salve as alterações."/>@if(loading()){<app-loading-state/>}@else if(error()){<app-error-state title="Não foi possível carregar o produto" [message]="error()!"/>}@else if(product()){<app-product-form [product]="product()!" [categories]="service.categories()" [saving]="saving()" submitLabel="Salvar alterações" (saved)="save($event)" (cancel)="router.navigate(['/app/produtos'])"/>}`,
+  template: `<app-page-header eyebrow="Produtos" title="Editar produto" subtitle="Atualize os dados necessários e salve as alterações."/>@if(loading()){<app-loading-state/>}@else if(error()){<app-error-state title="Não foi possível carregar o produto" [message]="error()!"/>}@else if(product()){<app-product-form [product]="product()!" [categories]="service.categories()" [saving]="saving()" submitLabel="Salvar alterações" (saved)="save($event)" (cancel)="router.navigate(['/app/produtos'])"/>}`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductEditComponent {

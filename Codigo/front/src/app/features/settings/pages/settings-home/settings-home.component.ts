@@ -21,7 +21,7 @@ import { PHONE_PATTERN, formatPhone } from '../../../../shared/utils/phone.utils
     MatInputModule, MatProgressBarModule, MatSelectModule, PageHeaderComponent, SettingsNavComponent
   ],
   template: `
-    <app-page-header eyebrow="Administração" title="Configurações" subtitle="Dados básicos da loja e preferências gerais." />
+    <app-page-header eyebrow="Configurações" title="Configurações" subtitle="Dados básicos da loja e preferências gerais." />
     <app-settings-nav />
     @if (loading()) {
       <mat-progress-bar mode="indeterminate" aria-label="Carregando configurações da loja" />
