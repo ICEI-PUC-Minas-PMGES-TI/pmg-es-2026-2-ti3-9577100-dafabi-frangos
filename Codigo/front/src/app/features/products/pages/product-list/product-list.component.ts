@@ -38,7 +38,7 @@ export class ProductListComponent {
   private readonly snack = inject(MatSnackBar);
   readonly query = signal('');
   readonly categoryId = signal('ALL');
-  readonly status = signal<'ACTIVE' | 'INACTIVE' | 'ALL'>('ALL');
+  readonly status = signal<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE');
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   private request = 0;

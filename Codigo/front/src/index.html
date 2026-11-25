@@ -14,6 +14,20 @@
   <!-- Os ícones (Material Symbols Rounded) vêm empacotados no build via node_modules/material-symbols. -->
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <div class="boot-splash" role="status" aria-live="polite">
+      <img src="favicon.svg" alt="" width="56" height="56">
+      <strong>DaFabi Frangos</strong>
+      <span>Carregando o sistema…</span>
+      <i aria-hidden="true"></i>
+    </div>
+    <style>
+      .boot-splash{min-height:100vh;display:grid;place-content:center;justify-items:center;gap:10px;font-family:'DM Sans',Arial,sans-serif;color:#292524;background:#fafaf7}
+      .boot-splash strong{font-size:1.2rem}.boot-splash span{color:#6f6964;font-size:.85rem}
+      .boot-splash i{width:120px;height:4px;border-radius:4px;background:linear-gradient(90deg,#b42318 0 40%,#f3e1df 40%);background-size:200% 100%;animation:boot 1.1s linear infinite}
+      @keyframes boot{from{background-position:100% 0}to{background-position:-100% 0}}
+      @media (prefers-reduced-motion:reduce){.boot-splash i{animation:none}}
+    </style>
+  </app-root>
 </body>
 </html>
