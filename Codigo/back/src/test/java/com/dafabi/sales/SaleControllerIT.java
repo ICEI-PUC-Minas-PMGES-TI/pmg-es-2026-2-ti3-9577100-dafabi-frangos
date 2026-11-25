@@ -244,4 +244,31 @@ class SaleControllerIT {
         productRepository.deleteAll();
         categoryRepository.deleteAll();
     }
+
+    @Test
+    void repeatedSaleWithSameIdempotencyKeyIsRecordedOnce() throws Exception {
+        openCashRegister();
+        CreateSaleRequest request = new CreateSaleRequest(List.of(
+                new SaleItemRequest(chicken.getId(), 1)
+        ), PaymentMethod.PIX, null, UUID.randomUUID());
+        String key = UUID.randomUUID().toString();
+
+        String first = mockMvc.perform(post("/sales")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String second = mockMvc.perform(post("/sales")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(objectMapper.readTree(second).get("id").asText())
+                .isEqualTo(objectMapper.readTree(first).get("id").asText());
+        assertThat(productStockRepository.findById(chicken.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("4");
+    }
 }

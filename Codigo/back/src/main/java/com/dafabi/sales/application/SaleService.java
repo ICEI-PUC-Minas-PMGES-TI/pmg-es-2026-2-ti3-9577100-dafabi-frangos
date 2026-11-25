@@ -1,5 +1,6 @@
 package com.dafabi.sales.application;
 
+import java.util.Optional;
 import com.dafabi.shared.Quantities;
 import com.dafabi.cash.application.CashRegisterService;
 import com.dafabi.cash.domain.CashMovementDirection;
@@ -75,15 +76,46 @@ public class SaleService {
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request) {
-        return createInternal(request, null);
+        return createInternal(request, null, null);
     }
 
     @Transactional
     public SaleResponse create(CreateSaleRequest request, RequestUser user) {
-        return createInternal(request, user);
+        return create(request, user, null).sale();
     }
 
-    private SaleResponse createInternal(CreateSaleRequest request, RequestUser user) {
+    /**
+     * Registra a venda uma única vez por chave de idempotência: se a mesma tentativa
+     * chegar de novo (rede instável, clique repetido), devolve a venda já gravada.
+     */
+    @Transactional
+    public SaleCreation create(CreateSaleRequest request, RequestUser user, String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        if (key != null) {
+            Optional<Sale> previous = saleRepository.findByIdempotencyKey(key);
+            if (previous.isPresent()) {
+                return new SaleCreation(saleMapper.toResponse(previous.get()), false);
+            }
+        }
+        return new SaleCreation(createInternal(request, user, key), true);
+    }
+
+    public record SaleCreation(SaleResponse sale, boolean created) {
+    }
+
+    private String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return null;
+        }
+        String normalized = idempotencyKey.trim();
+        if (normalized.length() > 100) {
+            throw new BusinessException("INVALID_IDEMPOTENCY_KEY",
+                    "A chave de idempotência deve ter no máximo 100 caracteres.");
+        }
+        return normalized;
+    }
+
+    private SaleResponse createInternal(CreateSaleRequest request, RequestUser user, String idempotencyKey) {
         UUID storeId = request.storeId() != null ? request.storeId() : CashRegister.DEFAULT_STORE_ID;
 
         CashRegister register = cashRegisterRepository
@@ -113,6 +145,7 @@ public class SaleService {
                 BigDecimal.ZERO,
                 SaleStatus.COMPLETED);
         sale.setOperatorName(operatorName);
+        sale.setIdempotencyKey(idempotencyKey);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {

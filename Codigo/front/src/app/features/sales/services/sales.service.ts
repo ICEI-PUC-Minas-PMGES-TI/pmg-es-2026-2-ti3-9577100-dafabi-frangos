@@ -40,6 +40,8 @@ export class SalesService {
   readonly pageState = signal({ page: 0, size: 20, totalElements: 0, totalPages: 0 });
   readonly completedCounterTotal = signal(0);
   private productsRequest = 0;
+  /** Mesma chave enquanto o carrinho não muda: um reenvio não duplica a venda. */
+  private pendingSaleKey: string | null = null;
   private historyRequest = 0;
 
   async loadProducts(query = ''): Promise<void> {
@@ -83,6 +85,7 @@ export class SalesService {
       productId: product.id, productName: product.name, unitPrice: product.price,
       quantity, subtotal: product.price * quantity
     };
+    this.pendingSaleKey = null;
     this.cartState.update(items => existing
       ? items.map(item => item.productId === product.id ? updated : item)
       : [...items, updated]);
@@ -95,12 +98,13 @@ export class SalesService {
     const quantity = cartItem.quantity + delta;
     if (quantity < 1) throw new Error('INVALID_QUANTITY');
     if (quantity > sellableOf(product)) throw new Error('INSUFFICIENT_STOCK');
+    this.pendingSaleKey = null;
     this.cartState.update(items => items.map(item => item.productId === productId
       ? { ...item, quantity, subtotal: item.unitPrice * quantity } : item));
   }
 
-  remove(productId: string): void { this.cartState.update(items => items.filter(item => item.productId !== productId)); }
-  cancel(): void { this.cartState.set([]); }
+  remove(productId: string): void { this.pendingSaleKey = null; this.cartState.update(items => items.filter(item => item.productId !== productId)); }
+  cancel(): void { this.pendingSaleKey = null; this.cartState.set([]); }
 
   async complete(payment: PaymentRequest): Promise<Sale> {
     if (!this.cashOpen()) throw new Error('CASH_CLOSED');
@@ -108,18 +112,21 @@ export class SalesService {
     if (payment.method === 'CASH' && (payment.received ?? 0) < this.total()) throw new Error('INSUFFICIENT_AMOUNT');
     const user = this.auth.currentUser();
     if (!user) throw new Error('CASH_CLOSED');
+    this.pendingSaleKey ??= crypto.randomUUID();
     const response = await firstValueFrom(this.api.create({
       items: this.cartState().map(item => ({ productId: item.productId, quantity: item.quantity })),
       paymentMethod: payment.method,
       amountReceived: payment.received,
       storeId: STORE_ID,
       operatorId: user.id
-    }));
+    }, this.pendingSaleKey));
     const sale = toSale(response);
     this.sales.update(items => [sale, ...items.filter(item => item.id !== sale.id)]);
     this.cartState.set([]);
-    await this.loadProducts();
-    await this.cash.refresh();
+    this.pendingSaleKey = null;
+    // A venda já foi gravada: atualiza produtos e caixa sem segurar a confirmação.
+    void this.loadProducts();
+    void this.cash.refresh();
     return sale;
   }
 

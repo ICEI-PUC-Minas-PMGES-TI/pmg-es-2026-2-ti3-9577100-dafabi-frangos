@@ -1,5 +1,6 @@
 package com.dafabi.sales.controller;
 
+import org.springframework.web.bind.annotation.RequestHeader;
 import com.dafabi.sales.application.SaleService;
 import com.dafabi.sales.domain.PaymentMethod;
 import com.dafabi.sales.domain.SaleOrigin;
@@ -43,9 +44,15 @@ public class SaleController {
     }
 
     @PostMapping
-    public ResponseEntity<SaleResponse> create(@Valid @RequestBody CreateSaleRequest request, Authentication authentication) {
+    public ResponseEntity<SaleResponse> create(@Valid @RequestBody CreateSaleRequest request,
+                                               @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                               Authentication authentication) {
         RequestUser user = RequestUser.from(authentication);
-        SaleResponse response = saleService.create(request, user);
+        SaleService.SaleCreation creation = saleService.create(request, user, idempotencyKey);
+        SaleResponse response = creation.sale();
+        if (!creation.created()) {
+            return ResponseEntity.ok(response);
+        }
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")

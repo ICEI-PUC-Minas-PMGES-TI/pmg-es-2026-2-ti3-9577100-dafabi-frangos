@@ -23,6 +23,9 @@ import java.math.BigDecimal;
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, UUID> {
 
+    @EntityGraph(attributePaths = { "items", "items.product" })
+    Optional<Sale> findByIdempotencyKey(String idempotencyKey);
+
     @Query("select coalesce(max(sale.saleNumber), 0) from Sale sale")
     Long findMaxSaleNumber();
 
