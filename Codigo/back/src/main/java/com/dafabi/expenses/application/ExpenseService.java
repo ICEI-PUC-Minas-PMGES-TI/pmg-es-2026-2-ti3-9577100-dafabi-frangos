@@ -1,5 +1,6 @@
 package com.dafabi.expenses.application;
 
+import com.dafabi.expenses.dto.ReverseExpenseRequest;
 import com.dafabi.cash.application.CashRegisterService;
 import com.dafabi.cash.domain.CashMovementDirection;
 import com.dafabi.cash.domain.CashRegister;
@@ -97,6 +98,30 @@ public class ExpenseService {
         expense.setObservation(normalize(request.observation()));
         Expense saved = expenseRepository.save(expense);
         return mapper.toResponse(saved);
+    }
+
+    /**
+     * Corrige um pagamento registrado por engano (lançamento compensatório da política financeira):
+     * a despesa sai do resultado e, se foi paga em dinheiro, o valor volta ao caixa aberto.
+     */
+    @Transactional
+    public ExpenseResponse reverse(UUID id, ReverseExpenseRequest request) {
+        Expense expense = findEntityForUpdate(id);
+        if (expense.getStatus() != ExpenseStatus.CONSOLIDATED) {
+            throw new BusinessException("EXPENSE_NOT_PAID", "Só é possível estornar o pagamento de despesas pagas.",
+                    HttpStatus.CONFLICT);
+        }
+        if (expense.getPaymentMethod() == ExpensePaymentMethod.CASH) {
+            CashRegister register = cashRegisterRepository.findByStoreIdAndStatusForUpdate(
+                            CashRegister.DEFAULT_STORE_ID, CashRegisterStatus.OPEN)
+                    .orElseThrow(() -> new BusinessException("CASH_CLOSED",
+                            "Abra o caixa para devolver o valor pago em dinheiro.", HttpStatus.CONFLICT));
+            cashRegisterService.recordMovement(register.getId(), CashMovementDirection.IN, "EXPENSE_REVERSAL",
+                    expense.getAmount(), "Estorno de despesa", expense.getDescription(),
+                    EXPENSE_REFERENCE_TYPE, expense.getId());
+        }
+        expense.reverse(request.reason().trim());
+        return mapper.toResponse(expenseRepository.save(expense));
     }
 
     @Transactional

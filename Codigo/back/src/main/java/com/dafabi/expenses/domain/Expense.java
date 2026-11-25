@@ -70,6 +70,12 @@ public class Expense {
   @Column(name = "paid_at")
   private OffsetDateTime paidAt;
 
+  @Column(name = "reversed_at")
+  private OffsetDateTime reversedAt;
+
+  @Column(name = "reversal_reason", length = 500)
+  private String reversalReason;
+
   public Expense() {
   }
 
@@ -193,6 +199,16 @@ public class Expense {
   public OffsetDateTime getPaidAt() { return paidAt; }
 
   public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }
+
+  public OffsetDateTime getReversedAt() { return reversedAt; }
+
+  public String getReversalReason() { return reversalReason; }
+
+  public void reverse(String reason) {
+    this.status = ExpenseStatus.REVERSED;
+    this.reversedAt = OffsetDateTime.now();
+    this.reversalReason = reason;
+  }
 
   public void setUpdatedAt(OffsetDateTime updatedAt) {
     this.updatedAt = updatedAt;

@@ -40,7 +40,7 @@ export class ExpenseFormComponent {
     date: new FormControl(toDateInputValue(), { nonNullable: true, validators: [Validators.required] }),
     paymentMethod: new FormControl<PaymentMethod>('PIX', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
-    status: new FormControl<'PENDING' | 'CONSOLIDATED' | 'CANCELED'>('PENDING', { nonNullable: true })
+    status: new FormControl<'PENDING' | 'CONSOLIDATED' | 'CANCELED' | 'REVERSED'>('PENDING', { nonNullable: true })
   });
 
   constructor() {
