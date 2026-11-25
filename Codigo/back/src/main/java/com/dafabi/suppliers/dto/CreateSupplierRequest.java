@@ -1,5 +1,6 @@
 package com.dafabi.suppliers.dto;
 
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,9 +14,9 @@ public record CreateSupplierRequest(
 
         @NotBlank(message = "O telefone do fornecedor é obrigatório.")
         @Size(max = 30, message = "O telefone deve ter no máximo 30 caracteres.")
+        @Pattern(regexp = "^\\(?\\d{2}\\)?[ -]?9?\\d{4}-?\\d{4}$", message = "Informe o telefone com DDD, ex.: (31) 99999-9999.")
         String phone,
 
-        @NotBlank(message = "O e-mail do fornecedor é obrigatório.")
         @Email(message = "Informe um e-mail válido.")
         @Size(max = 150, message = "O e-mail deve ter no máximo 150 caracteres.")
         String email,
