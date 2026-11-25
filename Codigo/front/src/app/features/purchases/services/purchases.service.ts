@@ -40,6 +40,10 @@ export class PurchasesService {
     return purchase;
   }
 
+  async findById(id: string): Promise<Purchase> {
+    return toPurchase(await firstValueFrom(this.api.getById(id)));
+  }
+
   async pay(id: string, paymentMethod: PaymentMethod): Promise<Purchase> {
     const purchase = toPurchase(await firstValueFrom(this.api.pay(id, { paymentMethod })));
     this.upsert(purchase);
