@@ -42,6 +42,8 @@ export class SalesService {
   private productsRequest = 0;
   /** Mesma chave enquanto o carrinho não muda: um reenvio não duplica a venda. */
   private pendingSaleKey: string | null = null;
+  /** Último item adicionado, destacado no carrinho para confirmar a leitura. */
+  readonly lastAdded = signal<string | null>(null);
   private historyRequest = 0;
 
   async loadProducts(query = ''): Promise<void> {
@@ -86,6 +88,7 @@ export class SalesService {
       quantity, subtotal: product.price * quantity
     };
     this.pendingSaleKey = null;
+    this.lastAdded.set(product.id);
     this.cartState.update(items => existing
       ? items.map(item => item.productId === product.id ? updated : item)
       : [...items, updated]);
