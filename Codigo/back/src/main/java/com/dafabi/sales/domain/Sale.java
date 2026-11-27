@@ -47,6 +47,12 @@ public class Sale {
   @Column(nullable = false, length = 20)
   private SaleStatus status;
 
+  @Column(name = "amount_received", precision = 14, scale = 2)
+  private BigDecimal amountReceived;
+
+  @Column(name = "idempotency_key", length = 100, unique = true)
+  private String idempotencyKey;
+
   @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<SaleItem> items = new ArrayList<>();
 
@@ -119,6 +125,22 @@ public class Sale {
 
   public void setOperatorId(UUID operatorId) {
     this.operatorId = operatorId;
+  }
+
+  public BigDecimal getAmountReceived() {
+    return amountReceived;
+  }
+
+  public void setAmountReceived(BigDecimal amountReceived) {
+    this.amountReceived = amountReceived;
+  }
+
+  public String getIdempotencyKey() {
+    return idempotencyKey;
+  }
+
+  public void setIdempotencyKey(String idempotencyKey) {
+    this.idempotencyKey = idempotencyKey;
   }
 
   public Long getSaleNumber() {

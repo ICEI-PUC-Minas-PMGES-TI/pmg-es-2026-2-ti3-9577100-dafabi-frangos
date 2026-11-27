@@ -11,6 +11,8 @@ export interface ProductFormValue {
   perishable: boolean;
   status: ProductStatus;
   frequent: boolean;
+  initialBatch?: string;
+  initialExpiry?: string;
 }
 
 export interface ProductPageState {

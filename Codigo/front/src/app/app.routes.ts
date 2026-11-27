@@ -1,5 +1,9 @@
 import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
 import { authGuard } from './core/auth/auth.guard';
+import { AuthService } from './core/auth/auth.service';
+
+const homeRedirect = () => inject(AuthService).homeRoute();
 
 export const appRoutes: Routes = [
   { path: 'login', loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES) },
@@ -19,10 +23,11 @@ export const appRoutes: Routes = [
       { path: 'integracoes', loadChildren: () => import('./features/integrations/integrations.routes').then(m => m.INTEGRATIONS_ROUTES) },
       { path: 'estornos', loadChildren: () => import('./features/refunds/refunds.routes').then(m => m.REFUNDS_ROUTES) },
       { path: 'configuracoes', loadChildren: () => import('./features/settings/settings.routes').then(m => m.SETTINGS_ROUTES) },
-      { path: 'acesso-negado', loadComponent: () => import('./shared/components/error-state/error-state.component').then(m => m.ErrorStateComponent), data: { denied: true } },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+      { path: 'acesso-negado', loadComponent: () => import('./shared/components/error-state/error-state.component').then(m => m.ErrorStateComponent), data: { denied: true, breadcrumb: 'Acesso negado' } },
+      { path: 'nao-encontrado', loadComponent: () => import('./shared/components/error-state/error-state.component').then(m => m.ErrorStateComponent), data: { notFound: true, breadcrumb: 'Página não encontrada' } },
+      { path: '', redirectTo: homeRedirect, pathMatch: 'full' }
     ]
   },
-  { path: '', redirectTo: 'app/dashboard', pathMatch: 'full' },
-  { path: '**', redirectTo: 'app/dashboard' }
+  { path: '', redirectTo: homeRedirect, pathMatch: 'full' },
+  { path: '**', redirectTo: 'app/nao-encontrado' }
 ];

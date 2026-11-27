@@ -80,6 +80,17 @@ class ExpenseControllerIT {
                 .andExpect(jsonPath("$.expectedBalance", is(74.50)));
         mockMvc.perform(patch("/expenses/{id}/consolidate", id)).andExpect(status().isConflict());
         mockMvc.perform(patch("/expenses/{id}/cancel", id)).andExpect(status().isConflict());
+
+        // Estorno do pagamento: sai do resultado e o dinheiro volta ao caixa
+        mockMvc.perform(patch("/expenses/{id}/reverse", id).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Pagamento lançado em duplicidade\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status", is("REVERSED")))
+                .andExpect(jsonPath("$.reversalReason", is("Pagamento lançado em duplicidade")));
+        mockMvc.perform(get("/cash-registers/{id}/summary", register.getId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.expectedBalance", is(100.00)));
+        mockMvc.perform(patch("/expenses/{id}/reverse", id).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Segunda tentativa\"}"))
+                .andExpect(status().isConflict());
     }
 
     @Test

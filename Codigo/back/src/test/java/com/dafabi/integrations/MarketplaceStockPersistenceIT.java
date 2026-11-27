@@ -59,12 +59,12 @@ class MarketplaceStockPersistenceIT {
         var result=service.apply(IntegrationProvider.FOOD_99,request);
         entityManager.flush();
         assertThat(result).extracting("status").contains("APPLIED","UNMAPPED");
-        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
         assertThat(applications.findBySnapshotIdAndProductId(good.getId(),product.getId()).orElseThrow().getAppliedQuantity())
                 .isEqualByComparingTo("2");
         service.apply(IntegrationProvider.FOOD_99,request);
         entityManager.flush();
-        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualTo(3);
+        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("3");
     }
 
     @Test
@@ -88,11 +88,11 @@ class MarketplaceStockPersistenceIT {
         var confirmed=new MarketplaceStockApplyRequest(store,date,date,false,true);
         assertThat(service.apply(IntegrationProvider.IFOOD,confirmed)).extracting("status").containsExactly("APPLIED");
         entityManager.flush();
-        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualTo(7);
-        assertThat(lots.findById(expired.getId()).orElseThrow().getQuantity()).isEqualTo(2);
-        assertThat(lots.findById(valid.getId()).orElseThrow().getQuantity()).isEqualTo(1);
-        assertThat(lots.findById(receivedLater.getId()).orElseThrow().getQuantity()).isEqualTo(4);
+        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("7");
+        assertThat(lots.findById(expired.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("2");
+        assertThat(lots.findById(valid.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("1");
+        assertThat(lots.findById(receivedLater.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("4");
         service.apply(IntegrationProvider.IFOOD,confirmed);
-        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualTo(7);
+        assertThat(stocks.findById(product.getId()).orElseThrow().getQuantity()).isEqualByComparingTo("7");
     }
 }

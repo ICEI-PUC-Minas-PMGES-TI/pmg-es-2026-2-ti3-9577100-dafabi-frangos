@@ -1,3 +1,6 @@
+import { ApiError } from '../../../../core/http/api-error';
+import { UserEditDialogComponent } from '../../components/user-edit-dialog/user-edit-dialog.component';
+import { PasswordDialogComponent } from '../../components/password-dialog/password-dialog.component';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -19,12 +22,12 @@ import { SettingsService } from '../../services/settings.service';
   selector: 'app-users', standalone: true,
   imports: [MatButtonModule, MatIconModule, MatSlideToggleModule, PageHeaderComponent, StatusChipComponent,
     SettingsNavComponent, EmptyStateComponent, ErrorStateComponent, LoadingStateComponent],
-  template: `<app-page-header eyebrow="Configurações" title="Usuários" subtitle="Controle quem pode acessar o sistema e o perfil de cada pessoa."/><app-settings-nav/>
+  template: `<app-page-header eyebrow="Configurações" title="Usuários" subtitle="Controle quem pode acessar o sistema e o perfil de cada pessoa." actionLabel="Novo usuário" actionIcon="person_add" (action)="addUser()"/><app-settings-nav/>
     @if(loading()){<section class="surface"><app-loading-state label="Carregando usuários…"/></section>}
     @else if(error()){<app-error-state title="Usuários indisponíveis" message="Não foi possível carregar ou atualizar os usuários."/><div class="retry"><button mat-stroked-button (click)="load()">Tentar novamente</button></div>}
     @else if(!users().length){<section class="surface"><app-empty-state icon="group" title="Nenhum usuário cadastrado" message="Cadastre os acessos da equipe da loja."/></section>}
-    @else{<section class="surface"><div class="surface-header"><div><h2>Usuários cadastrados</h2><span class="cell-meta">{{users().length}} pessoas</span></div><button mat-flat-button class="primary-button" (click)="addUser()"><mat-icon>person_add</mat-icon>Novo usuário</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Acesso</th></tr></thead><tbody>@for(u of users();track u.id){<tr><td><div class="user-cell"><span>{{initials(u.name)}}</span><strong>{{u.name}}</strong></div></td><td>{{u.email}}</td><td>{{u.role==='ADMIN'?'Administradora':'Operador de caixa'}}</td><td><app-status-chip [status]="u.active?'ACTIVE':'INACTIVE'"/></td><td><mat-slide-toggle [checked]="u.active" [disabled]="savingId()===u.id||(u.id===auth.currentUser()?.id&&u.active)" (change)="toggle(u)" [attr.aria-label]="'Alterar acesso de '+u.name">{{u.active?'Liberado':'Bloqueado'}}</mat-slide-toggle></td></tr>}</tbody></table></div></section>}`,
-  styles: [`.user-cell{display:flex;align-items:center;gap:10px}.user-cell span{width:34px;height:34px;border-radius:50%;background:var(--yellow-light);color:var(--red-dark);display:grid;place-items:center;font-size:.68rem;font-weight:800}.retry{text-align:center;margin:12px}`],
+    @else{<section class="surface"><div class="surface-header"><div><h2>Usuários cadastrados</h2><span class="cell-meta">{{users().length}} pessoas</span></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Acesso</th><th>Ações</th></tr></thead><tbody>@for(u of users();track u.id){<tr><td><div class="user-cell"><span>{{initials(u.name)}}</span><strong>{{u.name}}</strong></div></td><td>{{u.email}}</td><td>{{u.role==='ADMIN'?'Administradora':'Operador de caixa'}}</td><td><app-status-chip [status]="u.active?'ACTIVE':'INACTIVE'"/></td><td><mat-slide-toggle [checked]="u.active" [disabled]="savingId()===u.id||(u.id===auth.currentUser()?.id&&u.active)" (change)="toggle(u)" [attr.aria-label]="'Alterar acesso de '+u.name">{{u.active?'Liberado':'Bloqueado'}}</mat-slide-toggle></td><td class="actions"><button mat-button (click)="editUser(u)"><mat-icon>edit</mat-icon>Editar</button><button mat-button (click)="resetPassword(u)"><mat-icon>key</mat-icon>Redefinir senha</button></td></tr>}</tbody></table></div></section>}`,
+  styles: [`.actions{white-space:nowrap}.user-cell{display:flex;align-items:center;gap:10px}.user-cell span{width:34px;height:34px;border-radius:50%;background:var(--yellow-light);color:var(--red-dark);display:grid;place-items:center;font-size:.68rem;font-weight:800}.retry{text-align:center;margin:12px}`],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UsersComponent {
@@ -58,6 +61,29 @@ export class UsersComponent {
     } catch {
       this.snack.open('Não foi possível atualizar o acesso. Tente novamente.', 'Fechar', { duration: 4000 });
     } finally { this.savingId.set(null); }
+  }
+
+  editUser(user: User): void {
+    this.dialog.open(UserEditDialogComponent, { data: user }).afterClosed().subscribe(async (value?: { name: string; role: User['role'] }) => {
+      if (!value) return;
+      this.savingId.set(user.id);
+      try {
+        const updated = await this.service.updateUser(user.id, value);
+        this.users.update(items => items.map(item => item.id === user.id ? { ...item, ...updated } : item));
+        this.snack.open('Usuário atualizado.', 'Fechar', { duration: 3000 });
+      } catch (error) {
+        this.snack.open(error instanceof ApiError ? error.message : 'Não foi possível atualizar o usuário.', 'Fechar', { duration: 4500 });
+      } finally {
+        this.savingId.set(null);
+      }
+    });
+  }
+
+  resetPassword(user: User): void {
+    this.dialog.open(PasswordDialogComponent, { data: {
+      mode: 'reset', userName: user.name,
+      submit: ({ newPassword }: { newPassword: string }) => this.service.resetPassword(user.id, newPassword)
+    } }).afterClosed().subscribe(done => { if (done) this.snack.open('Senha redefinida. Informe a nova senha ao usuário.', 'Fechar', { duration: 4000 }); });
   }
 
   addUser(): void {

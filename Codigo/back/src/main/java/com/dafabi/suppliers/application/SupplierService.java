@@ -31,9 +31,9 @@ public class SupplierService {
     @Transactional
     public SupplierResponse create(CreateSupplierRequest request) {
         UUID storeId = request.storeId() != null ? request.storeId() : Supplier.DEFAULT_STORE_ID;
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = normalizeEmail(request.email());
 
-        if (supplierRepository.existsByStoreIdAndEmailIgnoreCase(storeId, normalizedEmail)) {
+        if (normalizedEmail != null && supplierRepository.existsByStoreIdAndEmailIgnoreCase(storeId, normalizedEmail)) {
             throw new BusinessException(
                     "DUPLICATE_EMAIL",
                     "Já existe um fornecedor cadastrado com este e-mail.",
@@ -86,8 +86,9 @@ public class SupplierService {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fornecedor", id));
 
-        String normalizedEmail = request.email().trim().toLowerCase();
-        if (supplierRepository.existsByStoreIdAndEmailIgnoreCaseAndIdNot(supplier.getStoreId(), normalizedEmail, id)) {
+        String normalizedEmail = normalizeEmail(request.email());
+        if (normalizedEmail != null
+                && supplierRepository.existsByStoreIdAndEmailIgnoreCaseAndIdNot(supplier.getStoreId(), normalizedEmail, id)) {
             throw new BusinessException(
                     "DUPLICATE_EMAIL",
                     "Já existe um fornecedor cadastrado com este e-mail.",
@@ -108,5 +109,10 @@ public class SupplierService {
         supplier.setActive(active);
         Supplier saved = supplierRepository.save(supplier);
         return supplierMapper.toResponse(saved);
+    }
+
+    /** E-mail é opcional: muitos fornecedores atendem só por telefone. */
+    private static String normalizeEmail(String email) {
+        return email == null || email.isBlank() ? null : email.trim().toLowerCase();
     }
 }

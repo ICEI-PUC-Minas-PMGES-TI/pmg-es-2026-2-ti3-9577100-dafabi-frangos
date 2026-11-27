@@ -4,7 +4,8 @@ import { ApiSale, ApiSaleItem } from '../models/sales-api.models';
 function operatorLabel(operatorId: string, origin: ApiSale['origin']): string {
   if (origin === 'IFOOD') return 'Integração iFood';
   if (origin === 'FOOD_99') return 'Integração 99Food';
-  return operatorId ? `Operador ${operatorId}` : 'Operador não identificado';
+  // Nunca exibe o identificador técnico: vendas antigas podem apontar para um usuário que não existe mais.
+  return 'Usuário não encontrado';
 }
 
 function toItem(api: ApiSaleItem): SaleItem {
@@ -36,8 +37,9 @@ export function toSale(api: ApiSale): Sale {
     gross: Number(api.subtotal),
     discount: 0,
     fees: 0,
-    net: total,
+    // Venda estornada ou cancelada não gera receita: o líquido fica zerado.
+    net: api.status === 'REFUNDED' || api.status === 'CANCELLED' ? 0 : total,
     status: api.status === 'CANCELLED' ? 'CANCELED' : api.status,
-    history: ['Venda registrada pela API', 'Estoque atualizado']
+    history: ['Venda registrada', 'Estoque baixado']
   };
 }

@@ -35,7 +35,7 @@ public class MarketplaceItemSnapshot {
         itemRevenue=BigDecimal.ZERO; soldQuantity=BigDecimal.ZERO; sourceBatchId=batchId;
         sourcePayloadJson="{\"ausenteEmRelatorioDiarioCompleto\":true}"; updatedAt=now;
     }
-    public UUID getId(){return id;} public IntegrationProvider getProvider(){return provider;} public String getExternalStoreId(){return externalStoreId;}
+    public UUID getId(){return id;} public IntegrationProvider getProvider(){return provider;} public String getExternalStoreId(){return externalStoreId;} public String getStoreName(){return storeName;}
     public LocalDate getBusinessDate(){return businessDate;} public String getExternalItemName(){return externalItemName;}
     public BigDecimal getItemRevenue(){return itemRevenue;} public BigDecimal getSoldQuantity(){return soldQuantity;}
 }

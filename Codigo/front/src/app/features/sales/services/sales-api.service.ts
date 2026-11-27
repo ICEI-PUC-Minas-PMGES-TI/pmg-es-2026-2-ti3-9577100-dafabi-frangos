@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { ApiCreateSaleRequest, ApiSale, ApiSalePage, SaleQuery } from '../models/sales-api.models';
@@ -8,8 +8,9 @@ export class SalesApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/sales`;
 
-  create(request: ApiCreateSaleRequest) {
-    return this.http.post<ApiSale>(this.baseUrl, request);
+  create(request: ApiCreateSaleRequest, idempotencyKey?: string) {
+    const headers = idempotencyKey ? new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) : undefined;
+    return this.http.post<ApiSale>(this.baseUrl, request, { headers });
   }
 
   getById(id: string) {

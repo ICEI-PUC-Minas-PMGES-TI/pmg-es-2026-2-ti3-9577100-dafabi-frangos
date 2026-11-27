@@ -13,6 +13,7 @@ public class ExpenseMapper {
                 expense.getId(), expense.getDescription(), expense.getCategory(),
                 expense.getAmount() == null ? null : expense.getAmount().setScale(2, RoundingMode.HALF_UP),
                 expense.getDate(), expense.getPaymentMethod(), expense.getObservation(),
-                expense.getStatus(), expense.getUserId(), expense.getCreatedAt(), expense.getUpdatedAt(), expense.getPaidAt());
+                expense.getStatus(), expense.getUserId(), expense.getCreatedAt(), expense.getUpdatedAt(), expense.getPaidAt(),
+                expense.getReversedAt(), expense.getReversalReason());
     }
 }

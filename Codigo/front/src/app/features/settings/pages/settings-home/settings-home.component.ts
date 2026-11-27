@@ -11,6 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SettingsNavComponent } from '../../components/settings-nav/settings-nav.component';
 import { SettingsService } from '../../services/settings.service';
+import { PHONE_PATTERN, formatPhone } from '../../../../shared/utils/phone.utils';
 
 @Component({
   selector: 'app-settings-home',
@@ -20,7 +21,7 @@ import { SettingsService } from '../../services/settings.service';
     MatInputModule, MatProgressBarModule, MatSelectModule, PageHeaderComponent, SettingsNavComponent
   ],
   template: `
-    <app-page-header eyebrow="Administração" title="Configurações" subtitle="Dados básicos da loja e preferências gerais." />
+    <app-page-header eyebrow="Configurações" title="Configurações" subtitle="Dados básicos da loja e preferências gerais." />
     <app-settings-nav />
     @if (loading()) {
       <mat-progress-bar mode="indeterminate" aria-label="Carregando configurações da loja" />
@@ -41,8 +42,9 @@ import { SettingsService } from '../../services/settings.service';
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Telefone</mat-label>
-          <input matInput formControlName="phone" autocomplete="tel" />
+          <input matInput formControlName="phone" autocomplete="tel" inputmode="tel" placeholder="(31) 99999-9999" (blur)="form.controls.phone.setValue(formatPhone(form.controls.phone.value))" />
           @if (form.controls.phone.hasError('required')) { <mat-error>Informe o telefone.</mat-error> }
+          @else if (form.controls.phone.hasError('pattern')) { <mat-error>Informe o telefone com DDD, ex.: (31) 99999-9999.</mat-error> }
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
           <mat-label>Endereço</mat-label>
@@ -73,6 +75,7 @@ import { SettingsService } from '../../services/settings.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SettingsHomeComponent implements OnInit {
+  readonly formatPhone = formatPhone;
   private readonly service = inject(SettingsService);
   private readonly snack = inject(MatSnackBar);
   readonly loading = signal(true);
@@ -80,7 +83,7 @@ export class SettingsHomeComponent implements OnInit {
   readonly saving = signal(false);
   readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(120)] }),
-    phone: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(40)] }),
+    phone: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(40), Validators.pattern(PHONE_PATTERN)] }),
     address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(250)] }),
     defaultPayment: new FormControl('PIX', { nonNullable: true, validators: [Validators.required] }),
     compactMode: new FormControl(false, { nonNullable: true })

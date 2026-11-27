@@ -65,7 +65,7 @@ import { IntegrationsService } from '../../services/integrations.service';
         </div>
 
         @if (current.reportType === 'ORDERS') {
-          <div class="notice warning" role="status"><mat-icon>info</mat-icon>Totais abaixo reproduzem os campos disponíveis do arquivo e podem incluir cancelamentos. Campos não informados não representam necessariamente zero. Na 99Food, comissão e processamento não incluem logística nem marketing. Esta importação não movimenta o caixa nem o estoque.</div>
+          <div class="notice warning" role="status"><mat-icon>info</mat-icon>Os totais somam só os registros novos; os repetidos já estão no sistema e serão apenas atualizados. Totais abaixo reproduzem os campos disponíveis do arquivo e podem incluir cancelamentos. Campos não informados não representam necessariamente zero. Na 99Food, comissão e processamento não incluem logística nem marketing. Esta importação não movimenta o caixa nem o estoque.</div>
         }
         <div class="summary-grid">
           @if (current.reportType === 'ORDERS') {
@@ -87,7 +87,7 @@ import { IntegrationsService } from '../../services/integrations.service';
             <div><small>Quantidade vendida</small><strong>{{ current.summary.itemQuantity }}</strong></div>
             <div class="highlight"><small>Receita dos itens</small><strong>{{ current.summary.itemRevenue | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
           }
-          <div><small>Repetidos</small><strong>{{ current.duplicateRowCount }}</strong></div>
+          <div><small>Repetidos (serão atualizados)</small><strong>{{ current.duplicateRowCount }}</strong></div>
           <div><small>Linhas inválidas</small><strong>{{ current.invalidRowCount }}</strong></div>
         </div>
 

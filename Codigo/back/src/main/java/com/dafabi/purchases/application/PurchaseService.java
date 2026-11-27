@@ -1,5 +1,6 @@
 package com.dafabi.purchases.application;
 
+import com.dafabi.shared.Quantities;
 import com.dafabi.cash.application.CashRegisterService;
 import com.dafabi.cash.domain.CashMovementDirection;
 import com.dafabi.cash.domain.CashRegister;
@@ -102,17 +103,17 @@ public class PurchaseService {
                 null);
 
         // Ordem fixa de bloqueio dos saldos evita deadlock entre operações concorrentes.
-        Map<UUID, Integer> quantitiesByProduct = new TreeMap<>(Comparator.comparing(UUID::toString));
+        Map<UUID, BigDecimal> quantitiesByProduct = new TreeMap<>(Comparator.comparing(UUID::toString));
         for (PurchaseItemRequest item : request.items()) {
-            quantitiesByProduct.merge(item.productId(), item.quantity(), Integer::sum);
+            quantitiesByProduct.merge(item.productId(), Quantities.of(item.quantity()), BigDecimal::add);
         }
 
         Map<UUID, Product> productsById = new HashMap<>();
         Map<UUID, CostChange> costsByProduct = new HashMap<>();
-        Map<UUID, Integer> previousQuantities = new HashMap<>();
-        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+        Map<UUID, BigDecimal> previousQuantities = new HashMap<>();
+        for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {
             UUID productId = entry.getKey();
-            int quantity = entry.getValue();
+            BigDecimal quantity = entry.getValue();
 
             ProductStock stock = productStockRepository.findByProductIdForUpdate(productId)
                     .orElseThrow(() -> new BusinessException(
@@ -126,14 +127,14 @@ public class PurchaseService {
                         String.format("O produto \"%s\" está inativo e não pode ser comprado.", product.getName()));
             }
 
-            int previousQuantity = stock.getQuantity();
-            int newQuantity = previousQuantity + quantity;
+            BigDecimal previousQuantity = stock.getQuantity();
+            BigDecimal newQuantity = previousQuantity.add(quantity);
             BigDecimal previousCost = money(product.getCurrentCost());
-            BigDecimal totalInventoryCost = previousCost.multiply(BigDecimal.valueOf(previousQuantity))
+            BigDecimal totalInventoryCost = previousCost.multiply(previousQuantity.max(BigDecimal.ZERO))
                     .add(request.items().stream().filter(item -> item.productId().equals(productId))
                             .map(item -> money(item.unitCost()).multiply(BigDecimal.valueOf(item.quantity())))
                             .reduce(BigDecimal.ZERO, BigDecimal::add));
-            BigDecimal resultingCost = totalInventoryCost.divide(BigDecimal.valueOf(newQuantity), 2, RoundingMode.HALF_UP);
+            BigDecimal resultingCost = totalInventoryCost.divide(newQuantity, 2, RoundingMode.HALF_UP);
             product.setCurrentCost(resultingCost);
             stock.setQuantity(newQuantity);
             productsById.put(productId, product);
@@ -153,7 +154,7 @@ public class PurchaseService {
                     costs.previous(), costs.resulting(), item.batch(), item.expiry()));
         }
 
-        Map<UUID, Integer> aggregateBalances = new HashMap<>(previousQuantities);
+        Map<UUID, BigDecimal> aggregateBalances = new HashMap<>(previousQuantities);
         Set<String> batchesInRequest = new java.util.HashSet<>();
         for (PurchaseItemRequest item : request.items()) {
             Product product = productsById.get(item.productId());
@@ -166,8 +167,8 @@ public class PurchaseService {
                 }
                 lot = inventoryLotRepository.save(new InventoryLot(product, item.batch(), request.date(), item.expiry(), item.quantity()));
             }
-            int previous = aggregateBalances.get(item.productId());
-            int next = previous + item.quantity();
+            BigDecimal previous = aggregateBalances.get(item.productId());
+            BigDecimal next = previous.add(Quantities.of(item.quantity()));
             aggregateBalances.put(item.productId(), next);
             stockMovementRepository.save(new StockMovement(product, lot, StockMovementType.PURCHASE,
                     previous, next, PURCHASE_ORIGIN,
@@ -232,16 +233,16 @@ public class PurchaseService {
                     "Somente compras registradas e não pagas podem ser canceladas.", HttpStatus.CONFLICT);
         }
 
-        Map<UUID, Integer> quantitiesByProduct = new TreeMap<>(Comparator.comparing(UUID::toString));
+        Map<UUID, BigDecimal> quantitiesByProduct = new TreeMap<>(Comparator.comparing(UUID::toString));
         purchase.getItems().forEach(item -> quantitiesByProduct.merge(
-                item.getProduct().getId(), item.getQuantity(), Integer::sum));
+                item.getProduct().getId(), Quantities.of(item.getQuantity()), BigDecimal::add));
         List<StockMovement> receiptMovements = stockMovementRepository
                 .findByReferenceTypeAndReferenceIdAndMovementTypeOrderByOccurredAtAsc(
                         PURCHASE_REFERENCE_TYPE, purchase.getId(), StockMovementType.PURCHASE);
-        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+        for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {
             ProductStock stock = productStockRepository.findByProductIdForUpdate(entry.getKey())
                     .orElseThrow(() -> new ResourceNotFoundException("Produto", entry.getKey()));
-            if (stock.getQuantity() < entry.getValue()) {
+            if (stock.getQuantity().compareTo(entry.getValue()) < 0) {
                 throw new BusinessException("PURCHASE_STOCK_ALREADY_CONSUMED",
                         "Não é possível cancelar: parte do estoque desta compra já foi consumida.", HttpStatus.CONFLICT);
             }
@@ -254,17 +255,17 @@ public class PurchaseService {
             boolean lotAlreadyConsumed = receiptMovements.stream()
                     .filter(movement -> movement.getProduct().getId().equals(entry.getKey()))
                     .filter(movement -> movement.getLot() != null)
-                    .anyMatch(movement -> movement.getLot().getQuantity() < movement.getQuantityDelta());
+                    .anyMatch(movement -> movement.getLot().getQuantity().compareTo(movement.getQuantityDelta()) < 0);
             if (lotAlreadyConsumed) {
                 throw new BusinessException("PURCHASE_LOT_ALREADY_CONSUMED",
                         "Não é possível cancelar: parte de um lote recebido nesta compra já foi consumida.", HttpStatus.CONFLICT);
             }
         }
 
-        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+        for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {
             ProductStock stock = productStockRepository.findByProductIdForUpdate(entry.getKey()).orElseThrow();
-            int previousQuantity = stock.getQuantity();
-            int newQuantity = previousQuantity - entry.getValue();
+            BigDecimal previousQuantity = stock.getQuantity();
+            BigDecimal newQuantity = previousQuantity.subtract(entry.getValue());
             stock.setQuantity(newQuantity);
             PurchaseItem costSource = purchase.getItems().stream()
                     .filter(item -> item.getProduct().getId().equals(entry.getKey())).findFirst().orElseThrow();
@@ -283,11 +284,11 @@ public class PurchaseService {
                         actor(purchase.getCreatedBy()), PURCHASE_REFERENCE_TYPE, purchase.getId()));
                 continue;
             }
-            int balance = previousQuantity;
+            BigDecimal balance = previousQuantity;
             for (StockMovement receipt : productReceipts) {
-                int received = receipt.getQuantityDelta();
-                if (receipt.getLot() != null) receipt.getLot().setQuantity(receipt.getLot().getQuantity() - received);
-                int next = balance - received;
+                BigDecimal received = receipt.getQuantityDelta();
+                if (receipt.getLot() != null) receipt.getLot().setQuantity(receipt.getLot().getQuantity().subtract(received));
+                BigDecimal next = balance.subtract(received);
                 stockMovementRepository.save(new StockMovement(stock.getProduct(), receipt.getLot(),
                         StockMovementType.PURCHASE_CANCELLATION, balance, next,
                         "Cancelamento de compra", "Cancelamento da compra " + purchase.getId(),

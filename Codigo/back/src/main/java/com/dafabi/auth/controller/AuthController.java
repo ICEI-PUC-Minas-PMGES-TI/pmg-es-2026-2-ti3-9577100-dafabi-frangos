@@ -1,5 +1,8 @@
 package com.dafabi.auth.controller;
 
+import org.springframework.web.bind.annotation.PatchMapping;
+import com.dafabi.users.application.UserService;
+import com.dafabi.users.dto.ChangeOwnPasswordRequest;
 import com.dafabi.auth.application.AuthService;
 import com.dafabi.auth.dto.AuthTokenResponse;
 import com.dafabi.auth.dto.AuthenticatedUserResponse;
@@ -27,9 +30,11 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserService userService) {
         this.authService = authService;
+        this.userService = userService;
     }
 
     @PostMapping("/login")
@@ -48,6 +53,14 @@ public class AuthController {
             @RequestBody(required = false) LogoutRequest request) {
         RequestUser currentUser = extractRequestUser(authentication);
         authService.logout(currentUser, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> changeOwnPassword(@Valid @RequestBody ChangeOwnPasswordRequest request,
+                                                  Authentication authentication) {
+        RequestUser currentUser = RequestUser.from(authentication);
+        userService.changeOwnPassword(currentUser.id(), request.currentPassword(), request.newPassword());
         return ResponseEntity.noContent().build();
     }
 

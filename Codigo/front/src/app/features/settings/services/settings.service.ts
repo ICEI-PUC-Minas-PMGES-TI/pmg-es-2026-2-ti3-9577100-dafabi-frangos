@@ -12,8 +12,10 @@ export class SettingsService {
   private readonly storeEndpoint = `${environment.apiBaseUrl}/settings/store`;
   readonly store = signal<StoreSettings>({ name: 'DaFabi Frangos', phone: '', address: '', defaultPayment: 'PIX', compactMode: false });
   readonly permissions: PermissionRow[] = [
-    { area: 'Dashboard financeiro', admin: true, cashier: false }, { area: 'PDV e vendas', admin: true, cashier: true },
-    { area: 'Produtos e estoque', admin: true, cashier: true }, { area: 'Caixa', admin: true, cashier: true },
+    { area: 'Dashboard financeiro', admin: true, cashier: false }, { area: 'PDV e histórico de vendas', admin: true, cashier: true },
+    { area: 'Consultar produtos e estoque', admin: true, cashier: true },
+    { area: 'Cadastrar produtos, ajustar estoque e registrar lotes', admin: true, cashier: false },
+    { area: 'Caixa (abrir, consultar e fechar)', admin: true, cashier: true },
     { area: 'Compras e fornecedores', admin: true, cashier: false }, { area: 'Despesas', admin: true, cashier: false },
     { area: 'Integrações', admin: true, cashier: false }, { area: 'Estornos', admin: true, cashier: false },
     { area: 'Usuários e configurações', admin: true, cashier: false }
@@ -21,16 +23,34 @@ export class SettingsService {
   async loadStore() {
     const value = await firstValueFrom(this.http.get<StoreSettings>(this.storeEndpoint));
     this.store.set(value);
+    this.applyPreferences(value);
     return value;
+  }
+  /** Carrega as preferências ao entrar no sistema; falhas mantêm os valores padrão. */
+  async loadPreferences(): Promise<void> {
+    try { await this.loadStore(); } catch { /* mantém padrões */ }
+  }
+  private applyPreferences(value: StoreSettings): void {
+    document.body.classList.toggle('compact-tables', !!value.compactMode);
   }
   async saveStore(value: StoreSettings) {
     const saved = await firstValueFrom(this.http.put<StoreSettings>(this.storeEndpoint, value));
     this.store.set(saved);
+    this.applyPreferences(saved);
     return saved;
   }
   listUsers() { return firstValueFrom(this.http.get<User[]>(this.usersEndpoint)); }
   createUser(user: { name: string; email: string; password: string; role: User['role'] }) {
     return firstValueFrom(this.http.post<User>(this.usersEndpoint, user));
+  }
+  updateUser(id: string, value: { name: string; role: User['role'] }) {
+    return firstValueFrom(this.http.put<User>(`${this.usersEndpoint}/${id}`, value));
+  }
+  resetPassword(id: string, newPassword: string) {
+    return firstValueFrom(this.http.patch<void>(`${this.usersEndpoint}/${id}/password`, { newPassword }));
+  }
+  changeOwnPassword(currentPassword: string, newPassword: string) {
+    return firstValueFrom(this.http.patch<void>(`${environment.apiBaseUrl}/auth/me/password`, { currentPassword, newPassword }));
   }
   setUserActive(id: string, active: boolean) {
     return firstValueFrom(this.http.patch<User>(`${this.usersEndpoint}/${id}/status`, { active }));

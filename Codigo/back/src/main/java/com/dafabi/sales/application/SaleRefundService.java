@@ -1,5 +1,6 @@
 package com.dafabi.sales.application;
 
+import com.dafabi.shared.Quantities;
 import com.dafabi.cash.application.CashRegisterService;
 import com.dafabi.cash.domain.CashMovement;
 import com.dafabi.cash.domain.CashMovementDirection;
@@ -189,9 +190,9 @@ public class SaleRefundService {
     }
 
     private void reverseStock(Sale sale, SaleRefund refund) {
-        Map<UUID, Integer> quantitiesByProduct = new TreeMap<>();
+        Map<UUID, BigDecimal> quantitiesByProduct = new TreeMap<>();
         for (SaleItem item : sale.getItems()) {
-            quantitiesByProduct.merge(item.getProduct().getId(), item.getQuantity().intValueExact(), Integer::sum);
+            quantitiesByProduct.merge(item.getProduct().getId(), Quantities.of(item.getQuantity()), BigDecimal::add);
         }
 
         Map<UUID, java.util.List<StockMovement>> allocatedMovements = new java.util.HashMap<>();
@@ -200,15 +201,15 @@ public class SaleRefundService {
                 .forEach(movement -> allocatedMovements.computeIfAbsent(movement.getProduct().getId(), ignored -> new java.util.ArrayList<>())
                         .add(movement));
 
-        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+        for (Map.Entry<UUID, BigDecimal> entry : quantitiesByProduct.entrySet()) {
             UUID productId = entry.getKey();
             ProductStock stock = productStockRepository.findByProductIdForUpdate(productId)
                     .orElseThrow(() -> new ResourceNotFoundException("Produto", productId));
 
-            int previousQuantity = stock.getQuantity();
-            int newQuantity = previousQuantity + entry.getValue();
+            BigDecimal previousQuantity = stock.getQuantity();
+            BigDecimal newQuantity = previousQuantity.add(entry.getValue());
             stock.setQuantity(newQuantity);
-            int balance = previousQuantity;
+            BigDecimal balance = previousQuantity;
             java.util.List<StockMovement> saleMovements = allocatedMovements.getOrDefault(productId, java.util.List.of());
             if (saleMovements.isEmpty()) {
                 stockMovementRepository.save(new StockMovement(stock.getProduct(), null, StockMovementType.REFUND,
@@ -217,10 +218,10 @@ public class SaleRefundService {
                 continue;
             }
             for (StockMovement saleMovement : saleMovements) {
-                int restored = Math.negateExact(saleMovement.getQuantityDelta());
+                BigDecimal restored = saleMovement.getQuantityDelta().negate();
                 InventoryLot lot = saleMovement.getLot();
-                if (lot != null) lot.setQuantity(lot.getQuantity() + restored);
-                int nextBalance = balance + restored;
+                if (lot != null) lot.setQuantity(lot.getQuantity().add(restored));
+                BigDecimal nextBalance = balance.add(restored);
                 stockMovementRepository.save(new StockMovement(stock.getProduct(), lot, StockMovementType.REFUND,
                         balance, nextBalance, REFUND_ORIGIN, refund.getReason(),
                         refund.getRefundedByName(), REFUND_REFERENCE_TYPE, refund.getId()));

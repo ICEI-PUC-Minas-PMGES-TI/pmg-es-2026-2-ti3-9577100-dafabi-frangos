@@ -1,5 +1,6 @@
 package com.dafabi.integrations.application;
 
+import com.dafabi.shared.Quantities;
 import com.dafabi.integrations.domain.*;
 import com.dafabi.integrations.dto.*;
 import com.dafabi.integrations.repository.*;
@@ -155,7 +156,6 @@ public class MarketplaceStockService {
     }
 
     private void applyOne(MarketplaceItemSnapshot item,UUID productId,BigDecimal newReported,boolean confirmReturns) {
-        if(newReported.stripTrailingZeros().scale()>0) return;
         ProductStock stock=stocks.findByProductIdForUpdate(productId)
                 .orElseThrow(()->new BusinessException("PRODUCT_STOCK_NOT_FOUND","O produto associado não tem saldo de estoque configurado.",HttpStatus.CONFLICT));
         MarketplaceStockApplication application=applications.findForUpdate(item.getId(),productId)
@@ -164,42 +164,42 @@ public class MarketplaceStockService {
         if(delta.signum()<0 && !confirmReturns) {
             application.updateReported(newReported,"RETURN_REVIEW"); applications.save(application); return;
         }
-        int amount=delta.abs().intValueExact();
-        int previous=stock.getQuantity();
-        if(delta.signum()>0 && previous<amount) {
+        BigDecimal amount=Quantities.of(delta.abs());
+        BigDecimal previous=stock.getQuantity();
+        if(delta.signum()>0 && previous.compareTo(amount)<0) {
             application.updateReported(newReported,"INSUFFICIENT_STOCK"); applications.save(application); return;
         }
-        if(delta.signum()>0) stock.setQuantity(previous-amount);
-        else if(delta.signum()<0) stock.setQuantity(previous+amount);
-        if(amount>0) adjustLots(stock.getProduct(), delta.signum(), amount, previous, stock.getQuantity(), item, application);
+        if(delta.signum()>0) stock.setQuantity(previous.subtract(amount));
+        else if(delta.signum()<0) stock.setQuantity(previous.add(amount));
+        if(amount.signum()>0) adjustLots(stock.getProduct(), delta.signum(), amount, previous, stock.getQuantity(), item, application);
         application.markApplied(newReported); applications.save(application);
     }
 
-    private void adjustLots(Product product, int direction, int amount, int aggregateBefore, int aggregateAfter,
-                            MarketplaceItemSnapshot item, MarketplaceStockApplication application) {
-        int remaining = amount;
-        int aggregateBalance = aggregateBefore;
+    private void adjustLots(Product product, int direction, BigDecimal amount, BigDecimal aggregateBefore,
+                            BigDecimal aggregateAfter, MarketplaceItemSnapshot item, MarketplaceStockApplication application) {
+        BigDecimal remaining = amount;
+        BigDecimal aggregateBalance = aggregateBefore;
         String origin = item.getProvider() == IntegrationProvider.IFOOD ? "iFood" : "99Food";
         if (direction > 0 && product.isPerishable()) {
             List<InventoryLot> eligible = lots.findAvailableByProductForUpdate(product.getId()).stream()
                     .filter(lot -> !lot.getReceivedAt().isAfter(item.getBusinessDate())
                             && !lot.getExpiry().isBefore(item.getBusinessDate())).toList();
-            int traceable = eligible.stream().mapToInt(InventoryLot::getQuantity).sum();
-            if (traceable < amount) {
+            BigDecimal traceable = eligible.stream().map(InventoryLot::getQuantity).reduce(Quantities.ZERO, BigDecimal::add);
+            if (traceable.compareTo(amount) < 0) {
                 throw new BusinessException("MARKETPLACE_LOT_REVIEW_REQUIRED",
                         "A baixa não pode ser atribuída com segurança aos lotes válidos na data do relatório. Confira o estoque.",
                         HttpStatus.CONFLICT);
             }
             for (InventoryLot lot : eligible) {
-                if (remaining == 0) break;
-                int consumed = Math.min(remaining, lot.getQuantity());
-                lot.setQuantity(lot.getQuantity() - consumed);
-                int next = aggregateBalance - consumed;
+                if (remaining.signum() == 0) break;
+                BigDecimal consumed = Quantities.min(remaining, lot.getQuantity());
+                lot.setQuantity(lot.getQuantity().subtract(consumed));
+                BigDecimal next = aggregateBalance.subtract(consumed);
                 movements.save(new StockMovement(product, lot, StockMovementType.INTEGRATED_SALE,
                         aggregateBalance, next, origin, "Relatório de itens · " + item.getExternalItemName(),
                         "Importação de marketplace", "MARKETPLACE_STOCK_APPLICATION", application.getId()));
                 aggregateBalance = next;
-                remaining -= consumed;
+                remaining = remaining.subtract(consumed);
             }
         } else if (direction < 0 && product.isPerishable()) {
             List<StockMovement> previous = new ArrayList<>();
@@ -210,25 +210,25 @@ public class MarketplaceStockService {
             Map<UUID, LotBalance> balances = new LinkedHashMap<>();
             for (StockMovement movement : previous) {
                 if (movement.getLot() == null) continue;
-                balances.computeIfAbsent(movement.getLot().getId(), ignored -> new LotBalance(movement.getLot()))
-                        .remaining += -movement.getQuantityDelta();
+                LotBalance lotBalance = balances.computeIfAbsent(movement.getLot().getId(), ignored -> new LotBalance(movement.getLot()));
+                lotBalance.remaining = lotBalance.remaining.subtract(movement.getQuantityDelta());
             }
             for (LotBalance balance : balances.values()) {
-                if (remaining == 0) break;
-                int restored = Math.min(remaining, Math.max(0, balance.remaining));
-                if (restored == 0) continue;
-                balance.lot.setQuantity(balance.lot.getQuantity() + restored);
-                int next = aggregateBalance + restored;
+                if (remaining.signum() == 0) break;
+                BigDecimal restored = Quantities.min(remaining, balance.remaining.max(BigDecimal.ZERO));
+                if (restored.signum() == 0) continue;
+                balance.lot.setQuantity(balance.lot.getQuantity().add(restored));
+                BigDecimal next = aggregateBalance.add(restored);
                 movements.save(new StockMovement(product, balance.lot, StockMovementType.INTEGRATED_CANCELLATION,
                         aggregateBalance, next, origin, "Recomposição · " + item.getExternalItemName(),
                         "Cancelamento de venda integrada", "MARKETPLACE_STOCK_APPLICATION", application.getId()));
                 aggregateBalance = next;
-                balance.remaining -= restored;
-                remaining -= restored;
+                balance.remaining = balance.remaining.subtract(restored);
+                remaining = remaining.subtract(restored);
             }
         }
-        if (remaining > 0) {
-            int next = aggregateAfter;
+        if (remaining.signum() > 0) {
+            BigDecimal next = aggregateAfter;
             movements.save(new StockMovement(product, null,
                     direction > 0 ? StockMovementType.INTEGRATED_SALE : StockMovementType.INTEGRATED_CANCELLATION,
                     aggregateBalance, next, origin,
@@ -240,7 +240,7 @@ public class MarketplaceStockService {
 
     private static final class LotBalance {
         private final InventoryLot lot;
-        private int remaining;
+        private BigDecimal remaining = Quantities.ZERO;
         private LotBalance(InventoryLot lot) { this.lot = lot; }
     }
 
@@ -253,7 +253,7 @@ public class MarketplaceStockService {
         List<MarketplaceItemSnapshot> items=snapshots.findByProviderAndExternalStoreIdAndBusinessDateBetweenOrderByBusinessDateAscExternalItemNameAsc(provider,storeId,start,end);
         List<MarketplaceStockEffectView> result=new ArrayList<>();
         Map<UUID,Product> productById=new HashMap<>();
-        Map<UUID,Integer> stockByProduct=new HashMap<>();
+        Map<UUID,BigDecimal> stockByProduct=new HashMap<>();
         Set<UUID> missingStock=new HashSet<>();
         for(MarketplaceItemSnapshot item:items) {
             if (baseline != null && item.getBusinessDate().isBefore(baseline.getStartDate())) {
@@ -278,27 +278,26 @@ public class MarketplaceStockService {
                 MarketplaceStockApplication app=applications.findBySnapshotIdAndProductId(item.getId(),rule.getProductId()).orElse(null);
                 BigDecimal applied=app==null?BigDecimal.ZERO:app.getAppliedQuantity();
                 BigDecimal delta=reported.subtract(applied);
-                Integer currentStock=stockByProduct.computeIfAbsent(rule.getProductId(),id->{
+                BigDecimal currentStock=stockByProduct.computeIfAbsent(rule.getProductId(),id->{
                     Optional<ProductStock> stock=stocks.findById(id);
                     if(stock.isEmpty()) missingStock.add(id);
-                    return stock.map(ProductStock::getQuantity).orElse(0);
+                    return stock.map(ProductStock::getQuantity).orElse(Quantities.ZERO);
                 });
                 String status; String explanation;
                 if(baseline==null){status="BASELINE_REQUIRED";explanation="Defina a data inicial e faça a contagem física antes de aplicar.";}
                 else if(item.getBusinessDate().isBefore(baseline.getStartDate())){status="BEFORE_BASELINE";explanation="Este registro é anterior ao início do controle de estoque.";}
-                else if(reported.stripTrailingZeros().scale()>0){status="UNIT_REVIEW";explanation="A quantidade calculada é fracionada e o estoque atual aceita apenas unidades inteiras.";}
                 else if(reported.compareTo(applied)==0){status="APPLIED";explanation="O saldo do estoque já corresponde a este relatório.";}
                 else if(product==null || missingStock.contains(rule.getProductId())){status="PRODUCT_REVIEW";explanation="O produto associado ou seu saldo de estoque não está disponível.";}
                 else if(delta.signum()>0 && product!=null && product.isPerishable() && item.getBusinessDate().isAfter(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="FUTURE_REVIEW";explanation="A data da venda está no futuro. Confira o relatório.";}
                 else if(delta.signum()>0 && product!=null && product.isPerishable() && !confirmHistorical && item.getBusinessDate().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo")))){status="HISTORICAL_REVIEW";explanation="Relatório de outra data: a atribuição aos lotes precisa de conferência; o saldo atual não comprova o estoque daquele dia.";}
-                else if(app!=null&&"INSUFFICIENT_STOCK".equals(app.getStatus())&&delta.signum()>0&&BigDecimal.valueOf(currentStock).compareTo(delta)<0){status=app.getStatus();explanation="O saldo atual é insuficiente; ajuste o estoque e aplique novamente.";}
+                else if(app!=null&&"INSUFFICIENT_STOCK".equals(app.getStatus())&&delta.signum()>0&&currentStock.compareTo(delta)<0){status=app.getStatus();explanation="O saldo atual é insuficiente; ajuste o estoque e aplique novamente.";}
                 else if(delta.signum()<0 && !confirmReturns){status="RETURN_REVIEW";explanation="A quantidade do relatório diminuiu; confirme se os produtos foram devolvidos ao estoque.";}
                 else {status="PENDING";explanation=reported.compareTo(applied)<0?"Confirme a devolução física antes de recompor o estoque.":"A baixa será aplicada após confirmar a revisão.";}
                 result.add(new MarketplaceStockEffectView(item.getId(),provider,storeId,item.getBusinessDate(),item.getExternalItemName(),rule.getProductId(),
                         product==null?"Produto removido":product.getName(),reported,applied,reported.subtract(applied),status,explanation));
             }
         }
-        Map<UUID,Integer> lotBalance=new HashMap<>();
+        Map<UUID,BigDecimal> lotBalance=new HashMap<>();
         Map<UUID,List<Integer>> indicesByItem=new LinkedHashMap<>();
         for(int i=0;i<result.size();i++)
             indicesByItem.computeIfAbsent(result.get(i).snapshotId(),ignored->new ArrayList<>()).add(i);
@@ -307,15 +306,15 @@ public class MarketplaceStockService {
             for(int index:indices) {
                 MarketplaceStockEffectView effect=result.get(index);
                 if(!"PENDING".equals(effect.status())||effect.quantityToApply().signum()<=0) continue;
-                int quantity=effect.quantityToApply().intValueExact();
+                BigDecimal quantity=effect.quantityToApply();
                 String reason=null;
-                if(stockByProduct.getOrDefault(effect.productId(),0)<quantity) reason="INSUFFICIENT_STOCK";
+                if(stockByProduct.getOrDefault(effect.productId(),Quantities.ZERO).compareTo(quantity)<0) reason="INSUFFICIENT_STOCK";
                 Product product=productById.get(effect.productId());
                 if(reason==null && product!=null && product.isPerishable()) {
-                    int available=lotBalance.computeIfAbsent(effect.productId(),id->lots.findAvailableByProduct(id).stream()
+                    BigDecimal available=lotBalance.computeIfAbsent(effect.productId(),id->lots.findAvailableByProduct(id).stream()
                             .filter(lot->!lot.getReceivedAt().isAfter(effect.businessDate())&&!lot.getExpiry().isBefore(effect.businessDate()))
-                            .mapToInt(InventoryLot::getQuantity).sum());
-                    if(available<quantity) reason="LOT_REVIEW";
+                            .map(InventoryLot::getQuantity).reduce(Quantities.ZERO,BigDecimal::add));
+                    if(available.compareTo(quantity)<0) reason="LOT_REVIEW";
                 }
                 if(reason!=null) {
                     blocked=true;
@@ -335,10 +334,10 @@ public class MarketplaceStockService {
             for(int index:indices) {
                 MarketplaceStockEffectView effect=result.get(index);
                 if(!"PENDING".equals(effect.status())||effect.quantityToApply().signum()<=0) continue;
-                int quantity=effect.quantityToApply().intValueExact();
-                stockByProduct.compute(effect.productId(),(id,value)->value-quantity);
+                BigDecimal quantity=effect.quantityToApply();
+                stockByProduct.compute(effect.productId(),(id,value)->value.subtract(quantity));
                 if(lotBalance.containsKey(effect.productId()))
-                    lotBalance.compute(effect.productId(),(id,value)->value-quantity);
+                    lotBalance.compute(effect.productId(),(id,value)->value.subtract(quantity));
             }
         }
         return result;

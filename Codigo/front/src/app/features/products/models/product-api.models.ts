@@ -17,6 +17,9 @@ export interface ApiProduct {
   frequent: boolean;
   status: ProductStatus;
   stockQuantity: number;
+  sellableQuantity?: number;
+  expiredQuantity?: number;
+  untrackedQuantity?: number;
   createdAt: string;
   updatedAt: string;
   version: number;
@@ -29,6 +32,9 @@ export interface ApiProductListItem {
   salePrice: number;
   currentCost: number;
   stockQuantity: number;
+  sellableQuantity?: number;
+  expiredQuantity?: number;
+  untrackedQuantity?: number;
   unit: string;
   barcode: string | null;
   perishable?: boolean;
@@ -55,6 +61,8 @@ export interface ApiCreateProductRequest {
   frequent: boolean;
   status: ProductStatus;
   initialStock: number;
+  initialBatch?: string;
+  initialExpiry?: string;
 }
 
 export interface ApiUpdateProductRequest {

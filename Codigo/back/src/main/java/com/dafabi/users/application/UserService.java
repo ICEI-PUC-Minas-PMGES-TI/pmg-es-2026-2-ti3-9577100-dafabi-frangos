@@ -65,6 +65,58 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /** Altera nome e perfil; mantém pelo menos uma Administradora ativa. */
+    @Transactional
+    public User update(UUID id, String name, UserRole role, UUID currentUserId) {
+        User user = findUser(id);
+        if (role == null) {
+            throw new BusinessException("INVALID_ROLE", "O perfil do usuário é obrigatório.");
+        }
+        boolean demotingAdmin = isAdmin(user) && role != UserRole.ADMIN;
+        if (demotingAdmin && id.equals(currentUserId)) {
+            throw new BusinessException("CANNOT_DEMOTE_SELF", "Não é possível remover o seu próprio perfil de Administradora.",
+                    HttpStatus.CONFLICT);
+        }
+        if (demotingAdmin && userRepository.findAll().stream().filter(other -> other.isActive() && isAdmin(other)).count() <= 1) {
+            throw new BusinessException("LAST_ADMIN", "O sistema precisa de pelo menos uma Administradora ativa.",
+                    HttpStatus.CONFLICT);
+        }
+        Role persistedRole = roleRepository.findByName(roleName(role))
+                .orElseGet(() -> roleRepository.save(new Role(null, roleName(role))));
+        user.rename(name.trim());
+        user.replaceRoles(Set.of(persistedRole));
+        return userRepository.save(user);
+    }
+
+    /** A Administradora define uma senha temporária para quem esqueceu a própria. */
+    @Transactional
+    public User resetPassword(UUID id, String newPassword) {
+        User user = findUser(id);
+        validatePassword(newPassword);
+        user.changePassword(passwordEncoder.encode(newPassword));
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeOwnPassword(UUID id, String currentPassword, String newPassword) {
+        User user = findUser(id);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BusinessException("INVALID_CURRENT_PASSWORD", "A senha atual não confere.");
+        }
+        validatePassword(newPassword);
+        user.changePassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    private User findUser(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Usuário não encontrado.", HttpStatus.NOT_FOUND));
+    }
+
+    private static boolean isAdmin(User user) {
+        return user.getRoles().stream().anyMatch(role -> "ROLE_ADMIN".equalsIgnoreCase(role.getName()));
+    }
+
     @Transactional
     public List<User> findAll() {
         return userRepository.findAll().stream()

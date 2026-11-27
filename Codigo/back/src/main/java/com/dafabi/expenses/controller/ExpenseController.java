@@ -1,5 +1,6 @@
 package com.dafabi.expenses.controller;
 
+import com.dafabi.expenses.dto.ReverseExpenseRequest;
 import com.dafabi.expenses.application.ExpenseService;
 import com.dafabi.expenses.domain.ExpensePaymentMethod;
 import com.dafabi.expenses.domain.ExpenseStatus;
@@ -51,6 +52,11 @@ public class ExpenseController {
 
     @PatchMapping("/{id}/cancel")
     public ExpenseResponse cancel(@PathVariable UUID id) { return service.cancel(id); }
+
+    @PatchMapping("/{id}/reverse")
+    public ExpenseResponse reverse(@PathVariable UUID id, @Valid @RequestBody ReverseExpenseRequest request) {
+        return service.reverse(id, request);
+    }
 
     @PatchMapping("/{id}/consolidate")
     public ExpenseResponse consolidate(@PathVariable UUID id) { return service.consolidate(id); }

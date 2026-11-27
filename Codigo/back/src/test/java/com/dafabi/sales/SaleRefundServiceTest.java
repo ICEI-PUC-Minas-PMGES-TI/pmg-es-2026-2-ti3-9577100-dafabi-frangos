@@ -133,14 +133,14 @@ class SaleRefundServiceTest {
         assertThat(outcome.refund().refundedBy()).isEqualTo("Fabiana Nogueira");
         assertThat(sale.getStatus()).isEqualTo(SaleStatus.REFUNDED);
 
-        assertThat(chickenStock.getQuantity()).isEqualTo(5);
-        assertThat(farofaStock.getQuantity()).isEqualTo(9);
+        assertThat(chickenStock.getQuantity()).isEqualByComparingTo("5");
+        assertThat(farofaStock.getQuantity()).isEqualByComparingTo("9");
 
         ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
         verify(stockMovementRepository, times(2)).save(movementCaptor.capture());
         assertThat(movementCaptor.getAllValues())
                 .allMatch(movement -> movement.getMovementType() == StockMovementType.REFUND
-                        && movement.getQuantityDelta() == 2
+                        && movement.getQuantityDelta().compareTo(new BigDecimal("2")) == 0
                         && movement.getPerformedBy().equals("Fabiana Nogueira"));
 
         verify(cashRegisterService).recordMovement(
@@ -168,7 +168,7 @@ class SaleRefundServiceTest {
 
         assertThat(outcome.refund().cashAmount()).isEqualByComparingTo("0.00");
         assertThat(outcome.refund().cashRegisterId()).isNull();
-        assertThat(chickenStock.getQuantity()).isEqualTo(5);
+        assertThat(chickenStock.getQuantity()).isEqualByComparingTo("5");
         verify(cashRegisterRepository, never()).findByStoreIdAndStatusForUpdate(any(), any());
         verifyNoInteractions(cashRegisterService);
     }
@@ -193,12 +193,12 @@ class SaleRefundServiceTest {
 
         saleRefundService.refund(sale.getId(), request, admin, null);
 
-        assertThat(lot.getQuantity()).isEqualTo(1);
+        assertThat(lot.getQuantity()).isEqualByComparingTo("1");
         ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
         verify(stockMovementRepository, times(3)).save(movementCaptor.capture());
         assertThat(movementCaptor.getAllValues()).anyMatch(movement -> movement.getLot() == lot
                 && movement.getMovementType() == StockMovementType.REFUND
-                && movement.getQuantityDelta() == 1);
+                && movement.getQuantityDelta().compareTo(BigDecimal.ONE) == 0);
     }
 
     @Test
@@ -218,8 +218,8 @@ class SaleRefundServiceTest {
                 "SALE", sale.getId(), StockMovementType.COUNTER_SALE)).thenReturn(List.of(first, second));
         when(saleRefundRepository.save(any(SaleRefund.class))).thenAnswer(invocation -> invocation.getArgument(0));
         saleRefundService.refund(sale.getId(), request, admin, null);
-        assertThat(expired.getQuantity()).isEqualTo(1);
-        assertThat(valid.getQuantity()).isEqualTo(2);
+        assertThat(expired.getQuantity()).isEqualByComparingTo("1");
+        assertThat(valid.getQuantity()).isEqualByComparingTo("2");
     }
 
     @Test

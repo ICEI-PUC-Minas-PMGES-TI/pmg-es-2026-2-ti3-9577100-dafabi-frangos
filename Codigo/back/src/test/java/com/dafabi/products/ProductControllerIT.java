@@ -77,7 +77,9 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                100
+                new BigDecimal("100"),
+                "L-INICIAL",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -95,6 +97,8 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.frequent", is(true)))
                 .andExpect(jsonPath("$.status", is("ACTIVE")))
                 .andExpect(jsonPath("$.stockQuantity", is(100)))
+                .andExpect(jsonPath("$.sellableQuantity", is(100)))
+                .andExpect(jsonPath("$.untrackedQuantity", is(0)))
                 .andExpect(jsonPath("$.category.id", is(savedCategory.getId().toString())))
                 .andExpect(jsonPath("$.category.name", is("Cortes de Frango")));
     }
@@ -112,7 +116,7 @@ class ProductControllerIT {
                 false,
                 false,
                 ProductStatus.ACTIVE,
-                -1 // Estoque negativo
+                new BigDecimal("-1") // Estoque negativo
         );
 
         mockMvc.perform(post("/products")
@@ -138,7 +142,9 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                20
+                new BigDecimal("20"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -156,7 +162,7 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                10
+                new BigDecimal("10")
         );
 
         mockMvc.perform(post("/products")
@@ -180,7 +186,9 @@ class ProductControllerIT {
                 true,
                 false,
                 ProductStatus.ACTIVE,
-                15
+                new BigDecimal("15"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         String responseContent = mockMvc.perform(post("/products")
@@ -210,7 +218,9 @@ class ProductControllerIT {
                 true,
                 true,
                 ProductStatus.ACTIVE,
-                18
+                new BigDecimal("18"),
+                "L-TESTE",
+                java.time.LocalDate.now().plusDays(5)
         );
 
         mockMvc.perform(post("/products")
@@ -227,5 +237,54 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.content[0].perishable", is(true)))
                 .andExpect(jsonPath("$.content[0].frequent", is(true)))
                 .andExpect(jsonPath("$.content[0].stockQuantity", is(18)));
+    }
+
+    @Test
+    @DisplayName("POST /products - Perecível com estoque inicial sem lote deve ser recusado")
+    void shouldRequireLotForPerishableInitialStock() throws Exception {
+        CreateProductRequest request = new CreateProductRequest(
+                "Frango sem lote", savedCategory.getId(), new BigDecimal("39.90"), new BigDecimal("20"),
+                "un", null, true, true, ProductStatus.ACTIVE, new BigDecimal("3"));
+
+        mockMvc.perform(post("/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INITIAL_LOT_REQUIRED")));
+    }
+
+    @Test
+    @WithMockUser(roles = "CASHIER")
+    @DisplayName("GET /products - Operador de caixa não recebe o custo dos produtos")
+    void cashierDoesNotReceiveProductCost() throws Exception {
+        var product = new com.dafabi.products.domain.Product(UUID.randomUUID(), savedCategory, "Farofa",
+                new BigDecimal("8.50"), new BigDecimal("3.20"), "un", null, false, true, ProductStatus.ACTIVE, null, null);
+        product.setStock(new com.dafabi.products.domain.ProductStock(product, 4));
+        productRepository.save(product);
+
+        mockMvc.perform(get("/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].salePrice", is(8.50)))
+                .andExpect(jsonPath("$.content[0].currentCost").doesNotExist());
+        mockMvc.perform(get("/products/{id}", product.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentCost").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("PUT /products/{id} - Custo não pode ser alterado à mão quando há estoque")
+    void shouldRejectManualCostChangeWhenProductHasStock() throws Exception {
+        var product = new com.dafabi.products.domain.Product(UUID.randomUUID(), savedCategory, "Guaraná 2L",
+                new BigDecimal("13.00"), new BigDecimal("8.00"), "un", null, false, true, ProductStatus.ACTIVE, null, null);
+        product.setStock(new com.dafabi.products.domain.ProductStock(product, 10));
+        productRepository.save(product);
+        var request = new com.dafabi.products.dto.UpdateProductRequest("Guaraná 2L", savedCategory.getId(),
+                new BigDecimal("13.00"), new BigDecimal("5.00"), "un", null, false, true);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/products/{id}", product.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("COST_MANAGED_BY_PURCHASES")));
     }
 }

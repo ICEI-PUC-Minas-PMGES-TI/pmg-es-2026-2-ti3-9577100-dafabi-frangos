@@ -13,16 +13,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/settings/store")
-@PreAuthorize("hasRole('ADMIN')")
 public class StoreSettingsController {
     private final StoreSettingsService service;
 
     public StoreSettingsController(StoreSettingsService service) { this.service = service; }
 
+    /** Leitura liberada ao Operador de caixa: o PDV usa a forma de pagamento sugerida. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER')")
     public StoreSettingsResponse get() { return service.get(); }
 
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public StoreSettingsResponse update(@Valid @RequestBody UpdateStoreSettingsRequest request) {
         return service.update(request);
     }

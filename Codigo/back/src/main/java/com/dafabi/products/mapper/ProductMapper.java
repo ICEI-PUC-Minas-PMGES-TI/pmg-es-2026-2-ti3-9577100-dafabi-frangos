@@ -1,5 +1,8 @@
 package com.dafabi.products.mapper;
 
+import com.dafabi.inventory.application.StockAvailability;
+import com.dafabi.shared.Quantities;
+import java.math.BigDecimal;
 import com.dafabi.products.domain.Category;
 import com.dafabi.products.domain.Product;
 import com.dafabi.products.domain.ProductStatus;
@@ -59,15 +62,19 @@ public class ProductMapper {
     }
 
     public ProductResponse toResponse(Product product) {
+        return toResponse(product, null);
+    }
+
+    public ProductResponse toResponse(Product product, StockAvailability availability) {
         if (product == null) {
             return null;
         }
 
         CategoryResponse categoryResponse = toCategoryResponse(product.getCategory());
 
-        Integer stockQuantity = product.getStock() != null
+        BigDecimal stockQuantity = product.getStock() != null
                 ? product.getStock().getQuantity()
-                : 0;
+                : Quantities.ZERO;
 
         return new ProductResponse(
                 product.getId(),
@@ -80,20 +87,27 @@ public class ProductMapper {
                 product.isPerishable(),
                 product.isFrequent(),
                 product.getStatus(),
-                stockQuantity,
+                Quantities.forJson(stockQuantity),
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                product.getVersion());
+                product.getVersion(),
+                Quantities.forJson(resolve(availability, stockQuantity).sellable()),
+                Quantities.forJson(resolve(availability, stockQuantity).expired()),
+                Quantities.forJson(resolve(availability, stockQuantity).untracked()));
     }
 
     public ProductListResponse toListResponse(Product product) {
+        return toListResponse(product, null);
+    }
+
+    public ProductListResponse toListResponse(Product product, StockAvailability availability) {
         if (product == null) {
             return null;
         }
 
-        Integer stockQuantity = product.getStock() != null
+        BigDecimal stockQuantity = product.getStock() != null
                 ? product.getStock().getQuantity()
-                : 0;
+                : Quantities.ZERO;
 
         return new ProductListResponse(
                 product.getId(),
@@ -101,12 +115,19 @@ public class ProductMapper {
                 toCategoryResponse(product.getCategory()),
                 product.getSalePrice(),
                 product.getCurrentCost(),
-                stockQuantity,
+                Quantities.forJson(stockQuantity),
                 product.getUnit(),
                 product.getBarcode(),
                 product.isPerishable(),
                 product.isFrequent(),
-                product.getStatus());
+                product.getStatus(),
+                Quantities.forJson(resolve(availability, stockQuantity).sellable()),
+                Quantities.forJson(resolve(availability, stockQuantity).expired()),
+                Quantities.forJson(resolve(availability, stockQuantity).untracked()));
+    }
+
+    private static StockAvailability resolve(StockAvailability availability, BigDecimal stock) {
+        return availability != null ? availability : StockAvailability.simple(stock);
     }
 
     private CategoryResponse toCategoryResponse(Category category) {

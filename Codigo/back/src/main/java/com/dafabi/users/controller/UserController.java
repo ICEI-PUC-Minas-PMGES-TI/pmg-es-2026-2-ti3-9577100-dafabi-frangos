@@ -1,5 +1,8 @@
 package com.dafabi.users.controller;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import com.dafabi.users.dto.ResetPasswordRequest;
+import com.dafabi.users.dto.UpdateUserRequest;
 import com.dafabi.shared.exception.BusinessException;
 import com.dafabi.shared.security.RequestUser;
 import com.dafabi.shared.security.UserRole;
@@ -44,6 +47,19 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         return toResponse(userService.create(request.email(), request.password(), request.name(), request.role()));
+    }
+
+    @PutMapping("/{id}")
+    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request,
+                               Authentication authentication) {
+        RequestUser current = RequestUser.from(authentication);
+        return toResponse(userService.update(id, request.name(), request.role(), current.id()));
+    }
+
+    @PatchMapping("/{id}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@PathVariable UUID id, @Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(id, request.newPassword());
     }
 
     @PatchMapping("/{id}/status")
