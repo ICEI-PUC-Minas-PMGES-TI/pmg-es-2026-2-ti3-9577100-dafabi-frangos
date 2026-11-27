@@ -1,0 +1,313 @@
+WEBVTT
+
+00:00:00.098 --> 00:00:01.781
+Este é o sistema web de ponto de
+
+00:00:01.793 --> 00:00:04.712
+venda e gestão financeira da DaFabi Frangos Ele
+
+00:00:04.724 --> 00:00:07.536
+reúne vendas no balcão caixa compras e estoque
+
+00:00:07.548 --> 00:00:11.022
+com lotes despesas estornos relatórios do iFood e
+
+00:00:11.034 --> 00:00:13.690
+da 99Food e um painel com o resultado
+
+00:00:13.702 --> 00:00:14.267
+do período
+
+00:00:15.806 --> 00:00:18.391
+Na tela de entrada o ambiente de demonstração
+
+00:00:18.415 --> 00:00:21.910
+oferece um acesso por perfil A administradora Fabiana
+
+00:00:22.030 --> 00:00:23.845
+entra e vê o painel do dia O
+
+00:00:23.857 --> 00:00:27.127
+menu lateral mostra todos os módulos vendas caixa
+
+00:00:27.211 --> 00:00:32.211
+produtos estoque compras fornecedores despesas integrações estornos e
+
+00:00:32.223 --> 00:00:33.220
+configurações
+
+00:00:34.766 --> 00:00:37.615
+Em Produtos a administradora cadastra uma Marmita de
+
+00:00:37.627 --> 00:00:40.872
+Frango de quinhentos gramas categoria preço de venda
+
+00:00:40.932 --> 00:00:44.091
+custo quantidade inicial e código de barras Ela
+
+00:00:44.103 --> 00:00:46.772
+marca a opção de exibir nos produtos frequentes
+
+00:00:46.784 --> 00:00:49.272
+do PDV e salva O produto aparece no
+
+00:00:49.284 --> 00:00:51.543
+catálogo com preço custo e estoque
+
+00:01:06.058 --> 00:01:09.051
+Antes de registrar compras ela cadastra o fornecedor
+
+00:01:09.063 --> 00:01:11.801
+Granja Boa Vista com telefone e e-mail Na
+
+00:01:11.813 --> 00:01:14.866
+lista telefone e e-mail viram contatos clicáveis
+
+00:01:26.183 --> 00:01:28.959
+Em Compras a administradora registra a entrada de
+
+00:01:28.972 --> 00:01:31.291
+vinte frangos assados a vinte e quatro reais
+
+00:01:31.303 --> 00:01:33.729
+e cinquenta Como o produto é perecível o
+
+00:01:33.741 --> 00:01:36.169
+sistema pede o lote recebido e a validade
+
+00:01:36.422 --> 00:01:39.006
+O valor total é calculado e ao registrar
+
+00:01:39.162 --> 00:01:41.470
+o estoque e o custo médio são atualizados
+
+00:01:41.482 --> 00:01:42.587
+e o lote é criado
+
+00:01:48.573 --> 00:01:50.857
+A compra fica com pagamento pendente até ser
+
+00:01:50.917 --> 00:01:53.679
+paga Aqui ela registra o pagamento por Pix
+
+00:01:53.932 --> 00:01:56.540
+Somente pagamentos em dinheiro saem do caixa
+
+00:02:01.243 --> 00:02:03.875
+Em Estoque cada produto mostra o saldo o
+
+00:02:03.887 --> 00:02:06.566
+custo e a origem da última movimentação A
+
+00:02:06.578 --> 00:02:10.135
+aba Perecíveis lista o lote L2711 com a
+
+00:02:10.147 --> 00:02:13.176
+validade O aviso amarelo mostra um saldo antigo
+
+00:02:13.188 --> 00:02:15.496
+sem lote ele não pode ser vendido até
+
+00:02:15.508 --> 00:02:17.876
+ser vinculado a um lote depois da contagem
+
+00:02:19.633 --> 00:02:22.311
+Agora entra o operador de caixa Carlos O
+
+00:02:22.323 --> 00:02:25.472
+menu dele é restrito nova venda histórico caixa
+
+00:02:25.497 --> 00:02:27.973
+produtos e estoque O PDV avisa que o
+
+00:02:27.985 --> 00:02:30.893
+caixa está fechado Ele informa o saldo inicial
+
+00:02:30.905 --> 00:02:33.225
+de cento e cinquenta reais confirma e o
+
+00:02:33.237 --> 00:02:35.557
+resumo do caixa passa a mostrar o atendimento
+
+00:02:35.569 --> 00:02:36.037
+aberto
+
+00:02:50.023 --> 00:02:52.247
+No PDV o frango entra pela leitura do
+
+00:02:52.259 --> 00:02:55.093
+código de barras A marmita e o refrigerante
+
+00:02:55.105 --> 00:02:57.774
+entram pelos botões de produtos frequentes e a
+
+00:02:57.786 --> 00:03:00.586
+quantidade é ajustada no carrinho No pagamento em
+
+00:03:00.598 --> 00:03:03.110
+dinheiro o atalho de duzentos reais calcula o
+
+00:03:03.122 --> 00:03:06.091
+troco Ao confirmar a venda é registrada o
+
+00:03:06.103 --> 00:03:08.062
+estoque é baixado e o dinheiro entra no
+
+00:03:08.074 --> 00:03:08.555
+caixa
+
+00:03:20.323 --> 00:03:22.631
+Uma segunda venda de uma farofa usa o
+
+00:03:22.643 --> 00:03:25.249
+atalho de valor exato O PDV fica pronto
+
+00:03:25.261 --> 00:03:26.535
+para o próximo cliente
+
+00:03:35.448 --> 00:03:37.828
+No histórico as vendas do balcão aparecem com
+
+00:03:37.840 --> 00:03:41.035
+origem pagamento e status O estorno é exclusivo
+
+00:03:41.047 --> 00:03:43.956
+da administradora Ela busca a venda número dois
+
+00:03:44.016 --> 00:03:46.263
+confere os itens e informa o motivo que
+
+00:03:46.276 --> 00:03:49.352
+é obrigatório O sistema avisa quanto será revertido
+
+00:03:49.364 --> 00:03:52.489
+no caixa Depois da confirmação o estorno fica
+
+00:03:52.501 --> 00:03:55.013
+registrado com o responsável e o motivo e
+
+00:03:55.026 --> 00:03:56.564
+os itens voltam ao estoque
+
+00:04:11.990 --> 00:04:14.442
+Em Despesas ela registra o botijão de gás
+
+00:04:14.454 --> 00:04:16.629
+da cozinha de cento e vinte reais pago
+
+00:04:16.641 --> 00:04:19.560
+em dinheiro A despesa entra como pendente ela
+
+00:04:19.572 --> 00:04:21.627
+só afeta o resultado e o caixa quando
+
+00:04:21.639 --> 00:04:24.356
+é marcada como paga Ao confirmar o pagamento
+
+00:04:24.512 --> 00:04:26.964
+o valor aparece nas despesas pagas do período
+
+00:04:27.048 --> 00:04:28.322
+e sai do caixa aberto
+
+00:04:49.800 --> 00:04:52.720
+Em Integrações a loja importa o relatório exportado
+
+00:04:52.732 --> 00:04:55.411
+do portal do iFood Neste exemplo o arquivo
+
+00:04:55.423 --> 00:04:58.055
+é sintético O sistema analisa a planilha e
+
+00:04:58.067 --> 00:05:01.889
+mostra uma prévia pedidos lidos concluídos cancelados valores
+
+00:05:01.901 --> 00:05:04.233
+e taxas e a validação de cada linha
+
+00:05:04.485 --> 00:05:07.370
+Só depois da confirmação os pedidos são gravados
+
+00:05:07.622 --> 00:05:09.702
+A importação não movimenta o caixa nem o
+
+00:05:09.714 --> 00:05:10.243
+estoque
+
+00:05:23.600 --> 00:05:25.367
+No fim do dia o operador abre o
+
+00:05:25.379 --> 00:05:28.768
+resumo do caixa saldo inicial vendas despesas e
+
+00:05:28.792 --> 00:05:31.446
+estornos em dinheiro e o saldo esperado Ao
+
+00:05:31.458 --> 00:05:34.559
+fechar ele informa o valor contado Como faltaram
+
+00:05:34.571 --> 00:05:37.023
+dois reais o sistema calcula a diferença e
+
+00:05:37.035 --> 00:05:40.653
+exige uma justificativa Depois da confirmação o caixa
+
+00:05:40.665 --> 00:05:43.093
+fica fechado para novas vendas com a diferença
+
+00:05:43.105 --> 00:05:43.826
+registrada
+
+00:05:58.808 --> 00:06:01.128
+De volta ao painel a administradora vê o
+
+00:06:01.140 --> 00:06:03.159
+faturamento do dia com o balcão e o
+
+00:06:03.171 --> 00:06:05.743
+iFood as despesas pagas as taxas e o
+
+00:06:05.755 --> 00:06:08.806
+resultado estimado O painel avisa quando o resultado
+
+00:06:08.818 --> 00:06:11.931
+está incompleto por exemplo pelo custo das mercadorias
+
+00:06:11.943 --> 00:06:15.153
+dos pedidos importados Abaixo ficam as vendas por
+
+00:06:15.165 --> 00:06:17.785
+origem as vendas recentes e a composição do
+
+00:06:17.797 --> 00:06:18.446
+resultado
+
+00:06:21.158 --> 00:06:23.716
+As permissões também valem na API Se o
+
+00:06:23.728 --> 00:06:26.589
+operador tentar abrir o painel financeiro pelo endereço
+
+00:06:26.805 --> 00:06:28.993
+o sistema mostra acesso não permitido
+
+00:06:35.366 --> 00:06:37.470
+Por trás das telas o front em Angular
+
+00:06:37.482 --> 00:06:40.256
+conversa com uma API Spring Boot O login
+
+00:06:40.268 --> 00:06:43.622
+usa tokens JWT e perfis Os dados ficam
+
+00:06:43.634 --> 00:06:47.408
+no PostgreSQL versionado com Flyway e vendas compras
+
+00:06:47.420 --> 00:06:50.196
+e estornos usam transações com bloqueio do estoque
+
+00:06:50.208 --> 00:06:52.528
+e do caixa para evitar venda acima do
+
+00:06:52.540 --> 00:06:53.285
+disponível

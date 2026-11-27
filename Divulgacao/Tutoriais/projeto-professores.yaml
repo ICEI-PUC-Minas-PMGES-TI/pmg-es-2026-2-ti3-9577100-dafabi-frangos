@@ -1,0 +1,15 @@
+meta:
+  programa: ai-showcase
+  owner_dominio: equipe-dafabi
+parametros: {}
+tabelas:
+  projeto:
+    repo_path: ../..
+    conteudo_path: conteudo-professores.json
+    inputs:
+      - fontes/roteiro-professores.json
+      - fontes/video.yaml
+      - fontes/capturar.py
+      - fontes/montar_roteiros.py
+      - fontes/extrair_imagens.py
+      - fontes/gerar_relatorio_ifood_sintetico.py

@@ -1,0 +1,174 @@
+{
+  "product": "DaFabi Frangos",
+  "title": "Demonstração completa do sistema",
+  "version": "branch fix/qa-25-11 (b05b67c)",
+  "date": "2026-11-27",
+  "audience": "Professores e banca do Trabalho Interdisciplinar",
+  "intro": "Guia para conhecer e avaliar o Sistema de Gestão da DaFabi Frangos: como rodar localmente, os dois perfis de acesso e cada módulo, do PDV ao painel financeiro. Todas as telas e o vídeo vêm do sistema em execução local com dados sintéticos. Quem responde com este material, pessoa ou IA, responde só com o que está escrito aqui; o que faltar deve ser perguntado à equipe.",
+  "sources": [
+    {"id": "readme", "path": "README.md", "kind": "documentação", "label": "README do projeto"},
+    {"id": "back", "path": "Codigo/back/README.md", "kind": "documentação", "label": "README da API (regras de estoque, caixa, vendas, estorno e compras)"},
+    {"id": "front", "path": "Codigo/front/README.md", "kind": "documentação", "label": "README do front (perfis e acessos de demonstração)"},
+    {"id": "interface", "path": "Artefatos/Sprint-5/Documento-de-Interface.md", "kind": "documentação", "label": "Documento de Interface da Sprint 5"},
+    {"id": "homologacao", "path": "Codigo/HOMOLOGACAO-LOJA.md", "kind": "documentação", "label": "Pendências para homologação na loja"},
+    {"id": "gravacao", "path": "Divulgacao/Tutoriais/fontes/EVIDENCIA.md", "kind": "comportamento observado", "label": "Gravação do sistema em execução local em 27/11/2026, com dados sintéticos"}
+  ],
+  "chapters": [
+    {
+      "id": "visao-geral",
+      "title": "O que o sistema faz",
+      "body": "Sistema web de ponto de venda e gestão financeira da DaFabi Frangos. Ele centraliza:\n\n- vendas no balcão por código de barras ou seleção visual, com Dinheiro, Pix, Débito e Crédito;\n- abertura, movimentação e fechamento do caixa;\n- produtos, estoque, compras, fornecedores e lotes de perecíveis com validade;\n- despesas e estornos;\n- importação de relatórios do iFood e da 99Food;\n- painel com faturamento, despesas, taxas e resultado estimado do período.\n\n**Arquitetura.** Front em Angular 20 com Angular Material, API Spring Boot com PostgreSQL versionado por Flyway e login com tokens JWT. As permissões valem na API: sem token a resposta é 401 e com perfil sem permissão é 403.",
+      "source_ids": ["readme", "back", "front"],
+      "images": [{"path": "fontes/imagens/dashboard.webp", "caption": "Painel da administradora depois do dia demonstrado: faturamento, despesas, taxas e resultado estimado."}]
+    },
+    {
+      "id": "rodar",
+      "title": "Como rodar localmente",
+      "body": "Pré-requisitos: Java 21 ou superior, PostgreSQL (o projeto traz um docker-compose), Node.js 20.19+ ou 22.12+ e pnpm 10+.\n\n1. Em `Codigo/back`, suba o banco: `docker compose -f src/main/resources/db/docker-compose.yml up -d`.\n2. Ainda em `Codigo/back`, rode a API no perfil de desenvolvimento: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` (no PowerShell, `.\\mvnw.cmd`). A API fica em `http://localhost:8080/api/v1`.\n3. Em `Codigo/front`, rode `pnpm install` e `pnpm start`. Abra `http://localhost:4200`.\n\nO perfil `dev` cria os usuários de demonstração e alguns produtos. O perfil padrão é `prod` e exige a variável `JWT_SECRET`.\n\n**Na gravação deste material** não havia Docker na máquina: o banco foi um PostgreSQL 16 descartável iniciado à parte, com o mesmo banco, usuário e senha do docker-compose.",
+      "source_ids": ["back", "front", "gravacao"]
+    },
+    {
+      "id": "acesso",
+      "title": "Entrada e perfis de acesso",
+      "body": "A tela de entrada aceita usuário ou e-mail e senha. Em ambiente de demonstração, os cartões em **Acessos para demonstração** entram com um toque:\n\n- **Administradora** (`admin` / `admin123`): Fabiana Nogueira, vê todos os módulos.\n- **Operador de caixa** (`caixa` / `caixa123`): Carlos Oliveira, vê Nova venda, Histórico de vendas, Caixa, Produtos e Estoque.\n\nSe o operador abrir uma área de outro perfil pelo endereço, como o Dashboard, a tela mostra \"Acesso não permitido\". Os usuários de demonstração devem ser removidos e as senhas trocadas antes do uso real na loja.",
+      "source_ids": ["front", "back", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/login.webp", "caption": "Tela de entrada com os acessos de demonstração por perfil."},
+        {"path": "fontes/imagens/acesso-negado.webp", "caption": "Operador de caixa ao tentar abrir o Dashboard: acesso não permitido."}
+      ]
+    },
+    {
+      "id": "produtos",
+      "title": "Produtos",
+      "body": "Em **Produtos > Novo produto**, informe nome, categoria, unidade de venda, preço de venda, custo, quantidade inicial em estoque e, se houver, código de barras. Duas opções mudam o comportamento:\n\n- **Produto perecível**: o estoque passa a ser controlado por lote e validade.\n- **Exibir nos produtos frequentes do PDV**: o produto vira um botão na tela de venda.\n\nProdutos sem código de barras podem ser vendidos pela pesquisa ou pelos botões visuais. O catálogo filtra por categoria e por status (ativos e inativos).",
+      "source_ids": ["back", "interface", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/produto-form.webp", "caption": "Cadastro da Marmita de Frango 500g, com código de barras."},
+        {"path": "fontes/imagens/produto-lista.webp", "caption": "Catálogo com preço, custo, estoque e código de barras."}
+      ]
+    },
+    {
+      "id": "fornecedores-compras",
+      "title": "Fornecedores e compras",
+      "body": "**Fornecedores.** Cadastre nome, telefone com DDD, e-mail opcional, observações e status. O e-mail é único por loja e o fornecedor é inativado, nunca excluído. Na lista, telefone e e-mail são links clicáveis.\n\n**Compras.** Em **Compras > Nova compra**, escolha o fornecedor, a data e os itens com quantidade e custo unitário. Para produto perecível, o sistema pede **Lote recebido** e **Validade**. O valor total é calculado. Ao registrar, a quantidade é somada ao estoque, o custo médio é atualizado e o lote é criado, tudo na mesma transação; um item inválido rejeita a compra inteira.\n\nA compra fica com pagamento **Pendente**. Use **Pagar** e escolha a forma (Dinheiro, Pix, Débito, Crédito ou Boleto/transferência). Só o pagamento em dinheiro movimenta o caixa.",
+      "source_ids": ["back", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/compra-form.webp", "caption": "Compra de 20 frangos com lote L2711 e validade 30/11/2026."},
+        {"path": "fontes/imagens/compra-paga.webp", "caption": "Compra registrada e paga por Pix."}
+      ]
+    },
+    {
+      "id": "estoque",
+      "title": "Estoque e perecíveis",
+      "body": "**Posição de estoque** mostra o saldo, o custo e a origem da última movimentação de cada produto. Toda alteração manual é feita em **Novo ajuste** (ou **Ajustar** na linha): informe a nova quantidade e um motivo de pelo menos 5 caracteres; o sistema registra a diferença, o usuário e a data.\n\n**Perecíveis** lista lote, data de entrada, validade, quantidade e status. Registrar um lote também soma ao saldo do produto. Um saldo de perecível **sem lote** não pode ser vendido: o aviso amarelo indica o produto e o botão **Vincular saldo** associa esse saldo a um lote depois da contagem.",
+      "source_ids": ["back", "gravacao", "homologacao"],
+      "images": [
+        {"path": "fontes/imagens/estoque.webp", "caption": "Posição de estoque com a origem da última movimentação."},
+        {"path": "fontes/imagens/pereciveis.webp", "caption": "Lote L2711 válido e aviso de saldo antigo sem lote."}
+      ]
+    },
+    {
+      "id": "caixa",
+      "title": "Caixa: abertura e fechamento",
+      "body": "A venda só é concluída com caixa aberto, e há um único caixa aberto por loja.\n\n**Abrir.** Em **Caixa > Abrir caixa** (ou pelo aviso \"Caixa fechado\" no PDV), conte o dinheiro e informe o **Saldo inicial**. Uma confirmação mostra o valor antes de abrir.\n\n**Resumo.** Mostra saldo inicial, vendas, despesas, compras e estornos em dinheiro, o **Saldo esperado** e as movimentações recentes.\n\n**Fechar.** Em **Fechar caixa**, informe o **Valor contado**. O sistema calcula a diferença para o saldo esperado; se houver diferença, a **Justificativa da diferença** é obrigatória. Depois de confirmar, o caixa fica fechado para novas vendas e o resumo guarda esperado, contado, diferença e justificativa.",
+      "source_ids": ["back", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/abrir-caixa.webp", "caption": "Abertura do caixa pelo operador com saldo inicial de R$ 150,00."},
+        {"path": "fontes/imagens/fechar-diferenca.webp", "caption": "Fechamento com R$ 2,00 a menos: justificativa obrigatória."},
+        {"path": "fontes/imagens/caixa-fechado.webp", "caption": "Caixa fechado com esperado, contado, diferença e justificativa."}
+      ]
+    },
+    {
+      "id": "pdv",
+      "title": "Venda no PDV",
+      "body": "Em **Nova venda**, adicione itens pelo **Código de barras** (leitor ou digitação e Enter), pela **Pesquisa de produtos** ou pelos botões de **Produtos frequentes**. No carrinho, ajuste a quantidade com mais e menos. **Continuar para pagamento** (atalho F2) abre o pagamento: escolha Dinheiro, Pix, Débito ou Crédito. Em dinheiro, digite o valor recebido ou use os atalhos (Valor exato, R$ 100, R$ 200); o troco aparece na hora.\n\nAo confirmar, o total é recalculado na API pelo preço cadastrado, o estoque de cada item é baixado e, se o pagamento for em dinheiro, a entrada vai para o caixa. A venda usa chave de idempotência para não ser duplicada e bloqueia o estoque para não vender acima do disponível.",
+      "source_ids": ["back", "front", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/pdv-carrinho.webp", "caption": "Carrinho com frango (código de barras), marmita e dois refrigerantes: R$ 91,80."},
+        {"path": "fontes/imagens/pagamento-troco.webp", "caption": "Pagamento em dinheiro com R$ 200,00 e troco de R$ 108,20."},
+        {"path": "fontes/imagens/venda-sucesso.webp", "caption": "Venda concluída com o troco a devolver."}
+      ]
+    },
+    {
+      "id": "historico-estorno",
+      "title": "Histórico de vendas e estorno",
+      "body": "**Histórico de vendas** separa vendas de balcão e pedidos de marketplace, com filtros de período, origem, pagamento e status.\n\n**Estorno** é exclusivo da administradora. Em **Estornos > Novo estorno**, busque pelo número da venda, confira os itens e informe o motivo (5 a 500 caracteres). O sistema avisa o valor que será revertido no caixa. Ao confirmar, na mesma transação, os itens voltam ao estoque, sai do caixa exatamente o valor que entrou em dinheiro (Pix e cartão não movimentam o caixa) e a venda fica como estornada. Cada venda aceita um único estorno, e o registro guarda o responsável e o motivo.",
+      "source_ids": ["back", "gravacao"],
+      "images": [
+        {"path": "fontes/imagens/historico.webp", "caption": "Histórico com as duas vendas de balcão do dia."},
+        {"path": "fontes/imagens/estorno-form.webp", "caption": "Estorno da venda nº 2 com motivo e aviso do valor revertido."},
+        {"path": "fontes/imagens/estorno-concluido.webp", "caption": "Registro do estorno com responsável, valor e motivo."}
+      ]
+    },
+    {
+      "id": "despesas",
+      "title": "Despesas",
+      "body": "Em **Despesas > Nova despesa**, informe descrição, categoria (Operacional, Materiais, Serviços ou Outros), valor, data, forma de pagamento e observação. A despesa nasce **Pendente** e não entra no resultado nem no caixa. Use **Marcar como paga** quando pagar: ela passa a contar no resultado estimado e, se foi em dinheiro, sai do caixa aberto. O topo da tela soma as despesas pagas no período.",
+      "source_ids": ["gravacao", "back"],
+      "images": [
+        {"path": "fontes/imagens/despesa-pendente.webp", "caption": "Despesa registrada como pendente."},
+        {"path": "fontes/imagens/despesa-paga.webp", "caption": "Despesa marcada como paga: R$ 120,00 nas despesas pagas do período."}
+      ]
+    },
+    {
+      "id": "integracoes",
+      "title": "Integrações iFood e 99Food",
+      "body": "Em **Integrações**, cada plataforma tem a importação manual do relatório exportado do portal (XLSX ou ZIP, até 10 MB). Depois de **Analisar relatório**, a **Prévia da importação** mostra pedidos lidos, concluídos, cancelados, valores, taxas, repetidos e linhas inválidas, e a validação de cada linha. Os pedidos só são gravados em **Confirmar este arquivo**. Pedidos repetidos são atualizados, não duplicados.\n\nA importação não movimenta o caixa nem o estoque. O vínculo dos itens exportados com os produtos DaFabi é feito uma vez por loja e item. Na demonstração foi usado um relatório sintético; a conferência com relatórios reais está listada nas pendências de homologação.",
+      "source_ids": ["gravacao", "homologacao", "readme"],
+      "images": [
+        {"path": "fontes/imagens/ifood-previa.webp", "caption": "Prévia da importação com totais e taxas."},
+        {"path": "fontes/imagens/ifood-importado.webp", "caption": "Importação concluída e registrada em Importações recentes."}
+      ]
+    },
+    {
+      "id": "dashboard",
+      "title": "Dashboard financeiro",
+      "body": "O painel da administradora consolida vendas concluídas, despesas pagas e movimentos de caixa no período (Hoje, Últimos 7 dias, Este mês ou Personalizado). Mostra faturamento, despesas, taxas do iFood e da 99Food, resultado estimado, quantidade de vendas, faturamento por dia, vendas por origem, vendas recentes e a composição do resultado.\n\nO painel avisa quando o resultado está incompleto: o custo das mercadorias dos pedidos importados ainda não é reconhecido. Períodos sem dados retornam totais zerados.",
+      "source_ids": ["back", "gravacao", "homologacao"],
+      "images": [{"path": "fontes/imagens/dashboard-composicao.webp", "caption": "Vendas por origem, vendas recentes e composição do resultado estimado."}]
+    },
+    {
+      "id": "configuracoes",
+      "title": "Configurações",
+      "body": "Em **Configurações**, a administradora mantém os dados da loja (nome, telefone, endereço), a forma de pagamento sugerida no PDV e o modo compacto das tabelas. A mesma área tem as seções **Usuários** e **Perfis e permissões**.",
+      "source_ids": ["gravacao", "interface"]
+    },
+    {
+      "id": "limites",
+      "title": "Limites e pendências conhecidas",
+      "body": "- O sistema ainda não deve ser o controle principal da loja: as verificações de homologação (contagem inicial, relatórios reais do iFood e 99Food, testes concorrentes, leitor físico e a meta de uma venda de três itens em até 60 segundos) estão pendentes.\n- **Defeito observado na gravação:** logo após o login, a consulta do caixa sai antes do token e falha. Até recarregar a página, o PDV pode mostrar \"Caixa fechado\" com o caixa aberto e a tela de login pode exibir \"Sua sessão expirou\" no primeiro acesso.\n- A interface carrega fontes do Google; sem internet, a aparência muda.",
+      "source_ids": ["homologacao", "gravacao"]
+    }
+  ],
+  "quick_steps": [
+    {"title": "Suba o sistema", "body": "Banco e API em `Codigo/back` no perfil `dev`; front em `Codigo/front` com `pnpm start`. Abra `http://localhost:4200`.", "image": "fontes/imagens/login.webp"},
+    {"title": "Entre como Administradora", "body": "Toque no cartão **Administradora**. O painel aparece com o menu completo.", "image": "fontes/imagens/dashboard-vazio.webp"},
+    {"title": "Cadastre e compre", "body": "Crie um produto, um fornecedor e uma compra de frango com **lote** e **validade**. Confira o lote em **Estoque > Perecíveis**.", "image": "fontes/imagens/compra-form.webp"},
+    {"title": "Abra o caixa como operador", "body": "Entre como **Operador de caixa**, veja o menu restrito e abra o caixa com o saldo inicial.", "image": "fontes/imagens/abrir-caixa.webp"},
+    {"title": "Venda no PDV", "body": "Leia um código de barras, toque nos produtos frequentes e pague em dinheiro com troco.", "image": "fontes/imagens/pagamento-troco.webp"},
+    {"title": "Estorne e lance uma despesa", "body": "Como administradora, estorne uma venda com motivo e registre uma despesa. Marque-a como paga.", "image": "fontes/imagens/estorno-form.webp"},
+    {"title": "Importe o iFood", "body": "Em **Integrações > iFood**, envie um relatório, revise a prévia e confirme.", "image": "fontes/imagens/ifood-previa.webp"},
+    {"title": "Feche o caixa e veja o painel", "body": "Feche o caixa com o valor contado e confira o **Dashboard** do dia.", "image": "fontes/imagens/caixa-fechado.webp"}
+  ],
+  "practice": {
+    "scenario": "Responda como se estivesse avaliando as regras de negócio do sistema. Cada resposta tem explicação.",
+    "questions": [
+      {"id": "estoque-lote", "prompt": "Um frango perecível tem saldo de 25 unidades sem lote. O que acontece no PDV?", "options": ["Vende normalmente", "Esse saldo não pode ser vendido até ser vinculado a um lote", "O sistema cria um lote automaticamente na venda"], "answer": 1, "explanation": "Saldo de perecível sem lote não é vendável. O aviso em Perecíveis indica o produto e o botão Vincular saldo resolve depois da contagem."},
+      {"id": "despesa-pendente", "prompt": "Uma despesa de R$ 120,00 em dinheiro foi registrada e ainda está Pendente. Ela já saiu do caixa?", "options": ["Sim, no momento do registro", "Não. Só sai quando for marcada como paga", "Só sai no fechamento do caixa"], "answer": 1, "explanation": "A despesa só afeta o resultado e o caixa quando é marcada como paga."},
+      {"id": "estorno-pix", "prompt": "Uma venda paga por Pix é estornada. Quanto sai do caixa físico?", "options": ["O valor total da venda", "Nada, porque o Pix não entrou no caixa", "Metade do valor"], "answer": 1, "explanation": "O estorno devolve ao caixa exatamente o que entrou em dinheiro. Pix e cartão não movimentam o caixa."},
+      {"id": "estorno-perfil", "prompt": "Quem pode registrar um estorno?", "options": ["Qualquer usuário logado", "Somente a administradora", "Somente o operador que fez a venda"], "answer": 1, "explanation": "Os endpoints de estorno são restritos ao perfil ADMIN; outro perfil recebe 403."},
+      {"id": "fechamento", "prompt": "No fechamento, o valor contado ficou R$ 2,00 abaixo do esperado. O que o sistema exige?", "options": ["Nada, fecha direto", "Uma justificativa da diferença", "Um novo saldo inicial"], "answer": 1, "explanation": "Com diferença entre contado e esperado, a justificativa é obrigatória e fica registrada."},
+      {"id": "importacao", "prompt": "A importação do relatório do iFood altera o caixa ou o estoque?", "options": ["Altera os dois", "Altera só o caixa", "Não altera nenhum dos dois"], "answer": 2, "explanation": "A prévia avisa: a importação não movimenta o caixa nem o estoque."}
+    ]
+  },
+  "videos": [
+    {
+      "id": "demonstracao-completa",
+      "title": "Demonstração completa do sistema",
+      "description": "Gravação contínua do sistema em execução local com dados sintéticos: perfis, produtos, compras com lote, caixa, PDV, estorno, despesas, iFood, fechamento e painel.",
+      "path": "videos/v3-professores/demonstracao-completa-dafabi.mp4",
+      "captions": "videos/v3-professores/demonstracao-completa-dafabi.vtt",
+      "transcript": "videos/v3-professores/demonstracao-completa-dafabi.txt"
+    }
+  ]
+}

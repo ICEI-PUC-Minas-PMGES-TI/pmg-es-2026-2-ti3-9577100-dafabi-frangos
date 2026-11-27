@@ -1,0 +1,50 @@
+Sistema de Gestão da DaFabi Frangos
+Este é o sistema web de ponto de venda e gestão financeira da DaFabi Frangos. Ele reúne vendas no balcão, caixa, compras e estoque com lotes, despesas, estornos, relatórios do iFood e da 99Food e um painel com o resultado do período.
+
+Entrada e perfis de acesso
+Na tela de entrada, o ambiente de demonstração oferece um acesso por perfil. A administradora, Fabiana, entra e vê o painel do dia. O menu lateral mostra todos os módulos: vendas, caixa, produtos, estoque, compras, fornecedores, despesas, integrações, estornos e configurações.
+
+Cadastro de produto
+Em Produtos, a administradora cadastra uma Marmita de Frango de quinhentos gramas: categoria, preço de venda, custo, quantidade inicial e código de barras. Ela marca a opção de exibir nos produtos frequentes do PDV e salva. O produto aparece no catálogo com preço, custo e estoque.
+
+Cadastro de fornecedor
+Antes de registrar compras, ela cadastra o fornecedor Granja Boa Vista, com telefone e e-mail. Na lista, telefone e e-mail viram contatos clicáveis.
+
+Compra de perecível com lote e validade
+Em Compras, a administradora registra a entrada de vinte frangos assados a vinte e quatro reais e cinquenta. Como o produto é perecível, o sistema pede o lote recebido e a validade. O valor total é calculado, e ao registrar, o estoque e o custo médio são atualizados e o lote é criado.
+
+Pagamento da compra
+A compra fica com pagamento pendente até ser paga. Aqui ela registra o pagamento por Pix. Somente pagamentos em dinheiro saem do caixa.
+
+Estoque e lotes perecíveis
+Em Estoque, cada produto mostra o saldo, o custo e a origem da última movimentação. A aba Perecíveis lista o lote L2711 com a validade. O aviso amarelo mostra um saldo antigo sem lote: ele não pode ser vendido até ser vinculado a um lote depois da contagem.
+
+Perfil do operador e abertura do caixa
+Agora entra o operador de caixa, Carlos. O menu dele é restrito: nova venda, histórico, caixa, produtos e estoque. O PDV avisa que o caixa está fechado. Ele informa o saldo inicial de cento e cinquenta reais, confirma, e o resumo do caixa passa a mostrar o atendimento aberto.
+
+Venda no PDV com troco
+No PDV, o frango entra pela leitura do código de barras. A marmita e o refrigerante entram pelos botões de produtos frequentes, e a quantidade é ajustada no carrinho. No pagamento em dinheiro, o atalho de duzentos reais calcula o troco. Ao confirmar, a venda é registrada, o estoque é baixado e o dinheiro entra no caixa.
+
+Segunda venda com valor exato
+Uma segunda venda, de uma farofa, usa o atalho de valor exato. O PDV fica pronto para o próximo cliente.
+
+Histórico e estorno auditável
+No histórico, as vendas do balcão aparecem com origem, pagamento e status. O estorno é exclusivo da administradora. Ela busca a venda número dois, confere os itens e informa o motivo, que é obrigatório. O sistema avisa quanto será revertido no caixa. Depois da confirmação, o estorno fica registrado com o responsável e o motivo, e os itens voltam ao estoque.
+
+Despesa e pagamento
+Em Despesas, ela registra o botijão de gás da cozinha, de cento e vinte reais, pago em dinheiro. A despesa entra como pendente: ela só afeta o resultado e o caixa quando é marcada como paga. Ao confirmar o pagamento, o valor aparece nas despesas pagas do período e sai do caixa aberto.
+
+Importação do relatório do iFood
+Em Integrações, a loja importa o relatório exportado do portal do iFood. Neste exemplo o arquivo é sintético. O sistema analisa a planilha e mostra uma prévia: pedidos lidos, concluídos, cancelados, valores e taxas, e a validação de cada linha. Só depois da confirmação os pedidos são gravados. A importação não movimenta o caixa nem o estoque.
+
+Fechamento do caixa com conferência
+No fim do dia, o operador abre o resumo do caixa: saldo inicial, vendas, despesas e estornos em dinheiro, e o saldo esperado. Ao fechar, ele informa o valor contado. Como faltaram dois reais, o sistema calcula a diferença e exige uma justificativa. Depois da confirmação, o caixa fica fechado para novas vendas, com a diferença registrada.
+
+Painel financeiro do dia
+De volta ao painel, a administradora vê o faturamento do dia com o balcão e o iFood, as despesas pagas, as taxas e o resultado estimado. O painel avisa quando o resultado está incompleto, por exemplo pelo custo das mercadorias dos pedidos importados. Abaixo, ficam as vendas por origem, as vendas recentes e a composição do resultado.
+
+Controle de acesso por perfil
+As permissões também valem na API. Se o operador tentar abrir o painel financeiro pelo endereço, o sistema mostra acesso não permitido.
+
+Como o sistema foi construído
+Por trás das telas, o front em Angular conversa com uma API Spring Boot. O login usa tokens JWT e perfis. Os dados ficam no PostgreSQL, versionado com Flyway, e vendas, compras e estornos usam transações com bloqueio do estoque e do caixa, para evitar venda acima do disponível.

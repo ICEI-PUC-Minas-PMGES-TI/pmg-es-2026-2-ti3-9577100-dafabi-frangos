@@ -1,0 +1,32 @@
+O dia na loja com o sistema
+Este vídeo mostra a rotina da loja no sistema DaFabi: abrir o caixa, vender no balcão, receber mercadoria, lançar despesas e fechar o caixa no fim do dia.
+
+Abrir o caixa
+Toque em Operador de caixa, ou entre com seu usuário. O PDV avisa que o caixa está fechado. Clique em Abrir caixa, conte o dinheiro da gaveta e digite o saldo inicial. Confirme. O resumo mostra o caixa aberto.
+
+Vender no balcão
+Leia o código de barras ou toque no produto. Use o mais e o menos para a quantidade. Confira o total e clique em Continuar para pagamento. Em dinheiro, digite o valor recebido ou use um atalho. O troco aparece na tela. Confirme, e devolva o troco indicado.
+
+Venda rápida com valor exato
+Quando o cliente paga o valor certo, use o botão Valor exato. Para Pix e cartão, só escolha a forma de pagamento e confirme.
+
+Receber frango do fornecedor
+Na chegada da mercadoria, a Fabiana abre Compras e Nova compra. Escolha o fornecedor e o produto, digite a quantidade e o custo. Para frango e outros perecíveis, digite o lote e a validade da etiqueta. Registre: o estoque já fica disponível para venda.
+
+Conferir lotes e validade
+Em Estoque e Perecíveis, confira os lotes e as validades. Se aparecer o aviso amarelo de saldo sem lote, esse saldo não pode ser vendido: faça a contagem e use Vincular saldo.
+
+Lançar uma despesa
+Em Despesas, clique em Nova despesa. Escreva a descrição, a categoria, o valor e a forma de pagamento. A despesa fica pendente. Quando pagar, clique em Marcar como paga e confirme. Só então ela conta no resultado e, se foi em dinheiro, sai do caixa.
+
+Desfazer uma venda com estorno
+Se o cliente desistir, só a administradora faz o estorno. Em Estornos, clique em Novo estorno, digite o número da venda e busque. Confira os itens e escreva o motivo. Confirme: o dinheiro sai do caixa e os produtos voltam ao estoque.
+
+Fechar o caixa
+No fim do dia, abra Caixa e veja o saldo esperado. Clique em Fechar caixa, conte o dinheiro e digite o valor contado. Se houver diferença, escreva a justificativa. Confirme o fechamento: o caixa não aceita mais vendas até ser aberto de novo.
+
+Ver o resultado do dia
+No Dashboard, a Fabiana acompanha o faturamento, as despesas pagas, as taxas do iFood e da 99Food e o resultado estimado. Use Hoje, Últimos sete dias ou Este mês para trocar o período.
+
+Cuidados que evitam erro no caixa
+Para fechar o dia sem surpresas: confira lote e validade na entrada do frango, marque a despesa como paga quando pagar, justifique qualquer diferença no fechamento e deixe o estorno com a administradora.

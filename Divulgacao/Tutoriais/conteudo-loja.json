@@ -1,0 +1,137 @@
+{
+  "product": "DaFabi Frangos",
+  "title": "Guia prático da loja",
+  "version": "branch fix/qa-25-11 (b05b67c)",
+  "date": "2026-11-27",
+  "audience": "Fabiana (administradora) e operadores de caixa",
+  "intro": "Como usar o sistema no dia a dia da loja: abrir o caixa, vender, receber mercadoria, lançar despesas, desfazer uma venda e fechar o caixa. As telas vêm do sistema em funcionamento, com dados de exemplo. Quem responde com este guia, pessoa ou IA, responde só com o que está escrito aqui; se faltar algo, fale com a equipe que desenvolveu o sistema.",
+  "sources": [
+    {"id": "gravacao", "path": "Divulgacao/Tutoriais/fontes/EVIDENCIA.md", "kind": "comportamento observado", "label": "Gravação do sistema em funcionamento em 27/11/2026, com dados de exemplo"},
+    {"id": "regras", "path": "Codigo/back/README.md", "kind": "documentação", "label": "Regras de caixa, vendas, estorno e compras do sistema"},
+    {"id": "acessos", "path": "Codigo/front/README.md", "kind": "documentação", "label": "Perfis e acessos do sistema"},
+    {"id": "homologacao", "path": "Codigo/HOMOLOGACAO-LOJA.md", "kind": "documentação", "label": "Pendências antes de usar o sistema como controle principal"}
+  ],
+  "chapters": [
+    {
+      "id": "quem-faz-o-que",
+      "title": "Quem faz o quê",
+      "body": "- **Administradora (Fabiana):** vê tudo. Só ela faz estornos, lança despesas, registra compras, cadastra fornecedores e vê o Dashboard.\n- **Operador de caixa:** vê Nova venda, Histórico de vendas, Caixa, Produtos e Estoque. Abre o caixa, vende e fecha o caixa.\n\nCada pessoa entra com o próprio usuário e senha. O sistema registra quem abriu e fechou o caixa e quem fez cada estorno.\n\n**Antes de usar como controle principal:** a equipe ainda precisa conferir com a Fabiana a contagem inicial do estoque, os relatórios reais do iFood e da 99Food e o leitor de código de barras da loja.",
+      "source_ids": ["acessos", "regras", "homologacao", "gravacao"],
+      "images": [{"path": "fontes/imagens/menu-operador.webp", "caption": "Menu do operador de caixa: Nova venda, Histórico de vendas, Caixa, Produtos e Estoque."}]
+    },
+    {
+      "id": "abrir-caixa",
+      "title": "Abrir o caixa",
+      "body": "Sem caixa aberto, nenhuma venda é concluída. O PDV mostra o aviso \"Caixa fechado\".\n\n1. Clique em **Abrir caixa** no aviso do PDV, ou vá em **Caixa**.\n2. Conte o dinheiro da gaveta e digite o total em **Saldo inicial**.\n3. Clique em **Abrir caixa** e confirme na janela.\n\nO **Resumo do caixa** mostra o caixa aberto, com o seu nome e o horário.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [
+        {"path": "fontes/imagens/abrir-caixa.webp", "caption": "Saldo inicial de R$ 150,00 antes de abrir."},
+        {"path": "fontes/imagens/resumo-caixa-aberto.webp", "caption": "Caixa aberto com o saldo esperado."}
+      ]
+    },
+    {
+      "id": "vender",
+      "title": "Vender no balcão",
+      "body": "1. Em **Nova venda**, passe o código de barras no leitor (ou digite e tecle Enter). Sem código, toque no produto em **Produtos frequentes** ou use **Pesquisar produtos**.\n2. Ajuste a quantidade com o **+** e o **−** no carrinho.\n3. Confira o **Total da venda** e clique em **Continuar para pagamento** (ou F2).\n4. Escolha **Dinheiro**, **Pix**, **Débito** ou **Crédito**.\n5. Em dinheiro, digite o valor recebido ou use **Valor exato**, **R$ 100** ou **R$ 200**. O **Troco** aparece na tela.\n6. Clique em **Confirmar pagamento** e devolva o troco indicado.\n\nA venda baixa o estoque na hora. Só o dinheiro entra no caixa físico; Pix e cartão não mudam o saldo da gaveta.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [
+        {"path": "fontes/imagens/pdv-carrinho.webp", "caption": "Carrinho com os itens e o total."},
+        {"path": "fontes/imagens/pagamento-troco.webp", "caption": "Recebido R$ 200,00, troco R$ 108,20."},
+        {"path": "fontes/imagens/venda-sucesso.webp", "caption": "Venda realizada, com o troco a devolver."}
+      ]
+    },
+    {
+      "id": "receber-mercadoria",
+      "title": "Receber mercadoria (compra)",
+      "body": "Feito pela administradora quando a mercadoria chega.\n\n1. Em **Compras**, clique em **Nova compra**.\n2. Escolha o **Fornecedor** e confira a **Data da compra**.\n3. Escolha o **Produto**, digite a **Quantidade** e o **Custo unitário**.\n4. Para frango e outros perecíveis, digite o **Lote recebido** e a **Validade** da etiqueta.\n5. Use **Adicionar item** para outros produtos da mesma nota.\n6. Clique em **Registrar compra**.\n\nO estoque já fica disponível. A compra aparece com pagamento **Pendente**: quando pagar, clique em **Pagar** e escolha a forma. Só pagamento em dinheiro sai do caixa.\n\nFornecedor novo? Cadastre antes em **Fornecedores > Novo fornecedor**.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [
+        {"path": "fontes/imagens/compra-form.webp", "caption": "Compra de 20 frangos com lote e validade."},
+        {"path": "fontes/imagens/compra-paga.webp", "caption": "Compra registrada e paga."}
+      ]
+    },
+    {
+      "id": "lotes",
+      "title": "Conferir lotes e validade",
+      "body": "Em **Estoque**, clique em **Perecíveis** para ver cada lote com a validade e a quantidade.\n\nSe aparecer o aviso amarelo \"produto perecível tem saldo sem lote\", esse saldo **não pode ser vendido**. Conte o produto e use **Vincular saldo** para ligar o saldo a um lote.\n\nPara corrigir uma quantidade que não bate com a prateleira, use **Ajustar** na linha do produto em **Estoque**: digite a quantidade real e o motivo.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [{"path": "fontes/imagens/pereciveis.webp", "caption": "Lote L2711 válido até 30/11/2026 e aviso de saldo sem lote."}]
+    },
+    {
+      "id": "despesas",
+      "title": "Lançar uma despesa",
+      "body": "1. Em **Despesas**, clique em **Nova despesa**.\n2. Preencha **Descrição**, **Categoria**, **Valor**, **Data** e **Forma de pagamento**.\n3. Clique em **Registrar despesa**. Ela fica **Pendente**.\n4. Quando pagar, clique em **Marcar como paga** e confirme.\n\nSó a despesa paga entra no resultado. Se foi paga em dinheiro, ela também sai do caixa aberto, então marque como paga no mesmo dia em que tirou o dinheiro da gaveta.",
+      "source_ids": ["gravacao"],
+      "images": [
+        {"path": "fontes/imagens/despesa-pendente.webp", "caption": "Despesa pendente: ainda não conta."},
+        {"path": "fontes/imagens/despesa-paga.webp", "caption": "Despesa paga: R$ 120,00 nas despesas do período."}
+      ]
+    },
+    {
+      "id": "estorno",
+      "title": "Desfazer uma venda (estorno)",
+      "body": "Só a administradora faz estorno.\n\n1. Em **Estornos**, clique em **Novo estorno**.\n2. Digite o **Número da venda** (está no Histórico de vendas) e clique em **Buscar venda**.\n3. Confira a data, o pagamento, o valor e os itens.\n4. Escreva o **Motivo do estorno**.\n5. Clique em **Confirmar estorno** e confirme na janela.\n\nOs produtos voltam ao estoque. Se a venda foi em dinheiro, o mesmo valor sai do caixa: devolva ao cliente pela gaveta. Cada venda só pode ser estornada uma vez.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [{"path": "fontes/imagens/estorno-form.webp", "caption": "Venda nº 2 encontrada, motivo preenchido e aviso do valor que sai do caixa."}]
+    },
+    {
+      "id": "fechar-caixa",
+      "title": "Fechar o caixa",
+      "body": "1. Em **Caixa**, confira o resumo e o **Saldo esperado**.\n2. Clique em **Fechar caixa**.\n3. Conte o dinheiro e digite o **Valor contado**.\n4. Se houver diferença, o sistema mostra o valor e pede a **Justificativa da diferença**. Escreva o motivo.\n5. Clique em **Confirmar fechamento** e em **Fechar caixa** na janela.\n\nDepois de fechado, o caixa não aceita vendas até ser aberto de novo.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [
+        {"path": "fontes/imagens/fechar-diferenca.webp", "caption": "R$ 2,00 a menos: a justificativa é obrigatória."},
+        {"path": "fontes/imagens/caixa-fechado.webp", "caption": "Caixa fechado com o registro da diferença."}
+      ]
+    },
+    {
+      "id": "ifood",
+      "title": "Importar vendas do iFood e da 99Food",
+      "body": "1. Baixe o relatório de pedidos no portal da plataforma.\n2. Em **Integrações**, clique em **Abrir integração** na plataforma.\n3. Selecione o arquivo e clique em **Analisar relatório**.\n4. Confira a prévia: pedidos lidos, cancelados, valores, taxas e linhas inválidas.\n5. Clique em **Confirmar este arquivo**.\n\nImportar de novo o mesmo relatório não duplica os pedidos. A importação não mexe no caixa nem no estoque.",
+      "source_ids": ["gravacao", "homologacao"],
+      "images": [{"path": "fontes/imagens/ifood-previa.webp", "caption": "Prévia antes de confirmar a importação."}]
+    },
+    {
+      "id": "painel",
+      "title": "Ver o resultado do dia",
+      "body": "O **Dashboard** mostra faturamento, despesas pagas, taxas do iFood e da 99Food, resultado estimado e quantidade de vendas. Troque o período em **Hoje**, **Últimos 7 dias**, **Este mês** ou **Personalizado**.\n\nO resultado é uma estimativa. Quando há pedidos importados, o painel avisa que o custo das mercadorias desses pedidos ainda não está incluído.",
+      "source_ids": ["gravacao", "regras"],
+      "images": [{"path": "fontes/imagens/dashboard.webp", "caption": "Painel do dia com o aviso de resultado incompleto."}]
+    },
+    {
+      "id": "problemas",
+      "title": "Problemas comuns",
+      "body": "- **\"Caixa fechado\" no PDV logo depois de entrar, mas o caixa está aberto:** recarregue a página (F5). É um defeito conhecido, já informado à equipe.\n- **\"Sua sessão expirou\" na tela de entrada:** entre normalmente com seu usuário e senha.\n- **Produto perecível não aparece para venda:** o saldo está sem lote ou o lote venceu. Veja **Estoque > Perecíveis**.\n- **Despesa não aparece no resultado:** ela ainda está **Pendente**. Use **Marcar como paga**.\n- **\"Acesso não permitido\":** essa área é só da administradora.",
+      "source_ids": ["gravacao"]
+    }
+  ],
+  "quick_steps": [
+    {"title": "Abra o caixa", "body": "Conte a gaveta, digite o **Saldo inicial** e confirme.", "image": "fontes/imagens/abrir-caixa.webp"},
+    {"title": "Venda", "body": "Leia o código ou toque no produto, confira o total e clique em **Continuar para pagamento**.", "image": "fontes/imagens/pdv-carrinho.webp"},
+    {"title": "Receba e dê o troco", "body": "Escolha a forma de pagamento. Em dinheiro, digite o valor recebido e devolva o **Troco** mostrado.", "image": "fontes/imagens/pagamento-troco.webp"},
+    {"title": "Registre a mercadoria que chegou", "body": "Administradora: **Compras > Nova compra**. Para frango, digite **lote** e **validade**.", "image": "fontes/imagens/compra-form.webp"},
+    {"title": "Marque as despesas pagas", "body": "Administradora: registre a despesa e use **Marcar como paga** quando pagar.", "image": "fontes/imagens/despesa-paga.webp"},
+    {"title": "Feche o caixa", "body": "Conte o dinheiro, digite o **Valor contado** e justifique qualquer diferença.", "image": "fontes/imagens/fechar-diferenca.webp"}
+  ],
+  "practice": {
+    "scenario": "Situações do dia a dia no balcão. Escolha o que fazer no sistema.",
+    "questions": [
+      {"id": "caixa-fechado", "prompt": "Você chegou, entrou no sistema e o PDV diz \"Caixa fechado\". Ninguém abriu o caixa hoje. O que fazer?", "options": ["Vender mesmo assim", "Contar a gaveta e abrir o caixa com o saldo inicial", "Chamar a administradora para fazer um estorno"], "answer": 1, "explanation": "Sem caixa aberto a venda não é concluída. Abra o caixa com o valor contado da gaveta."},
+      {"id": "troco", "prompt": "A venda deu R$ 91,80 e o cliente entregou R$ 200,00 em dinheiro. Como registrar?", "options": ["Escolher Dinheiro e digitar ou tocar em R$ 200; devolver o troco mostrado", "Escolher Pix", "Digitar R$ 91,80 e calcular o troco de cabeça"], "answer": 0, "explanation": "Com o valor recebido, o sistema calcula o troco (R$ 108,20) e o dinheiro entra no caixa."},
+      {"id": "frango-lote", "prompt": "Chegaram 20 frangos. Na compra, o sistema pede lote e validade. O que digitar?", "options": ["Qualquer número", "O lote e a validade da etiqueta do fornecedor", "Deixar em branco"], "answer": 1, "explanation": "O lote e a validade controlam o que pode ser vendido. Saldo sem lote não é vendável."},
+      {"id": "gas", "prompt": "Você pagou o gás em dinheiro com a gaveta e registrou a despesa. Ela aparece como Pendente. O que falta?", "options": ["Nada", "Marcar como paga", "Fazer um estorno"], "answer": 1, "explanation": "Só a despesa paga conta no resultado e sai do caixa. Sem isso, o fechamento vai acusar sobra."},
+      {"id": "desistiu", "prompt": "O cliente desistiu depois de pagar. O operador pode desfazer a venda?", "options": ["Sim, no PDV", "Não. A administradora faz o estorno com o motivo", "Basta apagar a venda do histórico"], "answer": 1, "explanation": "Estorno é só da administradora e precisa de motivo. Os itens voltam ao estoque e o dinheiro sai do caixa."},
+      {"id": "faltou", "prompt": "No fechamento, a contagem deu R$ 2,00 a menos que o esperado. O que fazer?", "options": ["Digitar o valor esperado para bater", "Digitar o valor real contado e escrever a justificativa", "Não fechar o caixa"], "answer": 1, "explanation": "Registre o valor real. O sistema mostra a diferença e pede a justificativa, que fica guardada."}
+    ]
+  },
+  "videos": [
+    {
+      "id": "rotina-da-loja",
+      "title": "A rotina da loja no sistema",
+      "description": "Abrir o caixa, vender com troco, receber frango com lote, lançar despesa, estornar, fechar o caixa e ver o resultado. Gravado no sistema em funcionamento com dados de exemplo.",
+      "path": "videos/v3-loja/rotina-da-loja-dafabi.mp4",
+      "captions": "videos/v3-loja/rotina-da-loja-dafabi.vtt",
+      "transcript": "videos/v3-loja/rotina-da-loja-dafabi.txt"
+    }
+  ]
+}

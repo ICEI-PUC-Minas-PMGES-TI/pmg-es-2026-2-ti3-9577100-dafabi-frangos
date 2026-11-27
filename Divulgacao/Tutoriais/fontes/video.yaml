@@ -1,0 +1,39 @@
+meta:
+  programa: ai-showcase
+  owner_dominio: equipe-dafabi
+  atualizado_em: '2026-11-27'
+parametros:
+  tts_voice:
+    valor: pt-BR-FranciscaNeural
+    unidade: voz
+    racional: Narração em português brasileiro.
+  tts_rate:
+    valor: '+4%'
+    unidade: taxa de fala
+    racional: Ritmo próximo ao das ações gravadas, sem acelerar a leitura dos rótulos.
+  video_width:
+    valor: 1600
+    unidade: pixels
+    racional: Mesma proporção 16:10 da gravação (1440 x 900).
+  video_height:
+    valor: 1000
+    unidade: pixels
+    racional: Mesma proporção 16:10 da gravação (1440 x 900).
+  video_fps:
+    valor: 24
+    unidade: quadros por segundo
+    racional: Preserva o movimento do cursor e dos destaques.
+  scene_tail_seconds:
+    valor: 0.6
+    unidade: segundos
+    racional: Pausa curta entre blocos.
+tabelas:
+  visual_video:
+    fundo: '#fff6f2'
+    painel: '#ffffff'
+    texto: '#2b1a17'
+    secundario: '#6b5550'
+    destaque: '#b42318'
+    linha: '#f0c9c0'
+    fonte: assets/s2b-brandbook/Manrope-Regular.ttf
+    fonte_negrito: assets/s2b-brandbook/Manrope-Bold.ttf
